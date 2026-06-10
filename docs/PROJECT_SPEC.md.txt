@@ -1,0 +1,105 @@
+Read docs/PROJECT_SPEC.md completely.
+
+You are acting as a senior software architect, product manager, and full-stack engineer.
+
+Your task is to design and build the first MVP for an internal lead intelligence system for Kronos Data.
+
+Important rules:
+- Do NOT build a public SaaS yet.
+- Do NOT build a Chrome extension yet.
+- Do NOT build a complex CRM yet.
+- Focus only on an internal dashboard for lead discovery, diagnosis, and prioritization.
+- The goal is to help us find businesses with visible pain points and prioritize the best sales opportunities.
+- Optimize for speed, clarity, and maintainability.
+- Make every decision around helping the sales process, not around building generic software.
+
+Business context:
+Kronos Data is a consulting company focused on automation, operational efficiency, and business growth. We want to identify businesses with visible problems such as lost leads, slow response times, weak follow-up, poor conversion, manual repetitive work, weak online presence, and low operational efficiency.
+
+Target market:
+- Spanish-speaking businesses first
+- Priority countries: Peru, Mexico, Colombia, Chile, Spain
+
+Initial target industries:
+- Dental clinics
+- Real estate agencies
+- Law firms
+
+What the system must do in MVP phase 1:
+1. Store companies in a database.
+2. Allow manual entry of company data.
+3. Allow evaluation of each company based on visible signals.
+4. Generate an opportunity score from 0 to 100.
+5. Generate a business pain diagnosis.
+6. Suggest the most likely automation or consulting solution.
+7. Rank companies by priority.
+8. Display everything in a clean internal dashboard.
+
+Signals to analyze:
+- Has a website
+- Has WhatsApp visible
+- Has contact form
+- Has booking/reservation system
+- Has Instagram active
+- Has LinkedIn presence
+- Has Google Business Profile
+- Has reviews
+- Has unanswered reviews
+- Has clear CTA
+- Has clear lead capture
+- Has signs of slow response
+- Has signs of weak follow-up
+- Has signs of manual repetitive work
+- Has signs of weak online presence
+
+Scoring categories:
+- Lead generation
+- Customer follow-up
+- Automation readiness
+- Online presence
+- Reputation
+- Conversion optimization
+
+Output required for each company:
+- Company name
+- Industry
+- Country
+- Website
+- Social links
+- Opportunity score
+- Priority level
+- Detected problems
+- Probable pain point
+- Recommended solution
+- Estimated project value range
+- Notes for sales outreach
+
+Dashboard requirements:
+- Clean, minimal UI
+- Table of companies
+- Filters by country, industry, score, priority
+- Sort by score
+- Detail view for each company
+- Easy editing of company records
+- Clear labels for sales use
+
+Architecture requirements:
+- Propose the best tech stack for a fast MVP
+- Create a clear folder structure
+- Use a database that is simple to maintain
+- Keep the code modular
+- Prepare the project for future AI analysis and enrichment
+- Prepare the project for future outreach message generation
+
+Deliverables:
+1. A short implementation plan
+2. Suggested folder structure
+3. Database schema
+4. MVP dashboard layout
+5. Scoring logic design
+6. First working implementation plan before coding
+7. Then implement the MVP step by step after I approve the architecture
+
+Do not jump into full production-level complexity.
+Build the smallest useful version first.
+Ask me for approval before coding if anything is unclear.

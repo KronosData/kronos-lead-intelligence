@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id                String    @id @default(uuid())
+  name              String
+  industry          String
+  country           String
+  city              String?
+  website           String?
+  whatsapp          String?
+  instagram         String?
+  linkedin          String?
+  googleBusinessUrl String?   @map("google_business_url")
+  status            String    @default("active")
+  leadSource        String?   @map("lead_source")
+
+  // Denormalized — updated atomically on every new evaluation insert
+  latestOpportunityScore Int       @default(0) @map("latest_opportunity_score")
+  latestPriorityLevel    String    @default("low") @map("latest_priority_level")
+  latestEvaluatedAt      DateTime? @map("latest_evaluated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  evaluations     Evaluation[]
+  salesNotes      SalesNote[]
+  outreachHistory OutreachHistory[]
+
+  @@map("companies")
+}
+
+model Evaluation {
+  id          String @id @default(uuid())
+  companyId   String @map("company_id")
+  evaluatedBy String @map("evaluated_by")
+
+  // Signals (15 boolean flags)
+  // Absence of good things = FALSE = opportunity
+  // Presence of bad things = TRUE  = opportunity
+  signalHasWebsite           Boolean @default(false) @map("signal_has_website")
+  signalHasWhatsapp          Boolean @default(false) @map("signal_has_whatsapp")
+  signalHasContactForm       Boolean @default(false) @map("signal_has_contact_form")
+  signalHasBookingSystem     Boolean @default(false) @map("signal_has_booking_system")
+  signalHasInstagram         Boolean @default(false) @map("signal_has_instagram")
+  signalHasLinkedin          Boolean @default(false) @map("signal_has_linkedin")
+  signalHasGoogleBusiness    Boolean @default(false) @map("signal_has_google_business")
+  signalHasReviews           Boolean @default(false) @map("signal_has_reviews")
+  signalHasUnansweredReviews Boolean @default(false) @map("signal_has_unanswered_reviews")
+  signalHasClearCta          Boolean @default(false) @map("signal_has_clear_cta")
+  signalHasLeadCapture       Boolean @default(false) @map("signal_has_lead_capture")
+  signalSlowResponse         Boolean @default(false) @map("signal_slow_response")
+  signalWeakFollowup         Boolean @default(false) @map("signal_weak_followup")
+  signalManualWork           Boolean @default(false) @map("signal_manual_work")
+  signalWeakOnlinePresence   Boolean @default(false) @map("signal_weak_online_presence")
+
+  // Computed scores (0–100)
+  scoreLeadGeneration        Int? @map("score_lead_generation")
+  scoreFollowUp              Int? @map("score_follow_up")
+  scoreConversionProcess     Int? @map("score_conversion_process")
+  scoreAutomationOpportunity Int? @map("score_automation_opportunity")
+  scoreOnlinePresence        Int? @map("score_online_presence")
+  scoreReputation            Int? @map("score_reputation")
+  opportunityScore           Int? @map("opportunity_score")
+
+  // Diagnosis
+  priorityLevel       String?  @map("priority_level")
+  detectedProblems    String[] @map("detected_problems")
+  probablePainPoint   String?  @map("probable_pain_point")
+  recommendedSolution String?  @map("recommended_solution")
+  estimatedValueMin   Int?     @map("estimated_value_min")
+  estimatedValueMax   Int?     @map("estimated_value_max")
+
+  // Revenue Opportunity Module
+  estimatedLeadsLostPerMonth   Int? @map("estimated_leads_lost_per_month")
+  estimatedRevenueLostPerMonth Int? @map("estimated_revenue_lost_per_month")
+  estimatedRoiPotential        Int? @map("estimated_roi_potential")
+
+  // Service Match Engine
+  recommendedServices        String[]  @map("recommended_services")
+  implementationDifficulty   String?   @map("implementation_difficulty")
+  implementationTimeEstimate String?   @map("implementation_time_estimate")
+  estimatedProjectPriceMin   Int?      @map("estimated_project_price_min")
+  estimatedProjectPriceMax   Int?      @map("estimated_project_price_max")
+
+  evaluatedAt DateTime @default(now()) @map("evaluated_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, evaluatedAt(sort: Desc)])
+  @@map("evaluations")
+}
+
+model SalesNote {
+  id        String @id @default(uuid())
+  companyId String @map("company_id")
+
+  contactName  String? @map("contact_name")
+  contactRole  String? @map("contact_role")
+  contactPhone String? @map("contact_phone")
+  contactEmail String? @map("contact_email")
+
+  // not_contacted | attempted | contacted | in_conversation
+  // proposal_sent | negotiating | closed_won | closed_lost
+  contactStatus String @default("not_contacted") @map("contact_status")
+
+  // not_scheduled | scheduled | completed | no_show | rescheduled
+  meetingStatus String    @default("not_scheduled") @map("meeting_status")
+  meetingDate   DateTime? @map("meeting_date")
+  meetingNotes  String?   @map("meeting_notes")
+
+  budgetMin         Int?    @map("budget_min")
+  budgetMax         Int?    @map("budget_max")
+  budgetCurrency    String  @default("USD") @map("budget_currency")
+  objections        String?
+  followUpNotes     String? @map("follow_up_notes")
+  salesObservations String? @map("sales_observations")
+
+  nextAction     String?   @map("next_action")
+  nextActionDate DateTime? @map("next_action_date")
+  assignedTo     String?   @map("assigned_to")
+
+  closeProbability Int?    @map("close_probability")
+  lostReason       String? @map("lost_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("sales_notes")
+}
+
+model OutreachHistory {
+  id        String @id @default(uuid())
+  companyId String @map("company_id")
+
+  // linkedin | email | whatsapp | instagram | call | other
+  channel     String
+  messageSent String?  @map("message_sent")
+  sentBy      String?  @map("sent_by")
+  sentAt      DateTime @default(now()) @map("sent_at")
+
+  // interested | not_interested | no_response
+  // asked_to_follow_up | booked_call | closed_won | closed_lost
+  responseReceived Boolean   @default(false) @map("response_received")
+  responseType     String?   @map("response_type")
+  responseNotes    String?   @map("response_notes")
+  repliedAt        DateTime? @map("replied_at")
+
+  nextFollowUpAt DateTime? @map("next_follow_up_at")
+
+  // Future-proofing: automation, AI message tracking, multi-account
+  sequenceNumber Int     @default(1) @map("sequence_number")
+  templateUsed   String? @map("template_used")
+  channelAccount String? @map("channel_account")
+  isAutomated    Boolean @default(false) @map("is_automated")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([sentAt])
+  @@index([channel])
+  @@index([responseType])
+  @@index([nextFollowUpAt])
+  @@map("outreach_history")
+}

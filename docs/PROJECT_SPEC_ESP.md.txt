@@ -1,0 +1,105 @@
+Lee completamente docs/PROJECT_SPEC.md.
+
+Actúas como un arquitecto de software senior, gerente de producto e ingeniero full-stack.
+
+Tu tarea es diseñar y construir el primer MVP de un sistema interno de inteligencia comercial para Kronos Data.
+
+Reglas importantes:
+- NO construyas todavía un SaaS público.
+- NO construyas todavía una extensión de Chrome.
+- NO construyas todavía un CRM complejo.
+- Enfócate solo en un dashboard interno para descubrir, diagnosticar y priorizar leads.
+- El objetivo es ayudarnos a encontrar empresas con dolores visibles y priorizar las mejores oportunidades de venta.
+- Optimiza para velocidad, claridad y mantenibilidad.
+- Toma cada decisión pensando en ayudar al proceso de ventas, no en construir software genérico.
+
+Contexto del negocio:
+Kronos Data es una consultora enfocada en automatización, eficiencia operativa y crecimiento empresarial. Queremos identificar empresas con problemas visibles como pérdida de leads, tiempos lentos de respuesta, mal seguimiento, baja conversión, trabajo manual repetitivo, mala presencia online y baja eficiencia operativa.
+
+Mercado objetivo:
+- Empresas de habla hispana primero
+- Países prioritarios: Perú, México, Colombia, Chile y España
+
+Industrias iniciales:
+- Clínicas dentales
+- Inmobiliarias
+- Estudios legales
+
+Lo que el sistema debe hacer en la fase 1 del MVP:
+1. Guardar empresas en una base de datos.
+2. Permitir ingreso manual de datos.
+3. Permitir evaluar cada empresa según señales visibles.
+4. Generar un puntaje de oportunidad de 0 a 100.
+5. Generar un diagnóstico del dolor del negocio.
+6. Sugerir la automatización o consultoría más probable.
+7. Ordenar las empresas por prioridad.
+8. Mostrar todo en un dashboard interno limpio.
+
+Señales a analizar:
+- Tiene página web
+- Tiene WhatsApp visible
+- Tiene formulario de contacto
+- Tiene sistema de reservas/citas
+- Tiene Instagram activo
+- Tiene presencia en LinkedIn
+- Tiene perfil de Google Business
+- Tiene reseñas
+- Tiene reseñas sin responder
+- Tiene CTA claro
+- Tiene captura de leads clara
+- Tiene señales de respuesta lenta
+- Tiene señales de mal seguimiento
+- Tiene señales de trabajo manual repetitivo
+- Tiene señales de mala presencia online
+
+Categorías de puntuación:
+- Generación de leads
+- Seguimiento de clientes
+- Preparación para automatización
+- Presencia online
+- Reputación
+- Optimización de conversión
+
+Salida requerida para cada empresa:
+- Nombre de la empresa
+- Industria
+- País
+- Página web
+- Enlaces sociales
+- Puntaje de oportunidad
+- Nivel de prioridad
+- Problemas detectados
+- Dolor probable
+- Solución recomendada
+- Rango estimado del valor del proyecto
+- Notas para outreach comercial
+
+Requisitos del dashboard:
+- UI limpia y minimalista
+- Tabla de empresas
+- Filtros por país, industria, puntaje y prioridad
+- Ordenar por puntaje
+- Vista detallada por empresa
+- Edición fácil de registros
+- Etiquetas claras para ventas
+
+Requisitos de arquitectura:
+- Propón el mejor stack tecnológico para un MVP rápido
+- Crea una estructura de carpetas clara
+- Usa una base de datos sencilla de mantener
+- Mantén el código modular
+- Prepara el proyecto para análisis y enriquecimiento con IA en el futuro
+- Prepara el proyecto para generación futura de mensajes de prospección
+
+Entregables:
+1. Un plan breve de implementación
+2. Estructura sugerida de carpetas
+3. Esquema de base de datos
+4. Diseño del dashboard MVP
+5. Diseño de la lógica de scoring
+6. Primer plan de implementación funcional antes de programar
+7. Luego implementa el MVP paso a paso después de que yo apruebe la arquitectura
+
+No te lances a una complejidad de producción completa.
+Construye primero la versión más pequeña que realmente sirva.
+Pídeme aprobación antes de programar si algo no está claro.
