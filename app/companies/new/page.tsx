@@ -99,7 +99,7 @@ export default function NewCompanyPage() {
 
       // 2. Auto-evaluate
       const ev = await evaluateCompany(company.id, {
-        evaluatedBy: 'alejandro@kronosdata.com',
+        evaluatedBy: 'alejandro@kronosdata.tech',
         ...signals,
       })
       setEvaluation(ev)

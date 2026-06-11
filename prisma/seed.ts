@@ -29,7 +29,7 @@ async function main() {
   await prisma.evaluation.create({
     data: {
       companyId: dental.id,
-      evaluatedBy: 'alejandro@kronosdata.com',
+      evaluatedBy: 'alejandro@kronosdata.tech',
       signalHasWebsite: true,
       signalHasWhatsapp: true,
       signalHasContactForm: false,
@@ -101,7 +101,7 @@ async function main() {
       followUpNotes: 'Enviar caso de estudio de otra clínica dental en Lima',
       nextAction: 'Enviar propuesta',
       nextActionDate: new Date('2026-06-16T09:00:00Z'),
-      assignedTo: 'alejandro@kronosdata.com',
+      assignedTo: 'alejandro@kronosdata.tech',
       closeProbability: 65,
     },
   })
@@ -111,7 +111,7 @@ async function main() {
       companyId: dental.id,
       channel: 'whatsapp',
       messageSent: 'Hola Dr. Mendez, le escribo de Kronos Data. Notamos que su clínica podría estar perdiendo pacientes por falta de sistema de reservas online...',
-      sentBy: 'alejandro@kronosdata.com',
+      sentBy: 'alejandro@kronosdata.tech',
       sentAt: new Date('2026-06-03T10:30:00Z'),
       responseReceived: true,
       responseType: 'interested',
@@ -147,7 +147,7 @@ async function main() {
   await prisma.evaluation.create({
     data: {
       companyId: realestate.id,
-      evaluatedBy: 'alejandro@kronosdata.com',
+      evaluatedBy: 'alejandro@kronosdata.tech',
       signalHasWebsite: false,
       signalHasWhatsapp: true,
       signalHasContactForm: false,
@@ -215,7 +215,7 @@ async function main() {
       objections: null,
       nextAction: 'Segundo intento de contacto por LinkedIn',
       nextActionDate: new Date('2026-06-12T10:00:00Z'),
-      assignedTo: 'alejandro@kronosdata.com',
+      assignedTo: 'alejandro@kronosdata.tech',
       closeProbability: 40,
     },
   })
@@ -225,7 +225,7 @@ async function main() {
       companyId: realestate.id,
       channel: 'linkedin',
       messageSent: 'Hola Rosa, vi tu perfil en LinkedIn. En Kronos Data ayudamos a inmobiliarias en Lima a generar leads qualificados con automatización...',
-      sentBy: 'alejandro@kronosdata.com',
+      sentBy: 'alejandro@kronosdata.tech',
       sentAt: new Date('2026-06-08T11:00:00Z'),
       responseReceived: false,
       responseType: 'no_response',
@@ -259,7 +259,7 @@ async function main() {
   await prisma.evaluation.create({
     data: {
       companyId: lawfirm.id,
-      evaluatedBy: 'alejandro@kronosdata.com',
+      evaluatedBy: 'alejandro@kronosdata.tech',
       signalHasWebsite: true,
       signalHasWhatsapp: false,
       signalHasContactForm: true,
@@ -327,7 +327,7 @@ async function main() {
       followUpNotes: 'Énfasis en que el sistema puede parecer manual al cliente final',
       nextAction: 'Preparar demo personalizada',
       nextActionDate: new Date('2026-06-16T10:00:00Z'),
-      assignedTo: 'alejandro@kronosdata.com',
+      assignedTo: 'alejandro@kronosdata.tech',
       closeProbability: 55,
     },
   })
@@ -337,7 +337,7 @@ async function main() {
       companyId: lawfirm.id,
       channel: 'email',
       messageSent: 'Estimado Lic. Morales, le escribo desde Kronos Data. Identificamos que su estudio podría automatizar la captación y agenda de consultas iniciales...',
-      sentBy: 'alejandro@kronosdata.com',
+      sentBy: 'alejandro@kronosdata.tech',
       sentAt: new Date('2026-06-06T09:00:00Z'),
       responseReceived: true,
       responseType: 'asked_to_follow_up',
@@ -345,7 +345,7 @@ async function main() {
       repliedAt: new Date('2026-06-07T08:30:00Z'),
       nextFollowUpAt: new Date('2026-06-16T10:00:00Z'),
       sequenceNumber: 1,
-      channelAccount: 'alejandro@kronosdata.com',
+      channelAccount: 'alejandro@kronosdata.tech',
       isAutomated: false,
     },
   })
@@ -373,7 +373,7 @@ async function main() {
   await prisma.evaluation.create({
     data: {
       companyId: restaurant.id,
-      evaluatedBy: 'alejandro@kronosdata.com',
+      evaluatedBy: 'alejandro@kronosdata.tech',
       signalHasWebsite: true,
       signalHasWhatsapp: true,
       signalHasContactForm: false,
@@ -440,7 +440,7 @@ async function main() {
       followUpNotes: 'Contactar en julio cuando empiece temporada alta',
       nextAction: 'Follow-up en julio',
       nextActionDate: new Date('2026-07-05T10:00:00Z'),
-      assignedTo: 'alejandro@kronosdata.com',
+      assignedTo: 'alejandro@kronosdata.tech',
       closeProbability: 35,
     },
   })
@@ -450,7 +450,7 @@ async function main() {
       companyId: restaurant.id,
       channel: 'whatsapp',
       messageSent: 'Hola María, le escribo de Kronos Data. Su restaurante tiene muy buenas reseñas en Google, pero notamos que las reservas aún se hacen por llamada...',
-      sentBy: 'alejandro@kronosdata.com',
+      sentBy: 'alejandro@kronosdata.tech',
       sentAt: new Date('2026-06-07T16:00:00Z'),
       responseReceived: true,
       responseType: 'asked_to_follow_up',
@@ -486,7 +486,7 @@ async function main() {
   await prisma.evaluation.create({
     data: {
       companyId: consultora.id,
-      evaluatedBy: 'alejandro@kronosdata.com',
+      evaluatedBy: 'alejandro@kronosdata.tech',
       signalHasWebsite: true,
       signalHasWhatsapp: true,
       signalHasContactForm: true,
@@ -551,7 +551,7 @@ async function main() {
       salesObservations: 'Perfil técnico. Apreciaría una demo más detallada de la integración.',
       nextAction: 'Esperar respuesta a propuesta enviada el 09/06',
       nextActionDate: new Date('2026-06-14T09:00:00Z'),
-      assignedTo: 'alejandro@kronosdata.com',
+      assignedTo: 'alejandro@kronosdata.tech',
       closeProbability: 60,
     },
   })
@@ -561,7 +561,7 @@ async function main() {
       companyId: consultora.id,
       channel: 'linkedin',
       messageSent: 'Hola Jorge, vi tu contenido sobre procesos en LinkedIn. Tengo una propuesta específica para consultoras que quieren escalar sin contratar más personal...',
-      sentBy: 'alejandro@kronosdata.com',
+      sentBy: 'alejandro@kronosdata.tech',
       sentAt: new Date('2026-06-01T09:00:00Z'),
       responseReceived: true,
       responseType: 'booked_call',

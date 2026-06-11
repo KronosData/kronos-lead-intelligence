@@ -139,7 +139,7 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
     setError('')
     try {
       const ev = await evaluateCompany(id, {
-        evaluatedBy: 'alejandro@kronosdata.com',
+        evaluatedBy: 'alejandro@kronosdata.tech',
         ...signals,
       })
       setLatestEvaluation(ev)

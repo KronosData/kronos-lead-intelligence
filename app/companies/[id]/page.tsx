@@ -290,7 +290,7 @@ function OutreachPanel({ companyId }: { companyId: string }) {
       const rec = await createOutreach(companyId, {
         channel,
         messageSent: message.trim() || undefined,
-        sentBy: 'alejandro@kronosdata.com',
+        sentBy: 'alejandro@kronosdata.tech',
         responseReceived,
         responseType: responseType || undefined,
         responseNotes: responseNotes.trim() || undefined,
@@ -591,7 +591,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
     const signals: Record<string, boolean> = {}
     for (const s of SIGNAL_DEFINITIONS) signals[s.key] = (ev as unknown as Record<string, boolean>)[s.key]
     try {
-      const newEv = await evaluateCompany(id, { evaluatedBy: 'alejandro@kronosdata.com', ...signals })
+      const newEv = await evaluateCompany(id, { evaluatedBy: 'alejandro@kronosdata.tech', ...signals })
       setCompany((prev) => prev ? { ...prev, latestEvaluation: newEv, latestOpportunityScore: newEv.opportunityScore, latestPriorityLevel: newEv.priorityLevel } : prev)
     } catch { /* ignore */ }
     finally { setRevaluating(false) }
