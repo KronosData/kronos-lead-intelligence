@@ -105,7 +105,8 @@ export async function POST(request: Request) {
   recordSuccess(ip, email)
 
   const isProd = process.env.NODE_ENV === 'production'
-  const response = NextResponse.json({ ok: true })
+  console.log(`[Auth] Login success | ${new Date().toISOString()} | emailOk=${emailOk} passwordOk=${passwordOk}`)
+  const response = NextResponse.json({ success: true })
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProd,

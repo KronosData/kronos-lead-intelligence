@@ -8,10 +8,22 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (PUBLIC_PATHS.has(pathname)) {
+    // Redirect already-authenticated users away from /login → /
+    if (pathname === '/login') {
+      const token = request.cookies.get(COOKIE_NAME)?.value
+      if (token) {
+        const session = await verifySessionToken(token)
+        if (session) {
+          console.log(`[Proxy] Authenticated user on /login — redirecting to /`)
+          return NextResponse.redirect(new URL('/', request.url))
+        }
+      }
+    }
     return NextResponse.next()
   }
 
   const token = request.cookies.get(COOKIE_NAME)?.value
+  console.log(`[Proxy] path=${pathname} token=${token ? 'present' : 'absent'}`)
 
   if (!token) {
     if (pathname.startsWith('/api/')) {
@@ -21,6 +33,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const session = await verifySessionToken(token)
+  console.log(`[Proxy] session=${session ? 'valid' : 'null'}`)
 
   if (!session) {
     // Expired or tampered cookie

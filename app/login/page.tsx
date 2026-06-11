@@ -1,10 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Building2, Loader2, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -19,6 +17,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (loading) return
     setLoading(true)
     setError('')
 
@@ -30,8 +29,9 @@ export default function LoginPage() {
       })
 
       if (res.ok) {
-        router.push('/')
-        router.refresh()
+        // Hard navigation — ensures the browser sends the newly-set cookie
+        // with the next request instead of relying on the Next.js router cache.
+        window.location.replace('/')
         return
       }
 
