@@ -136,7 +136,7 @@ function estimateValue(
     : 0.25
 
   return {
-    min: baseMin,
+    min: Math.round(baseMin * multiplier),
     max: Math.round(baseMax * multiplier),
   }
 }
