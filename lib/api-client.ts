@@ -215,6 +215,41 @@ export async function createOutreach(
   })
 }
 
+// ─── Research ─────────────────────────────────────────────────────────────────
+
+export type ResearchConfidence = 'high' | 'medium' | 'low' | 'none'
+
+export interface ResearchSignal {
+  value: boolean | null
+  confidence: ResearchConfidence
+  source: string
+}
+
+export interface ResearchResult {
+  success: boolean
+  fetchedUrl: string
+  httpStatus: number | null
+  detectedName: string | null
+  detectedPhone: string | null
+  detectedWhatsapp: string | null
+  detectedInstagram: string | null
+  detectedLinkedin: string | null
+  isSPA: boolean
+  signals: Record<string, ResearchSignal>
+  autoFilledCount: number
+  manualRequiredCount: number
+  warnings: string[]
+  error?: string
+}
+
+export async function researchUrl(url: string): Promise<ResearchResult> {
+  return req('/research', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  })
+}
+
 // ─── Sales Note ───────────────────────────────────────────────────────────────
 
 export async function getSalesNote(id: string): Promise<SalesNote | null> {

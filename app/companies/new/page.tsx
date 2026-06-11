@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle2, Loader2, AlertCircle, ChevronRight } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Loader2, AlertCircle, ChevronRight, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { createCompany, evaluateCompany, type Evaluation } from '@/lib/api-client'
+import { createCompany, evaluateCompany, researchUrl, type Evaluation, type ResearchResult, type ResearchConfidence } from '@/lib/api-client'
 import { SIGNAL_DEFINITIONS, COUNTRIES, LEAD_SOURCES, INDUSTRY_SUGGESTIONS } from '@/lib/constants'
 
 const SIGNAL_BY_CATEGORY: Record<string, typeof SIGNAL_DEFINITIONS> = {}
@@ -67,10 +67,45 @@ export default function NewCompanyPage() {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
 
+  // Research assistant state
+  const [analyzerUrl, setAnalyzerUrl] = useState('')
+  const [analyzing, setAnalyzing] = useState(false)
+  const [researchResult, setResearchResult] = useState<ResearchResult | null>(null)
+  const [signalConfidence, setSignalConfidence] = useState<Record<string, ResearchConfidence>>({})
+
   const finalIndustry = industry === 'Otro' ? customIndustry : industry
 
   function toggleSignal(key: string) {
     setSignals((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  async function handleAnalyze() {
+    const trimmed = analyzerUrl.trim()
+    if (!trimmed) return
+    setAnalyzing(true)
+    setResearchResult(null)
+    try {
+      const result = await researchUrl(trimmed)
+      setResearchResult(result)
+      if (result.success) {
+        if (!website) setWebsite(result.fetchedUrl)
+        if (result.detectedWhatsapp && !whatsapp) setWhatsapp(result.detectedWhatsapp)
+        if (result.detectedInstagram && !instagram) setInstagram(result.detectedInstagram)
+        if (result.detectedLinkedin && !linkedin) setLinkedin(result.detectedLinkedin)
+        if (result.detectedName && !name) setName(result.detectedName)
+        const confidence: Record<string, ResearchConfidence> = {}
+        const updated = { ...signals }
+        for (const [key, sr] of Object.entries(result.signals)) {
+          if (sr.value !== null) {
+            updated[key] = sr.value
+            confidence[key] = sr.confidence
+          }
+        }
+        setSignals(updated)
+        setSignalConfidence(confidence)
+      }
+    } catch { /* form stays manual */ }
+    finally { setAnalyzing(false) }
   }
 
   async function handleSubmit() {
@@ -195,6 +230,68 @@ export default function NewCompanyPage() {
           <h1 className="text-2xl font-bold text-slate-900">Nueva Empresa</h1>
           <p className="text-sm text-slate-500">Completa la información y el checklist de señales para evaluar automáticamente</p>
         </div>
+      </div>
+
+      {/* ── Research Assistant ─────────────────────────────────────────────── */}
+      <div className="mb-6 max-w-6xl">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-slate-400" />
+              <CardTitle className="text-base">Analizar sitio web</CardTitle>
+              <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">opcional</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Pega la URL del prospecto y el sistema pre-completará señales y datos de contacto automáticamente.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                value={analyzerUrl}
+                onChange={(e) => setAnalyzerUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAnalyze() } }}
+                placeholder="https://clinicadental.com.pe"
+                disabled={analyzing}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleAnalyze()}
+                disabled={analyzing || !analyzerUrl.trim()}
+                className="shrink-0"
+              >
+                {analyzing
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Analizando...</>
+                  : <><Globe className="h-4 w-4" /> Analizar</>}
+              </Button>
+            </div>
+
+            {researchResult && (
+              <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${
+                researchResult.success
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                {researchResult.success ? (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-green-800">
+                    <span className="font-medium">✓ {researchResult.autoFilledCount} señales detectadas</span>
+                    <span className="text-green-700">· {researchResult.manualRequiredCount} requieren confirmación</span>
+                    {researchResult.isSPA && (
+                      <span className="text-amber-700">· Sitio dinámico — análisis parcial</span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-red-700">{researchResult.error ?? 'No se pudo analizar el sitio'}</span>
+                )}
+                {researchResult.warnings.map((w, i) => (
+                  <p key={i} className="text-xs text-amber-700 mt-1">{w}</p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
@@ -331,6 +428,15 @@ export default function NewCompanyPage() {
                           onCheckedChange={() => toggleSignal(s.key)}
                         />
                         <span className="text-sm text-slate-700">{s.label}</span>
+                        {signalConfidence[s.key] && signalConfidence[s.key] !== 'none' && (
+                          <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium ${
+                            signalConfidence[s.key] === 'high'
+                              ? 'bg-green-100 text-green-700'
+                              : signalConfidence[s.key] === 'medium'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-slate-100 text-slate-500'
+                          }`}>auto</span>
+                        )}
                         {signals[s.key] && s.problemWhen && (
                           <span className="ml-auto text-xs text-red-500 font-medium">Problema</span>
                         )}
