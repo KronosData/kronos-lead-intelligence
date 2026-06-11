@@ -37,7 +37,7 @@ async function verifyHash(password: string, storedHash: string): Promise<boolean
     const expected = Buffer.from(hashHex, 'hex')
 
     const derived = await new Promise<Buffer>((resolve, reject) => {
-      scrypt(password, salt, expected.length, { N: +N, r: +r, p: +p }, (err, key) => {
+      scrypt(password, salt, expected.length, { N: +N, r: +r, p: +p, maxmem: 128 * 1024 * 1024 }, (err, key) => {
         if (err) reject(err)
         else resolve(key)
       })

@@ -23,7 +23,7 @@ if (!password) {
 }
 
 const salt = randomBytes(32)
-const hash = await scryptAsync(password, salt, 64, { N: 65536, r: 8, p: 1 })
+const hash = await scryptAsync(password, salt, 64, { N: 65536, r: 8, p: 1, maxmem: 128 * 1024 * 1024 })
 
 const result = `scrypt:65536:8:1:${salt.toString('hex')}:${hash.toString('hex')}`
 
