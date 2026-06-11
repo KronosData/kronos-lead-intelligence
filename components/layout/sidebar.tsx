@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { BarChart3, Building2, Plus, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
 
 const nav = [
   { href: '/', label: 'Dashboard', icon: BarChart3 },
@@ -15,8 +14,7 @@ export function Sidebar() {
   const router = useRouter()
 
   async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
     router.refresh()
   }

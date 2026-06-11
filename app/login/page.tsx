@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, Loader2, AlertCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,7 +13,7 @@ export default function LoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('error') === 'unauthorized') {
-      setError('Acceso no autorizado para este correo electrónico.')
+      setError('Acceso no autorizado.')
     }
   }, [])
 
@@ -23,37 +22,25 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
-
-    if (authError) {
-      const code = (authError as { code?: string }).code
-      const status = (authError as { status?: number }).status
-
-      console.error('[Auth] signInWithPassword failed:', {
-        name: authError.name,
-        message: authError.message,
-        code,
-        status,
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       })
 
-      const isNetworkError = authError.name !== 'AuthApiError'
-      if (isNetworkError) {
-        setError(`Error de conexión con el servidor de autenticación. (${authError.name}: ${authError.message}) — Revisa los logs de Vercel.`)
-      } else if (code === 'invalid_credentials') {
-        setError('Correo o contraseña incorrectos.')
-      } else {
-        setError(`Error de autenticación: ${code ?? status ?? authError.message}`)
+      if (res.ok) {
+        router.push('/')
+        router.refresh()
+        return
       }
-      setLoading(false)
-      return
-    }
 
-    router.push('/')
-    router.refresh()
+      setError('Correo o contraseña incorrectos.')
+    } catch {
+      setError('Error de conexión. Inténtalo de nuevo.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
