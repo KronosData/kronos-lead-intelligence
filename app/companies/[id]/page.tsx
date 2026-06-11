@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit, Trash2, RefreshCw, AlertCircle, Loader2,
   TrendingDown, DollarSign, Zap, Clock, CheckCircle2, XCircle,
-  MessageSquare, Phone, Mail, Calendar, ChevronDown, ChevronUp, Send
+  MessageSquare, Phone, Mail, Calendar, ChevronDown, ChevronUp, Send,
+  Copy, Pencil, Plus, X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -268,22 +269,148 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
   )
 }
 
-function OutreachPanel({ companyId }: { companyId: string }) {
+function generateOutreachTemplate(
+  channel: 'whatsapp' | 'email' | 'linkedin',
+  version: number,
+  companyName: string,
+  industry: string,
+  ev: Evaluation
+): string {
+  const revenue = `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}`
+  const primary = (ev.recommendedServices[0] ?? '').toLowerCase()
+  const v = version % 2
+
+  let scenario = 'followup'
+  if (primary.includes('reserva') || primary.includes('cita')) scenario = 'booking'
+  else if (primary.includes('google')) scenario = 'google'
+  else if (primary.includes('reseña')) scenario = 'reviews'
+  else if (primary.includes('funnel') || primary.includes('captura')) scenario = 'leads'
+  else if (primary.includes('sitio web') || primary.includes('presencia') || primary.includes('redes')) scenario = 'presence'
+
+  if (channel === 'whatsapp') {
+    const tpl: Record<string, [string, string]> = {
+      booking: [
+        `Hola [Nombre] 👋\n\nVi que ${companyName} no tiene reservas online. En ${industry}, el 40% de las citas se intenta agendar fuera de horario — y sin sistema, esos clientes se van con la competencia.\n\nEstimamos que eso representa ${revenue}/mes en citas perdidas.\n\nLo resolvemos en 2 semanas. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola [Nombre],\n\n¿Cuántas reservas pierde ${companyName} fuera de horario?\n\nSin sistema automático hay ${ev.estimatedLeadsLostPerMonth} leads/mes que no se concretan — ${revenue} en ingresos que se evaporan.\n\nSistema listo en 2–3 semanas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+      ],
+      google: [
+        `Hola [Nombre] 👋\n\nBusqué "${companyName}" en Google Maps y el perfil no está optimizado.\n\nEl 76% de los clientes busca en Google antes de contactar. Sin perfil visible en ${industry}, ${companyName} no aparece cuando importa.\n\nEstimamos ${revenue}/mes en consultas que van a la competencia. Lo resolvemos en 1 semana. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola [Nombre],\n\nSi alguien busca "${industry} en [ciudad]" en Google, ¿${companyName} aparece en los primeros resultados?\n\nEstimamos ${revenue}/mes solo en pérdida por baja visibilidad local. 15 minutos y te muestro cómo cambiarlo.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+      ],
+      reviews: [
+        `Hola [Nombre] 👋\n\nVi reseñas de ${companyName} en Google sin responder.\n\nEl 68% de los clientes nuevos lee las respuestas antes de decidir. Sin respuesta = señal de que nadie atiende.\n\nEstimamos ${revenue}/mes en conversiones perdidas. Tenemos un sistema automático para gestionarlas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola [Nombre],\n\nLas reseñas sin responder de ${companyName} en Google están frenando a los prospectos.\n\nEstimamos ${revenue}/mes de impacto. Lo resolvemos con gestión automática en 1–2 semanas.\n\n¿15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+      ],
+      presence: [
+        `Hola [Nombre] 👋\n\nBusqué ${companyName} online y la presencia digital es mínima para ${industry}.\n\nCada cliente que no te encuentra online elige a la competencia. Estimamos ${revenue}/mes en conversiones perdidas.\n\nLo resolvemos en 4–6 semanas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola [Nombre],\n\nAnalizamos ${companyName} y hay una brecha importante entre lo que tienes online y lo que los clientes de ${industry} esperan encontrar.\n\nImpacto estimado: ${revenue}/mes.\n\n¿Te muestro el análisis completo? 15 min.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+      ],
+      leads: [
+        `Hola [Nombre] 👋\n\nRevisé la web y redes de ${companyName} y no hay una forma clara para que un cliente interesado deje sus datos.\n\nEl tráfico que ya tienes no se convierte — estimamos ${revenue}/mes en oportunidades que se evaporan.\n\nFunnel en 2–3 semanas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola [Nombre],\n\nEn ${companyName} no hay un "paso siguiente" claro para los visitantes.\n\nSin CTA ni captura de contacto, el interés se pierde. Estimamos ${revenue}/mes en leads que se van sin dejar datos.\n\n¿15 min para mostrarte la solución?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+      ],
+      followup: [
+        `Hola [Nombre] 👋\n\nVi ${companyName} en ${industry} y detecté señales de que hay leads que no reciben seguimiento a tiempo.\n\nEso cuesta en promedio ${revenue}/mes en clientes que preguntan y se van con la competencia antes de recibir respuesta.\n\nLo resolvemos en 2 semanas. ¿Tienes 15 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola [Nombre],\n\n¿Los leads que llegan a ${companyName} reciben respuesta el mismo día?\n\nSi no siempre — ahí está la fuga. Son ${revenue}/mes en clientes que eligieron a la competencia por ser más rápidos.\n\n¿Hablamos 10 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+      ],
+    }
+    const [t0, t1] = tpl[scenario] ?? tpl.followup
+    return v === 0 ? t0 : t1
+  }
+
+  if (channel === 'email') {
+    const subjects: Record<string, [string, string]> = {
+      booking: [`${companyName}: cuántas citas se pierden fuera de horario`, `Sistema de reservas para ${companyName} — sin cambiar tu proceso`],
+      google: [`${companyName} no aparece cuando alguien busca ${industry} en Google`, `Visibilidad en Google para ${companyName}`],
+      reviews: [`Las reseñas de ${companyName} están frenando nuevos clientes`, `Gestión de reputación para ${companyName}`],
+      presence: [`Lo que un cliente ve cuando busca "${companyName}" en Google`, `Análisis de presencia digital — ${companyName}`],
+      leads: [`El tráfico de ${companyName} no está convirtiéndose en clientes`, `${companyName}: cómo capturar los leads que ya tienes`],
+      followup: [`Encontré dónde se están yendo los clientes de ${companyName}`, `${companyName}: optimización de seguimiento de leads`],
+    }
+    const [s0, s1] = subjects[scenario] ?? subjects.followup
+    const subject = v === 0 ? s0 : s1
+    return `Asunto: ${subject}\n\nHola [Nombre],\n\nAnalizamos el perfil digital de ${companyName} y detectamos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso representa una pérdida estimada de ${revenue} al mes — ${ev.estimatedLeadsLostPerMonth} leads que no se convierten.\n\nServicios que resuelven esto directamente:\n${ev.recommendedServices.map((s) => `→ ${s}`).join('\n')}\n\nTiempo de implementación: ${ev.implementationTimeEstimate}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+  }
+
+  // LinkedIn
+  return v === 0
+    ? `[Nombre], analicé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${revenue}/mes en clientes que no se convierten.\n\nEn Kronos lo resolvemos en ${ev.implementationTimeEstimate}. ¿Tienes 20 min esta semana?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+    : `[Nombre], una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn la mayoría de negocios de ${industry} que analizamos, ahí está la mayor fuga — ${revenue}/mes de impacto.\n\n¿Hablamos 20 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+}
+
+function OutreachPanel({
+  companyId,
+  evaluation,
+  companyName,
+  industry,
+}: {
+  companyId: string
+  evaluation: Evaluation | null
+  companyName: string
+  industry: string
+}) {
   const [records, setRecords] = useState<OutreachRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const [adding, setAdding] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [channel, setChannel] = useState('')
   const [message, setMessage] = useState('')
   const [responseReceived, setResponseReceived] = useState(false)
   const [responseType, setResponseType] = useState('')
   const [responseNotes, setResponseNotes] = useState('')
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const [templateChannel, setTemplateChannel] = useState<'whatsapp' | 'email' | 'linkedin'>('whatsapp')
+  const [templateVersion, setTemplateVersion] = useState(0)
+  const [editingTemplate, setEditingTemplate] = useState(false)
+  const [editedTemplate, setEditedTemplate] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const liveTemplate = evaluation
+    ? generateOutreachTemplate(templateChannel, templateVersion, companyName, industry, evaluation)
+    : ''
+  const templateText = editingTemplate ? editedTemplate : liveTemplate
 
   useEffect(() => {
     listOutreach(companyId).then((r) => { setRecords(r.data); setLoading(false) }).catch(() => setLoading(false))
   }, [companyId])
 
-  async function handleAdd() {
+  function handleCopy() {
+    navigator.clipboard.writeText(templateText).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function handleEdit() {
+    setEditedTemplate(templateText)
+    setEditingTemplate(true)
+  }
+
+  function handleNextVersion() {
+    setEditingTemplate(false)
+    setTemplateVersion((v) => v + 1)
+  }
+
+  function openModalFromTemplate() {
+    setChannel(templateChannel)
+    setMessage(templateText)
+    setResponseReceived(false)
+    setResponseType('')
+    setResponseNotes('')
+    setModalOpen(true)
+  }
+
+  function openModalBlank() {
+    setChannel('')
+    setMessage('')
+    setResponseReceived(false)
+    setResponseType('')
+    setResponseNotes('')
+    setModalOpen(true)
+  }
+
+  async function handleSave() {
     if (!channel) return
     setSaving(true)
     try {
@@ -297,10 +424,18 @@ function OutreachPanel({ companyId }: { companyId: string }) {
         sequenceNumber: records.length + 1,
       })
       setRecords([rec, ...records])
-      setAdding(false)
-      setChannel(''); setMessage(''); setResponseReceived(false); setResponseType(''); setResponseNotes('')
+      setModalOpen(false)
     } catch { /* ignore */ }
     finally { setSaving(false) }
+  }
+
+  function toggleExpand(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   const channelIcon: Record<string, string> = {
@@ -308,24 +443,200 @@ function OutreachPanel({ companyId }: { companyId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      {/* ── Suggested Template ── */}
+      {evaluation && (
+        <div className="rounded-xl border-2 border-amber-200 bg-amber-50/40">
+          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-amber-100">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400 inline-block" />
+              <span className="text-sm font-semibold text-amber-900">Plantilla Sugerida</span>
+              <span className="text-xs text-slate-500">· Score {evaluation.opportunityScore} · {evaluation.recommendedServices[0]}</span>
+            </div>
+            <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-xs text-amber-700 font-medium shrink-0">
+              No enviada
+            </span>
+          </div>
+
+          <div className="flex gap-1 px-4 pt-3">
+            {(['whatsapp', 'email', 'linkedin'] as const).map((ch) => (
+              <button
+                key={ch}
+                onClick={() => { setTemplateChannel(ch); setEditingTemplate(false) }}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  templateChannel === ch ? 'bg-amber-900 text-white' : 'text-amber-800 hover:bg-amber-100'
+                }`}
+              >
+                {ch === 'whatsapp' ? '💬' : ch === 'email' ? '📧' : '💼'}{' '}
+                {ch.charAt(0).toUpperCase() + ch.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <div className="px-4 pt-3 pb-2">
+            {editingTemplate ? (
+              <Textarea
+                value={editedTemplate}
+                onChange={(e) => setEditedTemplate(e.target.value)}
+                className="min-h-[160px] text-sm bg-white border-amber-200 font-mono"
+              />
+            ) : (
+              <div className="rounded-lg bg-white border border-amber-100 px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                {templateText}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 px-4 pb-4">
+            <Button
+              size="sm" variant="outline"
+              className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+              onClick={handleCopy}
+            >
+              {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+              {copied ? 'Copiado' : 'Copiar'}
+            </Button>
+            {editingTemplate ? (
+              <Button
+                size="sm" variant="outline"
+                className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+                onClick={() => setEditingTemplate(false)}
+              >
+                <X className="h-3 w-3" /> Cancelar
+              </Button>
+            ) : (
+              <Button
+                size="sm" variant="outline"
+                className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+                onClick={handleEdit}
+              >
+                <Pencil className="h-3 w-3" /> Editar
+              </Button>
+            )}
+            <Button
+              size="sm" variant="outline"
+              className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+              onClick={handleNextVersion}
+            >
+              <RefreshCw className="h-3 w-3" /> Nueva versión
+            </Button>
+            <Button
+              size="sm"
+              className="ml-auto bg-amber-900 hover:bg-amber-800 text-white h-8 text-xs"
+              onClick={openModalFromTemplate}
+            >
+              <Send className="h-3 w-3" /> Registrar como enviado
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── History header ── */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{records.length} contacto{records.length !== 1 ? 's' : ''} registrado{records.length !== 1 ? 's' : ''}</p>
-        <Button size="sm" variant="outline" onClick={() => setAdding((v) => !v)}>
-          <Send className="h-3 w-3" /> {adding ? 'Cancelar' : 'Registrar Contacto'}
+        <p className="text-sm font-medium text-slate-700">
+          Historial de contactos
+          <span className="ml-2 text-slate-400 font-normal">({records.length})</span>
+        </p>
+        <Button size="sm" variant="outline" onClick={openModalBlank}>
+          <Plus className="h-3 w-3" /> Registrar contacto
         </Button>
       </div>
 
-      {adding && (
-        <Card>
-          <CardContent className="p-4 flex flex-col gap-3">
+      {/* ── History list ── */}
+      {loading ? (
+        <div className="flex justify-center p-8">
+          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+        </div>
+      ) : records.length === 0 ? (
+        <div className="text-center py-10 text-slate-400 text-sm rounded-xl border-2 border-dashed border-slate-200">
+          <MessageSquare className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+          Sin contactos registrados todavía.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {records.map((r) => {
+            const isExpanded = expandedIds.has(r.id)
+            const PREVIEW = 120
+            const needsTrunc = (r.messageSent?.length ?? 0) > PREVIEW
+            return (
+              <div key={r.id} className="rounded-xl border bg-white shadow-sm overflow-hidden">
+                <div className="flex">
+                  <div className={`w-1 shrink-0 ${r.responseReceived ? 'bg-blue-400' : 'bg-green-400'}`} />
+                  <div className="flex-1 p-4">
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-base">{channelIcon[r.channel] ?? '🔗'}</span>
+                        <span className="font-semibold text-sm capitalize text-slate-800">{r.channel}</span>
+                        <span className="text-xs text-slate-400">· #{r.sequenceNumber}</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-xs text-green-700 font-medium">
+                          <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Enviado
+                        </span>
+                        {r.responseReceived ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs text-blue-700 font-medium">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Respondió
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs text-slate-500">
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-300" /> Sin respuesta
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400 shrink-0">
+                        {new Date(r.sentAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {r.messageSent && (
+                      <div className="mb-2">
+                        <p className="text-sm text-slate-600 bg-slate-50 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">
+                          {isExpanded || !needsTrunc
+                            ? r.messageSent
+                            : `${r.messageSent.slice(0, PREVIEW)}…`}
+                        </p>
+                        {needsTrunc && (
+                          <button
+                            onClick={() => toggleExpand(r.id)}
+                            className="flex items-center gap-1 mt-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            {isExpanded
+                              ? <><ChevronUp className="h-3 w-3" /> Ocultar mensaje</>
+                              : <><ChevronDown className="h-3 w-3" /> Ver mensaje completo</>}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {r.responseType && (
+                      <p className="text-xs text-slate-500">
+                        Respuesta: <span className="font-medium capitalize">{r.responseType.replace(/_/g, ' ')}</span>
+                      </p>
+                    )}
+                    {r.responseNotes && (
+                      <p className="text-xs text-slate-400 mt-0.5 italic">"{r.responseNotes}"</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Modal: Register outreach ── */}
+      <Dialog open={modalOpen} onOpenChange={(o) => { if (!saving) setModalOpen(o) }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Registrar contacto</DialogTitle>
+            <DialogDescription className="text-xs">
+              Guarda el mensaje enviado y el resultado del contacto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Canal *</Label>
                 <Select value={channel} onValueChange={setChannel}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Canal" />
-                  </SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Canal" /></SelectTrigger>
                   <SelectContent>
                     {OUTREACH_CHANNELS.map((c) => (
                       <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
@@ -333,9 +644,14 @@ function OutreachPanel({ companyId }: { companyId: string }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end pb-1">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" checked={responseReceived} onChange={(e) => setResponseReceived(e.target.checked)} className="rounded" />
+                  <input
+                    type="checkbox"
+                    checked={responseReceived}
+                    onChange={(e) => setResponseReceived(e.target.checked)}
+                    className="rounded"
+                  />
                   Recibió respuesta
                 </label>
               </div>
@@ -345,8 +661,8 @@ function OutreachPanel({ companyId }: { companyId: string }) {
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Resumen o copia del mensaje..."
-                className="mt-1 min-h-[60px]"
+                placeholder="Pega o escribe el mensaje aquí..."
+                className="mt-1 min-h-[120px] text-xs font-mono"
               />
             </div>
             {responseReceived && (
@@ -354,9 +670,7 @@ function OutreachPanel({ companyId }: { companyId: string }) {
                 <div>
                   <Label className="text-xs">Tipo de respuesta</Label>
                   <Select value={responseType} onValueChange={setResponseType}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Respuesta" />
-                    </SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Respuesta" /></SelectTrigger>
                     <SelectContent>
                       {RESPONSE_TYPES.map((r) => (
                         <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
@@ -365,7 +679,7 @@ function OutreachPanel({ companyId }: { companyId: string }) {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Notas de respuesta</Label>
+                  <Label className="text-xs">Notas de la respuesta</Label>
                   <Input
                     value={responseNotes}
                     onChange={(e) => setResponseNotes(e.target.value)}
@@ -375,54 +689,16 @@ function OutreachPanel({ companyId }: { companyId: string }) {
                 </div>
               </div>
             )}
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleAdd} disabled={!channel || saving}>
-                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />} Guardar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></div>
-      ) : records.length === 0 ? (
-        <div className="text-center py-8 text-slate-400 text-sm">
-          <MessageSquare className="h-8 w-8 mx-auto mb-2 text-slate-200" />
-          Sin contactos registrados. Registra tu primer intento arriba.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {records.map((r) => (
-            <div key={r.id} className="rounded-lg border bg-white p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span>{channelIcon[r.channel] ?? '🔗'}</span>
-                  <span className="font-medium text-sm capitalize">{r.channel}</span>
-                  <span className="text-xs text-slate-400">· Intento #{r.sequenceNumber}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {r.responseReceived ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-xs text-green-700">
-                      <CheckCircle2 className="h-3 w-3" /> Respondió
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs text-slate-500">
-                      Sin respuesta
-                    </span>
-                  )}
-                  <span className="text-xs text-slate-400">
-                    {new Date(r.sentAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' })}
-                  </span>
-                </div>
-              </div>
-              {r.messageSent && <p className="text-sm text-slate-600 bg-slate-50 rounded px-3 py-2 mb-2">{r.messageSent}</p>}
-              {r.responseType && <p className="text-xs text-slate-500">Respuesta: {r.responseType.replace(/_/g, ' ')}</p>}
-              {r.responseNotes && <p className="text-xs text-slate-500 mt-1">{r.responseNotes}</p>}
-            </div>
-          ))}
-        </div>
-      )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={!channel || saving}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Guardar contacto
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -689,7 +965,12 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         </TabsContent>
 
         <TabsContent value="outreach">
-          <OutreachPanel companyId={id} />
+          <OutreachPanel
+            companyId={id}
+            evaluation={company.latestEvaluation}
+            companyName={company.name}
+            industry={company.industry}
+          />
         </TabsContent>
 
         <TabsContent value="sales">
