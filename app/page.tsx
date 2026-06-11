@@ -1,65 +1,364 @@
-import Image from "next/image";
+'use client'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+  Plus, Download, Upload, Search, RefreshCw, Building2, AlertCircle, Loader2, X
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { listCompanies, createCompany, type Company } from '@/lib/api-client'
+import { exportCompaniesCSV, importCompaniesCSV, type ParsedCSVRow } from '@/lib/csv'
+import { INDUSTRY_SUGGESTIONS } from '@/lib/constants'
 
-export default function Home() {
+type SortKey = 'score_desc' | 'score_asc' | 'created_asc' | 'updated_desc'
+
+function priorityVariant(p: string): 'hot' | 'high' | 'medium' | 'low' | 'secondary' {
+  if (p === 'hot') return 'hot'
+  if (p === 'high') return 'high'
+  if (p === 'medium') return 'medium'
+  if (p === 'low') return 'low'
+  return 'secondary'
+}
+
+function scoreColor(score: number) {
+  if (score >= 80) return 'text-red-600 font-bold'
+  if (score >= 60) return 'text-orange-600 font-bold'
+  if (score >= 40) return 'text-yellow-600 font-semibold'
+  return 'text-slate-500'
+}
+
+function statusBadge(status: string) {
+  const map: Record<string, string> = {
+    active: 'bg-blue-50 text-blue-700 border-blue-200',
+    contacted: 'bg-amber-50 text-amber-700 border-amber-200',
+    client: 'bg-green-50 text-green-700 border-green-200',
+    archived: 'bg-slate-50 text-slate-500 border-slate-200',
+  }
+  const labels: Record<string, string> = {
+    active: 'Activo', contacted: 'Contactado', client: 'Cliente', archived: 'Archivado',
+  }
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${map[status] ?? ''}`}>
+      {labels[status] ?? status}
+    </span>
+  )
+}
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const [search, setSearch] = useState('')
+  const [priority, setPriority] = useState('')
+  const [industry, setIndustry] = useState('')
+  const [sort, setSort] = useState<SortKey>('score_desc')
+
+  const [importOpen, setImportOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+  const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] } | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const fetchCompanies = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await listCompanies({
+        priority: priority.trim() || undefined,
+        sort,
+        limit: 200,
+      })
+      let list = res.data
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        list = list.filter((c) => c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q))
+      }
+      if (industry.trim()) {
+        list = list.filter((c) => c.industry.toLowerCase().includes(industry.toLowerCase()))
+      }
+      setCompanies(list)
+      setTotal(res.total)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error loading companies')
+    } finally {
+      setLoading(false)
+    }
+  }, [priority, sort, search, industry])
+
+  useEffect(() => { fetchCompanies() }, [fetchCompanies])
+
+  async function handleImport(file: File) {
+    setImporting(true)
+    setImportResult(null)
+    setImportProgress({ done: 0, total: 0 })
+    const result = await importCompaniesCSV(
+      file,
+      async (row: ParsedCSVRow) => { await createCompany(row as unknown as Record<string, unknown>) },
+      (done, total) => setImportProgress({ done, total }),
+    )
+    setImportResult(result)
+    setImporting(false)
+    if (result.success > 0) fetchCompanies()
+  }
+
+  const hotCount = companies.filter((c) => c.latestPriorityLevel === 'hot').length
+  const unevaluated = companies.filter((c) => !c.latestEvaluatedAt).length
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Pipeline de Leads</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {companies.length} empresa{companies.length !== 1 ? 's' : ''} · {hotCount} hot · {unevaluated} sin evaluar
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" /> Importar CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportCompaniesCSV(companies)} disabled={companies.length === 0}>
+            <Download className="h-4 w-4" /> Exportar
+          </Button>
+          <Button size="sm" asChild>
+            <Link href="/companies/new"><Plus className="h-4 w-4" /> Nueva Empresa</Link>
+          </Button>
         </div>
-      </main>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <div className="relative flex-1 min-w-52 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Buscar empresa o industria..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <Select value={priority} onValueChange={setPriority}>
+          <SelectTrigger className="w-36 bg-white">
+            <SelectValue placeholder="Prioridad" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value=" ">Todas</SelectItem>
+            <SelectItem value="hot">🔴 Hot</SelectItem>
+            <SelectItem value="high">🟠 High</SelectItem>
+            <SelectItem value="medium">🟡 Medium</SelectItem>
+            <SelectItem value="low">⚫ Low</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={industry} onValueChange={setIndustry}>
+          <SelectTrigger className="w-52 bg-white">
+            <SelectValue placeholder="Industria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value=" ">Todas las industrias</SelectItem>
+            {INDUSTRY_SUGGESTIONS.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+          <SelectTrigger className="w-48 bg-white">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="score_desc">Mayor score primero</SelectItem>
+            <SelectItem value="score_asc">Menor score primero</SelectItem>
+            <SelectItem value="updated_desc">Actualizado recientemente</SelectItem>
+            <SelectItem value="created_asc">Más antiguo primero</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button variant="ghost" size="icon" onClick={fetchCompanies} title="Refrescar">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+        {error ? (
+          <div className="flex items-center gap-2 p-6 text-red-600 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center gap-2 p-16 text-slate-400">
+            <Loader2 className="h-5 w-5 animate-spin" /> Cargando...
+          </div>
+        ) : companies.length === 0 ? (
+          <div className="flex flex-col items-center gap-4 p-16 text-center">
+            <Building2 className="h-10 w-10 text-slate-300" />
+            <div>
+              <p className="font-medium text-slate-700">No hay empresas</p>
+              <p className="text-sm text-slate-400 mt-1">
+                {search || priority || industry
+                  ? 'Ajusta los filtros para ver más resultados.'
+                  : 'Agrega tu primera empresa para empezar.'}
+              </p>
+            </div>
+            {!search && !priority && !industry && (
+              <Button size="sm" asChild>
+                <Link href="/companies/new"><Plus className="h-4 w-4" /> Nueva Empresa</Link>
+              </Button>
+            )}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableHead>Empresa</TableHead>
+                <TableHead>Industria</TableHead>
+                <TableHead>País</TableHead>
+                <TableHead className="text-center w-20">Score</TableHead>
+                <TableHead className="w-28">Prioridad</TableHead>
+                <TableHead className="w-32">Estado</TableHead>
+                <TableHead className="w-32">Evaluado</TableHead>
+                <TableHead className="w-16"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {companies.map((c) => (
+                <TableRow
+                  key={c.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/companies/${c.id}`)}
+                >
+                  <TableCell className="font-semibold text-slate-900">{c.name}</TableCell>
+                  <TableCell className="text-slate-500 text-sm">{c.industry}</TableCell>
+                  <TableCell className="text-slate-400 text-xs uppercase tracking-wide">{c.country}</TableCell>
+                  <TableCell className="text-center">
+                    {c.latestEvaluatedAt ? (
+                      <span className={`text-lg ${scoreColor(c.latestOpportunityScore)}`}>
+                        {c.latestOpportunityScore}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {c.latestEvaluatedAt ? (
+                      <Badge variant={priorityVariant(c.latestPriorityLevel)}>
+                        {c.latestPriorityLevel.toUpperCase()}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Sin evaluar</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{statusBadge(c.status)}</TableCell>
+                  <TableCell className="text-xs text-slate-400">
+                    {c.latestEvaluatedAt
+                      ? new Date(c.latestEvaluatedAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })
+                      : '—'}
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="text-xs h-7" asChild>
+                      <Link href={`/companies/${c.id}`}>Ver →</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {/* CSV Import Dialog */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(o) => { if (!importing) { setImportOpen(o); if (!o) setImportResult(null) } }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importar empresas desde CSV</DialogTitle>
+            <DialogDescription className="text-xs leading-relaxed">
+              Columnas requeridas: <code className="bg-slate-100 px-1 rounded">name · industry · country</code>
+              <br />Opcionales: <code className="bg-slate-100 px-1 rounded">city · website · whatsapp · leadSource</code>
+              <br />País válido: <code className="bg-slate-100 px-1 rounded">peru · mexico · colombia · chile · spain</code>
+            </DialogDescription>
+          </DialogHeader>
+
+          {!importing && !importResult && (
+            <label className="flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-slate-200 p-8 cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors">
+              <Upload className="h-8 w-8 text-slate-300" />
+              <span className="text-sm text-slate-500">Haz clic para seleccionar tu archivo CSV</span>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f) }}
+              />
+            </label>
+          )}
+
+          {importing && (
+            <div className="flex flex-col items-center gap-4 py-6">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+              <p className="text-sm text-slate-600">
+                Importando {importProgress.done} / {importProgress.total} empresas...
+              </p>
+              <div className="w-full bg-slate-100 rounded-full h-1.5">
+                <div
+                  className="bg-slate-800 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: importProgress.total ? `${(importProgress.done / importProgress.total) * 100}%` : '0%' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {importResult && (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <div className="flex-1 rounded-lg bg-green-50 border border-green-200 p-4 text-center">
+                  <p className="text-3xl font-bold text-green-700">{importResult.success}</p>
+                  <p className="text-xs text-green-600 mt-1">Importadas exitosamente</p>
+                </div>
+                <div className="flex-1 rounded-lg bg-red-50 border border-red-200 p-4 text-center">
+                  <p className="text-3xl font-bold text-red-700">{importResult.failed}</p>
+                  <p className="text-xs text-red-600 mt-1">Fallidas</p>
+                </div>
+              </div>
+              {importResult.errors.length > 0 && (
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3 max-h-24 overflow-y-auto">
+                  {importResult.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-red-600">{e}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {importResult ? (
+              <Button onClick={() => { setImportOpen(false); setImportResult(null) }}>Listo</Button>
+            ) : (
+              <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>Cancelar</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }
