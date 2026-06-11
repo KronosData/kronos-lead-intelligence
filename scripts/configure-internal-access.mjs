@@ -4,23 +4,24 @@
  *
  * Qué hace este script:
  *   1. Pide la contraseña (sin mostrarla en pantalla)
- *   2. Pide confirmarla
- *   3. Genera un hash seguro con scrypt
- *   4. Genera SESSION_SECRET criptográfico
- *   5. Configura las variables en Vercel (producción + preview)
- *   6. Actualiza el archivo .env local
+ *   2. Genera un hash seguro con scrypt
+ *   3. Genera SESSION_SECRET criptográfico
+ *   4. Configura las variables en Vercel vía API REST (sin CLI subprocess)
+ *   5. Actualiza el archivo .env local
  *
  * La contraseña nunca se guarda ni se imprime.
  * Solo el hash va a Vercel y al .env local.
  *
  * Uso: node scripts/configure-internal-access.mjs
+ * Requiere: npx vercel login + npx vercel link (ya hecho)
  */
 
 import { scrypt, randomBytes } from 'node:crypto'
 import { promisify } from 'node:util'
-import { spawn } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { resolve, join } from 'node:path'
+import { homedir } from 'node:os'
+import { createInterface } from 'node:readline'
 
 const scryptAsync = promisify(scrypt)
 const ROOT = resolve(import.meta.dirname, '..')
@@ -60,26 +61,30 @@ try {
 const sessionSecret = randomBytes(64).toString('hex')
 process.stdout.write('SESSION_SECRET generado (64 bytes).\n')
 
-// ── 4. Configurar Vercel ───────────────────────────────────────────────────
+// ── 4. Configurar Vercel vía API REST ──────────────────────────────────────
 
 process.stdout.write('\nConfigurando variables en Vercel...\n')
 
+const { token, projectId, teamId } = loadVercelConfig()
+
 const envVars = [
-  { name: 'INTERNAL_ACCESS_PASSWORD_HASH', value: passwordHash },
-  { name: 'SESSION_SECRET',                value: sessionSecret },
-  { name: 'AUTHORIZED_EMAILS',             value: 'alejandro@kronosdata.tech' },
+  { key: 'INTERNAL_ACCESS_PASSWORD_HASH', value: passwordHash,             type: 'sensitive' },
+  { key: 'SESSION_SECRET',                value: sessionSecret,            type: 'sensitive' },
+  { key: 'AUTHORIZED_EMAILS',             value: 'alejandro@kronosdata.tech', type: 'plain' },
 ]
 const targets = ['production', 'preview']
 
-for (const { name, value } of envVars) {
-  for (const target of targets) {
-    try {
-      // Remove existing value first (ignore errors if it doesn't exist)
-      await run('npx', ['vercel', 'env', 'rm', name, target, '--yes'], null)
-    } catch { /* ok — might not exist */ }
+// Get existing vars once
+const existing = await vercelListEnv(token, projectId, teamId)
 
-    await run('npx', ['vercel', 'env', 'add', name, target], value)
-    process.stdout.write(`  ✓ ${name} → ${target}\n`)
+for (const { key, value, type } of envVars) {
+  const found = existing.find(e => e.key === key)
+  if (found) {
+    await vercelPatchEnv(token, projectId, teamId, found.id, value, targets)
+    process.stdout.write(`  ✓ ${key} actualizada (production + preview)\n`)
+  } else {
+    await vercelCreateEnv(token, projectId, teamId, key, value, type, targets)
+    process.stdout.write(`  ✓ ${key} creada (production + preview)\n`)
   }
 }
 
@@ -114,7 +119,70 @@ process.stdout.write('\n✅ Configuración completada.\n')
 process.stdout.write('   La contraseña NO fue guardada en ningún archivo.\n')
 process.stdout.write('   Vuelve a Claude Code — continuará automáticamente.\n\n')
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Helpers: Vercel API ─────────────────────────────────────────────────────
+
+function loadVercelConfig() {
+  // Read Vercel auth token
+  const tokenPaths = [
+    join(homedir(), 'AppData', 'Roaming', 'xdg.data', 'com.vercel.cli', 'auth.json'),
+    join(homedir(), '.vercel', 'auth.json'),
+    join(homedir(), '.config', 'vercel', 'auth.json'),
+  ]
+  let token = process.env.VERCEL_TOKEN || null
+  if (!token) {
+    for (const p of tokenPaths) {
+      try {
+        const data = JSON.parse(readFileSync(p, 'utf8'))
+        if (data.token) { token = data.token; break }
+      } catch { /* not found at this path */ }
+    }
+  }
+  if (!token) err('No se encontró token de Vercel. Ejecuta: npx vercel login')
+
+  // Read project config from .vercel/repo.json
+  const repoPath = join(ROOT, '.vercel', 'repo.json')
+  let projectId, teamId
+  try {
+    const data = JSON.parse(readFileSync(repoPath, 'utf8'))
+    projectId = data.projects?.[0]?.id
+    teamId = data.projects?.[0]?.orgId
+  } catch {
+    err('No se encontró .vercel/repo.json. Ejecuta: npx vercel link')
+  }
+  if (!projectId) err('project.json no contiene un ID de proyecto. Ejecuta: npx vercel link')
+
+  return { token, projectId, teamId }
+}
+
+async function vercelApi(path, token, method, body) {
+  const url = `https://api.vercel.com${path}`
+  const opts = {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  }
+  if (body) opts.body = JSON.stringify(body)
+  const res = await fetch(url, opts)
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '')
+    throw new Error(`Vercel API ${method} ${path} → ${res.status}: ${txt.slice(0, 200)}`)
+  }
+  return res.json()
+}
+
+async function vercelListEnv(token, projectId, teamId) {
+  const data = await vercelApi(`/v9/projects/${projectId}/env?teamId=${teamId}&limit=50`, token, 'GET')
+  return data.envs || []
+}
+
+async function vercelPatchEnv(token, projectId, teamId, envId, value, targets) {
+  await vercelApi(`/v9/projects/${projectId}/env/${envId}?teamId=${teamId}`, token, 'PATCH', { value, target: targets })
+}
+
+async function vercelCreateEnv(token, projectId, teamId, key, value, type, targets) {
+  await vercelApi(`/v10/projects/${projectId}/env?teamId=${teamId}`, token, 'POST', { key, value, type, target: targets })
+}
+
+// ── Helpers: I/O ────────────────────────────────────────────────────────────
 
 function err(msg) {
   process.stderr.write(`\n❌ ${msg}\n\n`)
@@ -148,7 +216,7 @@ function readHidden(prompt) {
       }
       process.stdin.on('data', onData)
     } else {
-      // Fallback for non-TTY (e.g. piped input)
+      // Fallback for non-TTY (piped input)
       process.stdin.setEncoding('utf8')
       process.stdin.resume()
       let buf = ''
@@ -157,29 +225,5 @@ function readHidden(prompt) {
       process.stdin.once('data', onData)
       process.stdin.once('end', onEnd)
     }
-  })
-}
-
-function run(cmd, args, stdinValue) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(cmd, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      shell: process.platform === 'win32',
-      cwd: ROOT,
-    })
-
-    if (stdinValue !== null && stdinValue !== undefined) {
-      proc.stdin.write(stdinValue + '\n')
-    }
-    proc.stdin.end()
-
-    let out = ''
-    proc.stdout.on('data', d => { out += d.toString() })
-    proc.stderr.on('data', d => { out += d.toString() })
-
-    proc.on('close', code => {
-      if (code === 0) resolve(out)
-      else reject(new Error(`[${cmd} ${args.join(' ')}] exit ${code}: ${out.trim()}`))
-    })
   })
 }

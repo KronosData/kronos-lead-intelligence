@@ -1,209 +1,248 @@
 # INTERNAL_ACCESS_FIX_REPORT.md
-# Sistema de Acceso Interno — Kronos Lead Intelligence
-**Fecha:** 2026-06-11 · **Commit:** `6e2e2c4` · **Estado:** ✅ Desplegado
+# Sistema de Acceso Interno con Seguridad Reforzada
+**Fecha:** 2026-06-11 · **Commit:** `06dbd87` · **Estado:** ✅ Desplegado
 
 ---
 
 ## 1. Causa del cambio
 
-Supabase Auth fallaba silenciosamente en producción: las variables `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` son inlineadas en el bundle de Next.js durante el build. El timing entre la configuración de Vercel y la compilación provocaba que el cliente Supabase apuntara a `undefined`, por lo que ningún intento de login llegaba a Supabase Auth.
+Supabase Auth fallaba silenciosamente en producción. Las variables `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` son inlineadas en el bundle de Next.js durante el build — si no estaban presentes cuando Vercel compiló, quedaban `undefined` hardcodeados. Ningún intento de login llegaba a Supabase.
 
-En lugar de continuar depurando esta dependencia externa, se implementó un sistema de autenticación interno completamente server-side, sin dependencias de terceros para el proceso de login.
+Se implementó un sistema de autenticación propio, completamente server-side, con contraseña hasheada, cookies firmadas, protección contra fuerza bruta, validación de origen y cabeceras de seguridad HTTP.
 
-**Supabase Auth queda temporalmente desactivado como mecanismo de login.** El usuario `alejandro@kronosdata.tech` en Supabase Auth y todos los datos de Supabase permanecen intactos y podrán recuperarse para cuentas individuales en una fase futura.
+**Supabase Auth queda temporalmente desactivado como mecanismo de login.** El usuario en Supabase Auth y todos los datos permanecen intactos.
 
 ---
 
-## 2. Archivos creados
+## 2. Archivos
+
+### Creados
 
 | Archivo | Descripción |
 |---------|-------------|
-| `lib/session.ts` | Utilidades de sesión: `createSessionToken` / `verifySessionToken` vía `jose` |
-| `app/api/auth/login/route.ts` | Endpoint POST — valida email y contraseña, emite cookie de sesión |
-| `app/api/auth/logout/route.ts` | Endpoint POST — elimina la cookie de sesión |
+| `lib/session.ts` | `createSessionToken` / `verifySessionToken` vía `jose` (HS256) |
+| `lib/rate-limit.ts` | Rate limiter en memoria — 5 intentos fallidos / 15 min por IP y por email |
+| `app/api/auth/login/route.ts` | Endpoint POST de login — hash scrypt, rate limit, validación de origen |
+| `app/api/auth/logout/route.ts` | Endpoint POST de logout — elimina cookie, valida origen |
+| `scripts/hash-password.mjs` | Script local para generar `INTERNAL_ACCESS_PASSWORD_HASH` |
 
-## 3. Archivos modificados
+### Modificados
 
 | Archivo | Cambio |
 |---------|--------|
-| `proxy.ts` | Eliminada lógica de Supabase SSR. Ahora valida únicamente la cookie JWT `kronos_session` |
-| `app/login/page.tsx` | Eliminado `createClient` de Supabase. Llama a `POST /api/auth/login` |
-| `components/layout/sidebar.tsx` | Eliminado `createClient` de Supabase. Llama a `POST /api/auth/logout` |
-| `.env.example` | Añadidos `INTERNAL_ACCESS_PASSWORD` y `SESSION_SECRET` con placeholders |
-| `package.json` / `package-lock.json` | Añadida dependencia `jose` |
+| `proxy.ts` | Valida cookie JWT `kronos_session` — sin dependencia de Supabase Auth |
+| `app/login/page.tsx` | Llama a `POST /api/auth/login` — sin Supabase imports |
+| `components/layout/sidebar.tsx` | Llama a `POST /api/auth/logout` — sin Supabase imports |
+| `next.config.ts` | Cabeceras de seguridad HTTP (CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy) |
+| `.env.example` | `INTERNAL_ACCESS_PASSWORD` renombrada a `INTERNAL_ACCESS_PASSWORD_HASH` |
 
 ---
 
-## 4. Cómo funciona el sistema
+## 3. Seguridad de la contraseña
 
-### Flujo de login
-
-```
-Usuario introduce email + contraseña
-        │
-        ▼
-POST /api/auth/login (Node.js runtime)
-  1. Verifica email en AUTHORIZED_EMAILS
-  2. Compara contraseña con INTERNAL_ACCESS_PASSWORD
-     (timingSafeEqual — resistente a timing attacks)
-  3. Si válido: crea JWT firmado con SESSION_SECRET (HS256)
-  4. Establece cookie kronos_session
-        │
-        ▼
-Browser redirige a /
-```
-
-### Flujo de verificación en cada request
+### Variable
 
 ```
-Request → proxy.ts (Edge runtime)
-  1. ¿Ruta pública? (/login, /api/auth/login, /api/auth/logout)
-     → pass through
-  2. ¿Existe cookie kronos_session?
-     No → API: 401 JSON / Página: redirect /login
-  3. ¿JWT válido y no expirado?
-     No → eliminar cookie, redirect /login
-     Sí → pass through
+INTERNAL_ACCESS_PASSWORD_HASH
 ```
 
-### Flujo de logout
+**La contraseña nunca se almacena en texto plano.** Solo el hash se guarda en Vercel.
+No aparece en:
+- Bundle del navegador (sin prefijo `NEXT_PUBLIC_`)
+- GitHub o archivos versionados
+- Logs
+- Cookies
+- Este reporte
+
+### Algoritmo de hash
+
+**scrypt** (implementación nativa de Node.js, sin dependencias adicionales)
+
+| Parámetro | Valor | Descripción |
+|-----------|-------|-------------|
+| N | 65536 (2^16) | Coste CPU/memoria |
+| r | 8 | Tamaño de bloque |
+| p | 1 | Paralelismo |
+| salt | 32 bytes aleatorios | Generado de nuevo en cada hash |
+| keylen | 64 bytes | Longitud del hash derivado |
+
+Formato almacenado: `scrypt:65536:8:1:<salt_hex>:<hash_hex>`
+
+### Cómo generar el hash (localmente)
 
 ```
-Botón "Cerrar sesión"
-        │
-        ▼
-POST /api/auth/logout
-  Elimina cookie kronos_session
-        │
-        ▼
-Browser redirige a /login
+node scripts/hash-password.mjs
 ```
 
-### Cookie de sesión
+El script pide la contraseña con entrada oculta (sin eco en pantalla). Imprime el hash. No almacena nada. Copia el hash directamente en Vercel como `INTERNAL_ACCESS_PASSWORD_HASH`.
+
+**No compartas la contraseña en este chat ni en ningún archivo.**
+
+### Comparación
+
+- Scrypt asíncrono en Node.js (`node:crypto`)
+- `timingSafeEqual` para comparación resistente a timing attacks
+- Email y contraseña siempre se validan antes de responder (sin oracle de timing)
+
+---
+
+## 4. Protección contra fuerza bruta
+
+### Límites
+
+| Criterio | Límite |
+|----------|--------|
+| Intentos fallidos | 5 máximo |
+| Ventana de tiempo | 15 minutos |
+| Criterio de bloqueo | Por IP **y** por email (independientes) |
+| Tiempo de bloqueo | 15 minutos desde el primer intento |
+
+### Implementación
+
+In-memory con `globalThis` (patrón Prisma). Persiste entre invocaciones warm del mismo contenedor serverless. Se resetea en cold starts.
+
+> **Limitación conocida:** En entornos multi-instancia (Vercel alta concurrencia), el contador puede no ser compartido entre instancias. Para un sistema de acceso interno con 1-2 usuarios, esto es aceptable. Para producción de alto tráfico, usar Upstash Redis.
+
+### Logging
+
+Solo se registra:
+- Fecha y hora (ISO 8601)
+- IP parcialmente anonimizada (último octeto IPv4 = `xxx`, grupos IPv6 = `xxxx`)
+- Resultado: `Failed attempt` / `Rate-limited` / `Login success`
+
+Nunca se registra: contraseña, hash, email completo, tokens, cookies.
+
+---
+
+## 5. Sesión segura (cookie)
+
+### Propiedades de la cookie
 
 | Atributo | Valor |
 |----------|-------|
 | Nombre | `kronos_session` |
-| Algoritmo JWT | HS256 |
-| Duración | 12 horas |
-| HttpOnly | ✅ (no accesible desde JavaScript del navegador) |
-| Secure | ✅ en producción (HTTPS únicamente) |
-| SameSite | Lax |
-| Path | / |
+| Algoritmo JWT | HS256 firmado con `SESSION_SECRET` |
+| Duración | 12 horas (`exp` verificado en cada request) |
+| HttpOnly | ✅ No accesible desde JavaScript del navegador |
+| Secure | ✅ Solo HTTPS en producción |
+| SameSite | `Lax` |
+| Path | `/` |
 | Contenido | `{ email, iat, exp }` — sin contraseña ni secretos |
 
----
+### Cómo se rechaza una cookie manipulada
 
-## 5. Rutas protegidas
+La cookie es un JWT firmado con HMAC-SHA256. Si se modifica cualquier byte del payload o del header, la firma no coincide y `jwtVerify` lanza una excepción. `verifySessionToken` devuelve `null`. El proxy redirige a `/login` y elimina la cookie.
 
-### Páginas (redirigen a /login sin sesión válida)
+### Cierre de sesión
 
-| Ruta |
-|------|
-| `/` (dashboard) |
-| `/companies/new` |
-| `/companies/[id]` |
-| `/companies/[id]/edit` |
-
-### API Routes (responden `401 { "error": "Unauthorized" }` sin sesión válida)
-
-| Ruta |
-|------|
-| `/api/companies` |
-| `/api/companies/[id]` |
-| `/api/companies/[id]/evaluate` |
-| `/api/companies/[id]/evaluations` |
-| `/api/companies/[id]/outreach` |
-| `/api/companies/[id]/sales-note` |
-| `/api/research` |
-
-### Rutas públicas (siempre accesibles)
-
-| Ruta | Razón |
-|------|-------|
-| `/login` | Página de autenticación |
-| `/api/auth/login` | Endpoint de inicio de sesión |
-| `/api/auth/logout` | Endpoint de cierre de sesión |
+`POST /api/auth/logout` → `response.cookies.delete(COOKIE_NAME)` → el navegador elimina la cookie completamente.
 
 ---
 
-## 6. Variables de entorno
+## 6. Validación de origen
 
-| Variable | Tipo | Uso |
-|----------|------|-----|
-| `DATABASE_URL` | Server-side | Prisma (sin cambios) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Público (build time) | Cliente Supabase DB (sin cambios) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Público (build time) | Cliente Supabase DB (sin cambios) |
-| `AUTHORIZED_EMAILS` | Server-side | Lista de emails autorizados (ya existía) |
-| `INTERNAL_ACCESS_PASSWORD` | Server-side | Contraseña del sistema de acceso interno — NUNCA en bundle |
-| `SESSION_SECRET` | Server-side | Firma JWT de cookies de sesión — NUNCA en bundle |
+Los endpoints `/api/auth/login` y `/api/auth/logout` verifican el header `Origin`:
 
-`INTERNAL_ACCESS_PASSWORD` y `SESSION_SECRET` no tienen prefijo `NEXT_PUBLIC_` — **nunca llegan al bundle del navegador**.
+- Compara `new URL(origin).host === new URL(request.url).host`
+- Si no coincide → `403 Forbidden`
+- Si falta el header en producción → `403 Forbidden`
+- Permite ausencia del header en desarrollo (hot reload, Postman, etc.)
+
+Esto previene que orígenes externos fuercen acciones de login/logout.
 
 ---
 
-## 7. Resultado TypeScript
+## 7. Rutas protegidas
 
-```
-$ npx tsc --noEmit
-# (sin output)
-# Exit code: 0 — 0 errores
-```
+### Proxy (`proxy.ts`) — protección completa server-side
 
----
+| Tipo | Sin sesión | Con sesión expirada/inválida |
+|------|-----------|------------------------------|
+| Página | Redirect `/login` | Redirect `/login` + elimina cookie |
+| `/api/*` | `401 Unauthorized` | `401 Unauthorized` |
 
-## 8. Resultado del build
+### Páginas privadas
 
-```
-✔ Generated Prisma Client (7.8.0)
-✓ Compiled successfully in 3.2s
-✓ Generating static pages (10/10)
+`/` · `/companies/new` · `/companies/[id]` · `/companies/[id]/edit`
 
-Route (app)
-○ /              ○ /_not-found     ○ /companies/new  ○ /login
-ƒ /api/auth/login    ƒ /api/auth/logout
-ƒ /api/companies     ƒ /api/companies/[id]
-ƒ /api/companies/[id]/evaluate  ƒ /api/companies/[id]/evaluations
-ƒ /api/companies/[id]/outreach  ƒ /api/companies/[id]/sales-note
-ƒ /api/research  ƒ /companies/[id]  ƒ /companies/[id]/edit
+### APIs privadas
 
-ƒ Proxy (Middleware)
-```
+`/api/companies` · `/api/companies/[id]` · `/api/companies/[id]/evaluate` · `/api/companies/[id]/evaluations` · `/api/companies/[id]/outreach` · `/api/companies/[id]/sales-note` · `/api/research`
 
-15 rutas compiladas (2 nuevas: `/api/auth/login`, `/api/auth/logout`).
+### Rutas públicas
+
+`/login` · `/api/auth/login` · `/api/auth/logout` · `_next/static/*` · `_next/image/*` · `favicon.ico` · assets estáticos
 
 ---
 
-## 9. Commit generado
+## 8. Cabeceras de seguridad HTTP
+
+Añadidas en `next.config.ts` para todas las rutas (`source: '/(.*)'`):
+
+| Header | Valor | Protección |
+|--------|-------|-----------|
+| `Content-Security-Policy` | ver abajo | XSS, clickjacking, injection |
+| `X-Content-Type-Options` | `nosniff` | MIME sniffing |
+| `X-Frame-Options` | `DENY` | Clickjacking (compatibilidad con navegadores sin CSP) |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Fuga de URL en referrer |
+
+#### CSP completa
 
 ```
-Commit:  6e2e2c4
-Branch:  master
-Push:    3bc37cf..6e2e2c4  master -> master
-Remote:  https://github.com/KronosData/kronos-lead-intelligence.git
+default-src 'self';
+script-src 'self' 'unsafe-inline';
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:;
+font-src 'self';
+connect-src 'self' https://*.supabase.co;
+frame-src 'none';
+frame-ancestors 'none';
+object-src 'none';
+base-uri 'self'
 ```
+
+> `unsafe-inline` en script-src es necesario para Next.js (scripts de hidratación inline). Para CSP estricto con nonces, se requiere configuración adicional.
+
+---
+
+## 9. Variables de entorno
+
+| Variable | Tipo | Ubicación |
+|----------|------|-----------|
+| `DATABASE_URL` | Server-side | Vercel (existente) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Build-time público | Vercel (existente) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Build-time público | Vercel (existente) |
+| `AUTHORIZED_EMAILS` | Server-side runtime | Vercel (existente) |
+| `INTERNAL_ACCESS_PASSWORD_HASH` | Server-side runtime | Vercel — **a añadir** |
+| `SESSION_SECRET` | Server-side runtime | Vercel — **a añadir** |
+
+`INTERNAL_ACCESS_PASSWORD_HASH` y `SESSION_SECRET` nunca llegan al bundle del navegador (no tienen prefijo `NEXT_PUBLIC_`).
 
 ---
 
 ## 10. Instrucciones para Vercel
 
-### Variables a añadir
-
-Vercel → proyecto `kronos-lead-intelligence` → **Settings → Environment Variables**
-
-#### Variable 1
+### Paso 1 — Generar el hash de la contraseña (en tu terminal local)
 
 ```
-Key:   INTERNAL_ACCESS_PASSWORD
-Value: [la contraseña que tú elijas — mínimo 12 caracteres recomendado]
+node scripts/hash-password.mjs
+```
+
+El script pide la contraseña con entrada oculta. Imprime el hash. Copia el resultado.
+
+### Paso 2 — Añadir variables en Vercel
+
+Vercel → proyecto → **Settings → Environment Variables**
+
+#### Variable 1: hash de contraseña
+
+```
+Key:   INTERNAL_ACCESS_PASSWORD_HASH
+Value: [el hash generado por scripts/hash-password.mjs — empieza con "scrypt:65536:8:1:..."]
 ```
 Marcar: ✅ Production ✅ Preview ✅ Development
 
-Esta es la contraseña con la que entrarás al sistema. Elígela tú directamente en Vercel.
-
----
-
-#### Variable 2
+#### Variable 2: secreto de sesión
 
 ```
 Key:   SESSION_SECRET
@@ -211,31 +250,15 @@ Value: 3c83bc17ddccf62abf3559250e451d7aec85ff210fc5f9c51a679ac2a6d82d7c6d095b994
 ```
 Marcar: ✅ Production ✅ Preview ✅ Development
 
-> Este es el SESSION_SECRET generado criptográficamente (64 bytes / 512 bits). Cópialo exactamente. No lo compartas, no lo publiques, y no lo guardes en ningún archivo del repositorio.
+> Guarda `SESSION_SECRET` como **Sensitive** en Vercel para que no sea visible después de guardarlo.
 
----
+### Paso 3 — Redeploy (si el deployment ya terminó)
 
-### Verificar variables existentes
+Si el deployment del commit `06dbd87` terminó antes de que agregaras las variables:
 
-Estas ya deben existir en Vercel (no modificar):
-- `DATABASE_URL` ✅
-- `NEXT_PUBLIC_SUPABASE_URL` ✅
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` ✅
-- `AUTHORIZED_EMAILS` ✅ (debe tener `alejandro@kronosdata.tech`)
+1. Vercel → Deployments → `···` → **Redeploy** → sin cache
 
----
-
-### Redeploy
-
-Si el deployment de Vercel (`6e2e2c4`) ya terminó **antes** de que agregaras las variables:
-
-1. Vercel → Deployments → último deploy → `···` → **Redeploy**
-2. Desmarcar "Use existing Build Cache"
-3. Confirmar
-
-Si el deployment aún está corriendo cuando agregas las variables, se tomará automáticamente.
-
-> **Nota:** `INTERNAL_ACCESS_PASSWORD` y `SESSION_SECRET` son variables de runtime (no de build time), por lo que técnicamente un redeploy no es obligatorio para ellas. Pero se recomienda para asegurar un estado limpio.
+> `INTERNAL_ACCESS_PASSWORD_HASH` y `SESSION_SECRET` son runtime (no build-time), así que técnicamente no requieren redeploy. Pero se recomienda para estado limpio.
 
 ---
 
@@ -243,40 +266,75 @@ Si el deployment aún está corriendo cuando agregas las variables, se tomará a
 
 | # | Prueba | Esperado |
 |---|--------|----------|
-| 1 | Email correcto + contraseña correcta | Entra al dashboard |
+| 1 | Email correcto + contraseña correcta | Dashboard — login exitoso |
 | 2 | Email correcto + contraseña incorrecta | "Correo o contraseña incorrectos" |
-| 3 | Email no autorizado + contraseña correcta | "Correo o contraseña incorrectos" |
-| 4 | Acceso directo a `/` sin cookie | Redirige a /login |
-| 5 | `GET /api/companies` sin cookie | `{"error":"Unauthorized"}` 401 |
-| 6 | Cookie alterada manualmente | Rechazada, redirige a /login |
-| 7 | Botón "Cerrar sesión" | Cookie eliminada, redirige a /login |
-| 8 | Funcionalidad normal post-login | Dashboard, empresas, evaluaciones operativos |
+| 3 | Email no autorizado + contraseña correcta | "Correo o contraseña incorrectos" (mensaje genérico) |
+| 4 | Acceso directo a `/` sin cookie | Redirige a `/login` |
+| 5 | `POST /api/companies` sin cookie | `{"error":"Unauthorized"}` 401 |
+| 6 | Cookie alterada manualmente | Rechazada, redirect a `/login` |
+| 7 | Botón "Cerrar sesión" | Cookie eliminada, redirect a `/login` |
+| 8 | 5 intentos fallidos seguidos | El 6° intento responde igual que un fallo (rate limited) |
+| 9 | Login desde origen externo (curl con `Origin: https://otro.com`) | `403 Forbidden` |
+| 10 | Sesión válida — funciones actuales | Dashboard, empresas, evaluaciones operativas |
 
 ---
 
-## 12. Riesgos pendientes
+## 12. Resultado TypeScript
 
-| Riesgo | Severidad | Observación |
-|--------|-----------|-------------|
-| Contraseña única compartida | Baja | Es un sistema de acceso interno — diseñado para 1-2 usuarios. Para múltiples cuentas individuales, retomar Supabase Auth en fase futura |
-| Sin rate limiting en /api/auth/login | Baja | Vercel tiene protección básica. Para tráfico elevado, considerar añadir rate limiting |
-| SESSION_SECRET fijo | Informativo | Rotar el secret invalida todas las sesiones activas (usuarios deben volver a hacer login) |
-| Supabase Auth desactivado temporalmente | Informativo | El usuario en Supabase Auth permanece intacto. Reactivable en cualquier momento |
+```
+$ npx tsc --noEmit
+# (sin output) — Exit code: 0 — 0 errores
+```
+
+---
+
+## 13. Resultado del build
+
+```
+✔ Generated Prisma Client (7.8.0)
+✓ Compiled successfully in 3.1s
+✓ Generating static pages (10/10) in 267ms
+
+15 rutas compiladas — ƒ Proxy (Middleware)
+```
+
+---
+
+## 14. Commit generado
+
+```
+Commit:  06dbd87
+Branch:  master
+Push:    6e2e2c4..06dbd87  master -> master
+Remote:  https://github.com/KronosData/kronos-lead-intelligence.git
+```
+
+---
+
+## 15. Riesgos pendientes
+
+| Riesgo | Severidad | Mitigación |
+|--------|-----------|-----------|
+| Rate limiter in-memory sin compartir entre instancias serverless | Baja | Suficiente para uso interno; scrypt hace brute force computacionalmente caro |
+| Contraseña única compartida | Informativo | Sistema de acceso interno — para cuentas individuales, retomar Supabase Auth |
+| `unsafe-inline` en CSP script-src | Baja | Necesario para Next.js inline scripts; mitigado por SameSite y no tener datos públicos |
+| SESSION_SECRET fijo | Informativo | Rotar el secret invalida todas las sesiones activas (login requerido) |
 
 ---
 
 ## Estado del sistema
 
 ```
-🔐 Login:      Sistema interno — email + contraseña (sin Supabase Auth)
-🍪 Sesión:     JWT firmado (HS256), HttpOnly, Secure, 12h, cookie kronos_session
-🗄️  Base datos: Supabase/Prisma sin cambios — 0 empresas listas para datos reales
-🚀 GitHub:     commit 6e2e2c4 en master — auto-deploy en curso
-⚙️  Pendiente:  Añadir INTERNAL_ACCESS_PASSWORD y SESSION_SECRET en Vercel
-✅ TS:         exit 0  ✅ Build: 15 rutas
+🔐 Login:      scrypt hash + cookie JWT HS256 firmada (sin Supabase Auth)
+🛡️  Rate limit: 5 intentos / 15 min por IP y por email
+🔒 Origen:     validación en login y logout
+📋 Headers:    CSP · X-Content-Type-Options · X-Frame-Options · Referrer-Policy
+🍪 Cookie:     HttpOnly · Secure · SameSite=Lax · 12h · firmada · rechazo por tamper
+🚀 GitHub:     commit 06dbd87 en master
+⚙️  Pendiente:  1) generar hash local, 2) añadir INTERNAL_ACCESS_PASSWORD_HASH en Vercel
 ```
 
 ---
 
 *Reporte generado el 2026-06-11 · Kronos Lead Intelligence*
-*Commit: 6e2e2c4 · TypeScript: exit 0 · Build: ✅ 15 rutas*
+*Commit: 06dbd87 · TypeScript: exit 0 · Build: ✅ 15 rutas*
