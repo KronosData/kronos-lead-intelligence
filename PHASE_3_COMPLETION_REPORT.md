@@ -147,7 +147,7 @@ npx tsc --noEmit → exit 0 (zero errors)
 
 **Client-side filtering for search + industry** — Dashboard fetches up to 200 companies (server-side priority + sort), then filters search/industry on the client. For current scale (<200 companies), this avoids extra round-trips and keeps UX responsive.
 
-**No auth** — Explicitly deferred per Phase 3 spec. `evaluatedBy` is hardcoded to `alejandro@kronosdata.com` in create/edit/re-evaluate flows.
+**No auth** — Explicitly deferred per Phase 3 spec. `evaluatedBy` is hardcoded to `alejandro@kronosdata.tech` in create/edit/re-evaluate flows.
 
 ---
 

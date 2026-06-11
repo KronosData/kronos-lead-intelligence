@@ -177,7 +177,7 @@ GET /api/companies/eae2e8da-...
   "latestEvaluation": {
     "id": "...",
     "companyId": "eae2e8da-...",
-    "evaluatedBy": "alejandro@kronosdata.com",
+    "evaluatedBy": "alejandro@kronosdata.tech",
     "signalHasWebsite": false,
     "signalHasWhatsapp": true,
     "opportunityScore": 87,
@@ -256,7 +256,7 @@ Runs the full evaluation pipeline and persists results. Creates a new evaluation
 **Request Body**
 ```json
 {
-  "evaluatedBy": "alejandro@kronosdata.com",
+  "evaluatedBy": "alejandro@kronosdata.tech",
   "signalHasWebsite": true,
   "signalHasWhatsapp": true,
   "signalHasContactForm": false,
@@ -282,7 +282,7 @@ Runs the full evaluation pipeline and persists results. Creates a new evaluation
 {
   "id": "new-eval-uuid",
   "companyId": "eae2e8da-...",
-  "evaluatedBy": "alejandro@kronosdata.com",
+  "evaluatedBy": "alejandro@kronosdata.tech",
   "signalHasWebsite": true,
   "signalHasWhatsapp": true,
   "signalHasContactForm": false,
@@ -390,7 +390,7 @@ GET /api/companies/eae2e8da-.../outreach
       "companyId": "eae2e8da-...",
       "channel": "linkedin",
       "messageSent": "Hola Rosa...",
-      "sentBy": "alejandro@kronosdata.com",
+      "sentBy": "alejandro@kronosdata.tech",
       "sentAt": "2026-06-08T11:00:00.000Z",
       "responseReceived": false,
       "responseType": "no_response",
@@ -414,7 +414,7 @@ Logs a new outreach message.
 {
   "channel": "whatsapp",
   "messageSent": "Hola, le escribo de Kronos Data...",
-  "sentBy": "alejandro@kronosdata.com",
+  "sentBy": "alejandro@kronosdata.tech",
   "responseReceived": false,
   "sequenceNumber": 2,
   "nextFollowUpAt": "2026-06-17T10:00:00.000Z",
@@ -451,7 +451,7 @@ Returns the current sales note for a company, or `null` if none exists.
   "closeProbability": 40,
   "nextAction": "Segundo intento de contacto por LinkedIn",
   "nextActionDate": "2026-06-12T10:00:00.000Z",
-  "assignedTo": "alejandro@kronosdata.com",
+  "assignedTo": "alejandro@kronosdata.tech",
   "createdAt": "2026-06-10T17:13:40.000Z",
   "updatedAt": "2026-06-10T17:13:40.000Z"
 }

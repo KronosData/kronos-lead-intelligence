@@ -11,7 +11,7 @@ Este reporte documenta el estado actual, evalúa el enfoque vigente, y entrega 1
 
 **Hallazgos críticos:**
 - ❌ Cero plantillas de outreach en el sistema
-- ❌ Email incorrecto `alejandro@kronosdata.com` en 4 archivos de código fuente (corregido en este reporte)
+- ❌ Email incorrecto (`.com` en lugar de `.tech`) en 4 archivos de código fuente (corregido en este reporte)
 - ✅ Los mensajes guardados se muestran completos en la UI (sin truncamiento)
 
 ---
@@ -87,7 +87,7 @@ El texto se muestra completo. No hay `line-clamp`, `overflow-hidden`, `max-h`, n
 
 ## Sección 4 — Corrección de Email
 
-`alejandro@kronosdata.com` → `alejandro@kronosdata.tech`
+`[email incorrecto con dominio .com]` → `alejandro@kronosdata.tech`
 
 **Archivos corregidos:**
 
