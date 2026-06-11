@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { BarChart3, Building2, Plus, LogOut } from 'lucide-react'
+import { BarChart3, Building2, Compass, Plus, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const nav = [
   { href: '/', label: 'Dashboard', icon: BarChart3 },
   { href: '/companies/new', label: 'Add Company', icon: Plus },
+  { href: '/companies/discover', label: 'Descubrir Empresas', icon: Compass },
 ]
 
 export function Sidebar() {
