@@ -30,7 +30,24 @@ export default function LoginPage() {
     })
 
     if (authError) {
-      setError('Correo o contraseña incorrectos.')
+      const code = (authError as { code?: string }).code
+      const status = (authError as { status?: number }).status
+
+      console.error('[Auth] signInWithPassword failed:', {
+        name: authError.name,
+        message: authError.message,
+        code,
+        status,
+      })
+
+      const isNetworkError = authError.name !== 'AuthApiError'
+      if (isNetworkError) {
+        setError(`Error de conexión con el servidor de autenticación. (${authError.name}: ${authError.message}) — Revisa los logs de Vercel.`)
+      } else if (code === 'invalid_credentials') {
+        setError('Correo o contraseña incorrectos.')
+      } else {
+        setError(`Error de autenticación: ${code ?? status ?? authError.message}`)
+      }
       setLoading(false)
       return
     }
