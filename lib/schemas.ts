@@ -2,7 +2,11 @@ import { z } from 'zod'
 
 // ─── Shared primitives ─────────────────────────────────────────────────────────
 
-const Country = z.enum(['peru', 'mexico', 'colombia', 'chile', 'spain'])
+const Country = z.enum([
+  'peru', 'mexico', 'colombia', 'chile', 'spain',
+  'argentina', 'ecuador', 'bolivia', 'uruguay', 'paraguay',
+  'costa_rica', 'panama', 'guatemala', 'honduras', 'el_salvador', 'nicaragua',
+])
 
 const CompanyStatus = z.enum(['active', 'contacted', 'client', 'archived'])
 

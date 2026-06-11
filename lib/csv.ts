@@ -96,7 +96,11 @@ const ALIASES: Record<string, string> = {
   'fuente': 'leadSource', 'lead_source': 'leadSource', 'source': 'leadSource',
 }
 
-const VALID_COUNTRIES = ['peru', 'mexico', 'colombia', 'chile', 'spain']
+const VALID_COUNTRIES = [
+  'peru', 'mexico', 'colombia', 'chile', 'spain',
+  'argentina', 'ecuador', 'bolivia', 'uruguay', 'paraguay',
+  'costa_rica', 'panama', 'guatemala', 'honduras', 'el_salvador', 'nicaragua',
+]
 const VALID_LEAD_SOURCES = [
   'google_maps', 'linkedin', 'instagram', 'facebook',
   'referral', 'website', 'cold_outreach', 'event', 'other',

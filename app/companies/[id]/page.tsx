@@ -269,13 +269,20 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
   )
 }
 
+function buildWhatsAppUrl(number: string, message: string): string {
+  const clean = number.replace(/[^0-9]/g, '')
+  return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`
+}
+
 function generateOutreachTemplate(
   channel: 'whatsapp' | 'email' | 'linkedin',
   version: number,
   companyName: string,
   industry: string,
-  ev: Evaluation
+  ev: Evaluation,
+  contactName?: string | null
 ): string {
+  const nombre = contactName?.trim() || companyName || 'equipo'
   const revenue = `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}`
   const primary = (ev.recommendedServices[0] ?? '').toLowerCase()
   const v = version % 2
@@ -315,7 +322,7 @@ function generateOutreachTemplate(
       ],
     }
     const [t0, t1] = tpl[scenario] ?? tpl.followup
-    return v === 0 ? t0 : t1
+    return (v === 0 ? t0 : t1).replace(/\[Nombre\]/g, nombre)
   }
 
   if (channel === 'email') {
@@ -329,13 +336,13 @@ function generateOutreachTemplate(
     }
     const [s0, s1] = subjects[scenario] ?? subjects.followup
     const subject = v === 0 ? s0 : s1
-    return `Asunto: ${subject}\n\nHola [Nombre],\n\nAnalizamos el perfil digital de ${companyName} y detectamos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso representa una pérdida estimada de ${revenue} al mes — ${ev.estimatedLeadsLostPerMonth} leads que no se convierten.\n\nServicios que resuelven esto directamente:\n${ev.recommendedServices.map((s) => `→ ${s}`).join('\n')}\n\nTiempo de implementación: ${ev.implementationTimeEstimate}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+    return `Asunto: ${subject}\n\nHola ${nombre},\n\nAnalizamos el perfil digital de ${companyName} y detectamos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso representa una pérdida estimada de ${revenue} al mes — ${ev.estimatedLeadsLostPerMonth} leads que no se convierten.\n\nServicios que resuelven esto directamente:\n${ev.recommendedServices.map((s) => `→ ${s}`).join('\n')}\n\nTiempo de implementación: ${ev.implementationTimeEstimate}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
   }
 
   // LinkedIn
   return v === 0
-    ? `[Nombre], analicé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${revenue}/mes en clientes que no se convierten.\n\nEn Kronos lo resolvemos en ${ev.implementationTimeEstimate}. ¿Tienes 20 min esta semana?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
-    : `[Nombre], una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn la mayoría de negocios de ${industry} que analizamos, ahí está la mayor fuga — ${revenue}/mes de impacto.\n\n¿Hablamos 20 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+    ? `${nombre}, analicé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${revenue}/mes en clientes que no se convierten.\n\nEn Kronos lo resolvemos en ${ev.implementationTimeEstimate}. ¿Tienes 20 min esta semana?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+    : `${nombre}, una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn la mayoría de negocios de ${industry} que analizamos, ahí está la mayor fuga — ${revenue}/mes de impacto.\n\n¿Hablamos 20 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
 }
 
 function OutreachPanel({
@@ -343,11 +350,15 @@ function OutreachPanel({
   evaluation,
   companyName,
   industry,
+  contactName,
+  whatsapp,
 }: {
   companyId: string
   evaluation: Evaluation | null
   companyName: string
   industry: string
+  contactName?: string | null
+  whatsapp?: string | null
 }) {
   const [records, setRecords] = useState<OutreachRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -367,7 +378,7 @@ function OutreachPanel({
   const [copied, setCopied] = useState(false)
 
   const liveTemplate = evaluation
-    ? generateOutreachTemplate(templateChannel, templateVersion, companyName, industry, evaluation)
+    ? generateOutreachTemplate(templateChannel, templateVersion, companyName, industry, evaluation, contactName)
     : ''
   const templateText = editingTemplate ? editedTemplate : liveTemplate
 
@@ -496,6 +507,13 @@ function OutreachPanel({
               {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
               {copied ? 'Copiado' : 'Copiar'}
             </Button>
+            {templateChannel === 'whatsapp' && whatsapp && (
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs" asChild>
+                <a href={buildWhatsAppUrl(whatsapp, templateText)} target="_blank" rel="noopener noreferrer">
+                  <MessageSquare className="h-3 w-3" /> Abrir WhatsApp
+                </a>
+              </Button>
+            )}
             {editingTemplate ? (
               <Button
                 size="sm" variant="outline"
@@ -970,6 +988,8 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
             evaluation={company.latestEvaluation}
             companyName={company.name}
             industry={company.industry}
+            contactName={company.salesNote?.contactName}
+            whatsapp={company.whatsapp}
           />
         </TabsContent>
 

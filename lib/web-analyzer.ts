@@ -229,7 +229,7 @@ export async function analyzeUrl(rawUrl: string): Promise<ResearchResult> {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
+    const timeoutId = setTimeout(() => controller.abort(), 6000)
     let response: Response
     try {
       response = await fetch(url, {

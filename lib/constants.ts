@@ -7,6 +7,17 @@ export const COUNTRIES: { value: Country; label: string }[] = [
   { value: 'mexico', label: 'México' },
   { value: 'colombia', label: 'Colombia' },
   { value: 'chile', label: 'Chile' },
+  { value: 'argentina', label: 'Argentina' },
+  { value: 'ecuador', label: 'Ecuador' },
+  { value: 'bolivia', label: 'Bolivia' },
+  { value: 'uruguay', label: 'Uruguay' },
+  { value: 'paraguay', label: 'Paraguay' },
+  { value: 'costa_rica', label: 'Costa Rica' },
+  { value: 'panama', label: 'Panamá' },
+  { value: 'guatemala', label: 'Guatemala' },
+  { value: 'honduras', label: 'Honduras' },
+  { value: 'el_salvador', label: 'El Salvador' },
+  { value: 'nicaragua', label: 'Nicaragua' },
   { value: 'spain', label: 'España' },
 ]
 

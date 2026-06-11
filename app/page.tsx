@@ -295,7 +295,7 @@ export default function DashboardPage() {
             <DialogDescription className="text-xs leading-relaxed">
               Columnas requeridas: <code className="bg-slate-100 px-1 rounded">name · industry · country</code>
               <br />Opcionales: <code className="bg-slate-100 px-1 rounded">city · website · whatsapp · leadSource</code>
-              <br />País válido: <code className="bg-slate-100 px-1 rounded">peru · mexico · colombia · chile · spain</code>
+              <br />País válido: <code className="bg-slate-100 px-1 rounded">peru · mexico · colombia · chile · argentina · ecuador · bolivia · uruguay · paraguay · costa_rica · panama · guatemala · honduras · el_salvador · nicaragua · spain</code>
             </DialogDescription>
           </DialogHeader>
 
