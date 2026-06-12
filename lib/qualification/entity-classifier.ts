@@ -128,7 +128,7 @@ const GOVERNMENT_PATTERNS = [
 
 const PUBLIC_HEALTHCARE_PATTERNS = [
   'hospital nacional', 'hospital regional', 'hospital base',
-  'hospital general de ', 'hospital central',
+  'hospital general de ', 'hospital central', 'hospital publico',
   'clinica del estado', 'clinica estatal',
   'essalud ', 'es salud',
   'inmp ', 'insn ', 'inei salud',
