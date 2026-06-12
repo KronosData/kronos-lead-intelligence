@@ -1,5 +1,12 @@
 import type { SignalFlags, CategoryScores, PriorityLevel } from './types'
 import { PRIORITY_THRESHOLDS } from './constants'
+import {
+  applyEvidence,
+  computeCoverage,
+  scoreConfidenceFromCoverage,
+  evaluationStatusFromCoverage,
+  type SignalEvidenceMap,
+} from './evidence'
 
 // ─── Category score calculators (pure functions) ──────────────────────────────
 // Each signal belongs to exactly one category.
@@ -58,6 +65,30 @@ function getPriorityLevel(opportunityScore: number): PriorityLevel {
 }
 
 // ─── Main scoring function ────────────────────────────────────────────────────
+
+// computeScoresWithEvidence neutralizes unknown signals before scoring.
+// Coverage < 40% → priority capped at 'medium'; score reflects only confirmed evidence.
+export function computeScoresWithEvidence(
+  signals: SignalFlags,
+  evidence: SignalEvidenceMap,
+): CategoryScores {
+  const neutralized = applyEvidence(signals, evidence)
+  const base = computeScores(neutralized)
+  const coverage = computeCoverage(evidence)
+
+  let { priorityLevel } = base
+  if (coverage < 40 && (priorityLevel === 'hot' || priorityLevel === 'high')) {
+    priorityLevel = 'medium'
+  }
+
+  return {
+    ...base,
+    priorityLevel,
+    researchCoverage: coverage,
+    scoreConfidence: scoreConfidenceFromCoverage(coverage),
+    evaluationStatus: evaluationStatusFromCoverage(coverage),
+  }
+}
 
 export function computeScores(signals: SignalFlags): CategoryScores {
   const leadGen = scoreLeadGeneration(signals)

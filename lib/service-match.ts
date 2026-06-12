@@ -2,7 +2,6 @@ import type { SignalFlags, ServiceMatchOutput, ImplementationDifficulty, KronosS
 import { KRONOS_SERVICES } from './constants'
 
 // ─── Service trigger rules ────────────────────────────────────────────────────
-// Each rule maps signal conditions to a service key from KRONOS_SERVICES
 
 function getMatchedServiceKeys(s: SignalFlags): string[] {
   const matched: string[] = []
@@ -39,12 +38,10 @@ function getMatchedServiceKeys(s: SignalFlags): string[] {
     matched.push('website_development')
   }
 
-  // Sales process automation requires all three major operational problems
   if (s.signalSlowResponse && s.signalWeakFollowup && s.signalManualWork) {
     matched.push('sales_process_automation')
   }
 
-  // Digital presence audit is a catch-all for weak online presence
   if (s.signalWeakOnlinePresence) {
     matched.push('digital_presence_audit')
   }
@@ -68,37 +65,86 @@ function aggregateDifficulty(services: KronosService[]): ImplementationDifficult
   ) ?? 'low'
 }
 
-// ─── Time estimate aggregation ────────────────────────────────────────────────
+// ─── Tiered service selection ─────────────────────────────────────────────────
+// Returns: { primaryKey, complementaryKeys, futureKeys }
+// Low coverage (< 40%): primary = audit (diagnostic step)
+// High coverage: primary determined by confirmed impact priority
 
-function aggregateTimeEstimate(services: KronosService[]): string {
-  if (services.length === 0) return '1 semana'
-  if (services.length === 1) return services[0].timeEstimate
+const PRIMARY_PRIORITY_ORDER = [
+  'website_development',
+  'whatsapp_automation',
+  'appointment_booking',
+  'lead_capture_funnel',
+  'crm_followup_automation',
+  'google_business_setup',
+  'social_media_presence',
+  'review_management',
+  'sales_process_automation',
+]
 
-  // Estimate based on highest difficulty service as anchor
-  const highestDiff = aggregateDifficulty(services)
-  if (highestDiff === 'high') return '6–12 semanas'
-  if (highestDiff === 'medium') return '3–6 semanas'
-  return '1–3 semanas'
+function selectTieredKeys(
+  matchedKeys: string[],
+  coverage: number,
+): { primaryKey: string; complementaryKeys: string[]; futureKeys: string[] } {
+  if (matchedKeys.length === 0) {
+    return { primaryKey: 'digital_presence_audit', complementaryKeys: [], futureKeys: [] }
+  }
+
+  let primaryKey: string
+  let remaining: string[]
+
+  if (coverage < 40) {
+    // Low evidence → lead with the diagnostic; safer and more honest
+    primaryKey = 'digital_presence_audit'
+    remaining = matchedKeys.filter((k) => k !== 'digital_presence_audit')
+  } else {
+    // Pick highest-impact confirmed service
+    const byPriority = PRIMARY_PRIORITY_ORDER.find((k) => matchedKeys.includes(k))
+    primaryKey = byPriority ?? matchedKeys[0]
+    remaining = matchedKeys.filter((k) => k !== primaryKey)
+  }
+
+  // Prefer quick-win complementary services (low difficulty first)
+  const sorted = [...remaining].sort((a, b) => {
+    const da = DIFFICULTY_RANK[KRONOS_SERVICES[a]?.difficulty ?? 'low']
+    const db = DIFFICULTY_RANK[KRONOS_SERVICES[b]?.difficulty ?? 'low']
+    return da - db
+  })
+
+  const complementaryKeys = sorted.slice(0, 2)
+  const futureKeys = sorted.slice(2)
+
+  return { primaryKey, complementaryKeys, futureKeys }
 }
 
 // ─── Main service match function ──────────────────────────────────────────────
 
-export function matchServices(signals: SignalFlags): ServiceMatchOutput {
+export function matchServices(signals: SignalFlags, coverage = 100): ServiceMatchOutput {
   const matchedKeys = getMatchedServiceKeys(signals)
-  const matchedServices = matchedKeys
-    .map((key) => KRONOS_SERVICES[key])
-    .filter(Boolean)
+  const { primaryKey, complementaryKeys, futureKeys } = selectTieredKeys(matchedKeys, coverage)
 
-  const recommendedServices = matchedServices.map((s) => s.name)
+  const primarySvc = KRONOS_SERVICES[primaryKey]
+  const complementarySvcs = complementaryKeys.map((k) => KRONOS_SERVICES[k]).filter(Boolean)
 
-  const totalPriceMin = matchedServices.reduce((sum, s) => sum + s.priceMin, 0)
-  const totalPriceMax = matchedServices.reduce((sum, s) => sum + s.priceMax, 0)
+  const primaryName = primarySvc?.name ?? primaryKey
+  const complementaryNames = complementarySvcs.map((s) => s.name)
+  const futureNames = futureKeys.map((k) => KRONOS_SERVICES[k]?.name ?? k).filter(Boolean)
+
+  // Price = primary + complementary only (max 3 services total in proposal)
+  const priceMin = [primarySvc, ...complementarySvcs].filter(Boolean).reduce((sum, s) => sum + s.priceMin, 0)
+  const priceMax = [primarySvc, ...complementarySvcs].filter(Boolean).reduce((sum, s) => sum + s.priceMax, 0)
+
+  const priceLabel = coverage < 40 ? 'Rango preliminar' : 'Estimado'
 
   return {
-    recommendedServices,
-    implementationDifficulty: aggregateDifficulty(matchedServices),
-    implementationTimeEstimate: aggregateTimeEstimate(matchedServices),
-    estimatedProjectPriceMin: totalPriceMin,
-    estimatedProjectPriceMax: totalPriceMax,
+    recommendedServices: [primaryName, ...complementaryNames],
+    primaryService: primaryName,
+    complementaryServices: complementaryNames,
+    futureServices: futureNames,
+    implementationDifficulty: aggregateDifficulty([primarySvc, ...complementarySvcs].filter(Boolean)),
+    implementationTimeEstimate: primarySvc?.timeEstimate ?? '1 semana',
+    estimatedProjectPriceMin: priceMin,
+    estimatedProjectPriceMax: priceMax,
+    priceLabel,
   }
 }

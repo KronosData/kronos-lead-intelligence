@@ -1,41 +1,61 @@
 import type { SignalFlags, DiagnosisOutput } from './types'
+import type { SignalEvidenceMap } from './evidence'
+import { SIGNAL_DEFINITIONS } from './constants'
 
 // ─── Problem detection ────────────────────────────────────────────────────────
+// With evidence: only list problems that are confirmed or inferred (not unknown).
+// Unknown signals are excluded — absence of evidence is not evidence of a problem.
 
-function detectProblems(s: SignalFlags): string[] {
+function detectProblems(s: SignalFlags, evidence?: SignalEvidenceMap): string[] {
   const problems: string[] = []
 
-  if (!s.signalHasWebsite) problems.push('Sin sitio web activo')
-  if (!s.signalHasWhatsapp) problems.push('Sin WhatsApp visible')
-  if (!s.signalHasContactForm) problems.push('Sin formulario de contacto')
-  if (!s.signalHasBookingSystem) problems.push('Sin sistema de reservas o citas')
-  if (!s.signalHasInstagram) problems.push('Sin presencia en Instagram')
-  if (!s.signalHasLinkedin) problems.push('Sin presencia en LinkedIn')
-  if (!s.signalHasGoogleBusiness) problems.push('Sin Google Business Profile')
-  if (!s.signalHasReviews) problems.push('Sin reseñas en Google')
-  if (s.signalHasUnansweredReviews) problems.push('Reseñas sin responder detectadas')
-  if (!s.signalHasClearCta) problems.push('Sin llamada a la acción (CTA) clara')
-  if (!s.signalHasLeadCapture) problems.push('Sin captura de leads en el sitio')
-  if (s.signalSlowResponse) problems.push('Señales de respuesta lenta a consultas')
-  if (s.signalWeakFollowup) problems.push('Señales de seguimiento débil después del primer contacto')
-  if (s.signalManualWork) problems.push('Señales de trabajo manual repetitivo en procesos')
-  if (s.signalWeakOnlinePresence) problems.push('Presencia online débil o desactualizada')
+  function add(signalKey: keyof SignalFlags, problemText: string, condition: boolean) {
+    if (!condition) return
+    if (!evidence) { problems.push(problemText); return }
+    const entry = evidence[signalKey]
+    if (!entry) { problems.push(problemText); return }
+    if (entry.status === 'unknown') return // skip — not confirmed
+    if (entry.status === 'inferred') {
+      problems.push(`(posible) ${problemText.charAt(0).toLowerCase()}${problemText.slice(1)}`)
+    } else {
+      problems.push(problemText)
+    }
+  }
+
+  add('signalHasWebsite',           'Sin sitio web activo',                          !s.signalHasWebsite)
+  add('signalHasWhatsapp',          'Sin WhatsApp visible',                           !s.signalHasWhatsapp)
+  add('signalHasContactForm',       'Sin formulario de contacto',                     !s.signalHasContactForm)
+  add('signalHasBookingSystem',     'Sin sistema de reservas o citas',                !s.signalHasBookingSystem)
+  add('signalHasInstagram',         'Sin presencia en Instagram',                     !s.signalHasInstagram)
+  add('signalHasLinkedin',          'Sin presencia en LinkedIn',                      !s.signalHasLinkedin)
+  add('signalHasGoogleBusiness',    'Sin Google Business Profile',                    !s.signalHasGoogleBusiness)
+  add('signalHasReviews',           'Sin reseñas en Google',                          !s.signalHasReviews)
+  add('signalHasUnansweredReviews', 'Reseñas sin responder detectadas',               s.signalHasUnansweredReviews)
+  add('signalHasClearCta',          'Sin llamada a la acción (CTA) clara',            !s.signalHasClearCta)
+  add('signalHasLeadCapture',       'Sin captura de leads en el sitio',               !s.signalHasLeadCapture)
+  add('signalSlowResponse',         'Señales de respuesta lenta a consultas',          s.signalSlowResponse)
+  add('signalWeakFollowup',         'Señales de seguimiento débil tras el contacto',  s.signalWeakFollowup)
+  add('signalManualWork',           'Señales de trabajo manual repetitivo',            s.signalManualWork)
+  add('signalWeakOnlinePresence',   'Presencia online débil o desactualizada',         s.signalWeakOnlinePresence)
 
   return problems
 }
 
 // ─── Pain point identification ────────────────────────────────────────────────
 
-function identifyPainPoint(s: SignalFlags): string {
+function identifyPainPoint(s: SignalFlags, coverage: number): string {
+  if (coverage < 40) {
+    return 'Información preliminar — con los datos disponibles no es posible identificar el dolor principal. Un diagnóstico inicial permitirá confirmar las oportunidades concretas.'
+  }
+
   const hasFollowUpIssue = s.signalSlowResponse || s.signalWeakFollowup
   const hasLeadIssue = !s.signalHasContactForm || !s.signalHasLeadCapture
   const hasAutomationIssue = s.signalManualWork || !s.signalHasBookingSystem
   const hasPresenceIssue = !s.signalHasWebsite || s.signalWeakOnlinePresence
   const hasReputationIssue = !s.signalHasGoogleBusiness || s.signalHasUnansweredReviews
 
-  // Most critical combinations first
   if (hasFollowUpIssue && hasLeadIssue && hasAutomationIssue) {
-    return 'Fuga masiva de ingresos: sin captura de leads, sin seguimiento y procesos 100% manuales. El negocio está perdiendo clientes en cada etapa del proceso de venta.'
+    return 'Fuga de ingresos en múltiples etapas: sin captura de leads estructurada, sin seguimiento sistemático y con procesos mayormente manuales. El negocio está perdiendo clientes en cada paso del proceso de venta.'
   }
 
   if (hasFollowUpIssue && hasLeadIssue) {
@@ -71,7 +91,11 @@ function identifyPainPoint(s: SignalFlags): string {
 
 // ─── Solution recommendation ──────────────────────────────────────────────────
 
-function recommendSolution(s: SignalFlags): string {
+function recommendSolution(s: SignalFlags, coverage: number): string {
+  if (coverage < 40) {
+    return 'Una auditoría de presencia digital nos permitirá confirmar el diagnóstico y definir las acciones prioritarias con datos concretos.'
+  }
+
   const solutions: string[] = []
 
   if (s.signalSlowResponse || s.signalWeakFollowup || !s.signalHasWhatsapp) {
@@ -114,7 +138,7 @@ function recommendSolution(s: SignalFlags): string {
 
 function estimateValue(
   industry: string,
-  opportunityScore: number
+  opportunityScore: number,
 ): { min: number; max: number } {
   const industryLower = industry.toLowerCase()
 
@@ -146,14 +170,16 @@ function estimateValue(
 export function generateDiagnosis(
   signals: SignalFlags,
   industry: string,
-  opportunityScore: number
+  opportunityScore: number,
+  coverage = 100,
+  evidence?: SignalEvidenceMap,
 ): DiagnosisOutput {
   const value = estimateValue(industry, opportunityScore)
 
   return {
-    detectedProblems: detectProblems(signals),
-    probablePainPoint: identifyPainPoint(signals),
-    recommendedSolution: recommendSolution(signals),
+    detectedProblems: detectProblems(signals, evidence),
+    probablePainPoint: identifyPainPoint(signals, coverage),
+    recommendedSolution: recommendSolution(signals, coverage),
     estimatedValueMin: value.min,
     estimatedValueMax: value.max,
   }

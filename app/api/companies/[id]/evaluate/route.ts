@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/db'
 import { EvaluationSchema } from '@/lib/schemas'
-import { computeScores } from '@/lib/scoring'
+import { computeScoresWithEvidence } from '@/lib/scoring'
 import { generateDiagnosis } from '@/lib/diagnosis'
 import { matchServices } from '@/lib/service-match'
 import { estimateRevenueOpportunity } from '@/lib/value-estimator'
+import { evidenceAllManual } from '@/lib/evidence'
 import {
   created,
   notFound,
@@ -33,23 +34,25 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
     const { evaluatedBy, ...signals } = parsed.data
     const typedSignals = signals as SignalFlags
 
-    // Run all four pure engines
-    const scores    = computeScores(typedSignals)
-    const diagnosis = generateDiagnosis(typedSignals, company.industry, scores.opportunityScore)
-    const services  = matchServices(typedSignals)
+    // Manual evaluations: all signals are explicitly set by the user → 100% coverage
+    const evidence = evidenceAllManual(typedSignals)
+
+    const scores    = computeScoresWithEvidence(typedSignals, evidence)
+    const coverage  = scores.researchCoverage ?? 100
+    const diagnosis = generateDiagnosis(typedSignals, company.industry, scores.opportunityScore, coverage, evidence)
+    const services  = matchServices(typedSignals, coverage)
     const revenue   = estimateRevenueOpportunity(
       typedSignals,
       company.industry,
       services.estimatedProjectPriceMin,
+      coverage,
     )
 
-    // Persist atomically: new evaluation row + update denormalized company fields
     const evaluation = await prisma.$transaction(async (tx) => {
       const ev = await tx.evaluation.create({
         data: {
           companyId:   id,
           evaluatedBy,
-          // signals
           ...typedSignals,
           // scores
           scoreLeadGeneration:        scores.scoreLeadGeneration,
@@ -70,16 +73,24 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
           estimatedLeadsLostPerMonth:   revenue.estimatedLeadsLostPerMonth,
           estimatedRevenueLostPerMonth: revenue.estimatedRevenueLostPerMonth,
           estimatedRoiPotential:        revenue.estimatedRoiPotential,
-          // service match
+          // service match (tiered)
           recommendedServices:        services.recommendedServices,
+          primaryService:             services.primaryService,
+          complementaryServices:      services.complementaryServices,
+          futureServices:             services.futureServices,
           implementationDifficulty:   services.implementationDifficulty,
           implementationTimeEstimate: services.implementationTimeEstimate,
           estimatedProjectPriceMin:   services.estimatedProjectPriceMin,
           estimatedProjectPriceMax:   services.estimatedProjectPriceMax,
+          priceLabel:                 services.priceLabel,
+          // evidence metadata
+          signalEvidence:   evidence as object,
+          researchCoverage: coverage,
+          scoreConfidence:  scores.scoreConfidence,
+          evaluationStatus: scores.evaluationStatus,
         },
       })
 
-      // Update denormalized fields on the parent company
       await tx.company.update({
         where: { id },
         data: {

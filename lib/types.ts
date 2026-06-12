@@ -89,6 +89,10 @@ export interface CategoryScores {
   scoreReputation: number
   opportunityScore: number
   priorityLevel: PriorityLevel
+  // Evidence-aware fields (optional — absent in pre-evidence evaluations)
+  researchCoverage?: number
+  scoreConfidence?: 'high' | 'medium' | 'low'
+  evaluationStatus?: 'complete' | 'preliminary' | 'manual_review_required'
 }
 
 // ─── Diagnosis output ──────────────────────────────────────────────────────────
@@ -112,11 +116,15 @@ export interface RevenueOpportunityOutput {
 // ─── Service Match Engine output ──────────────────────────────────────────────
 
 export interface ServiceMatchOutput {
-  recommendedServices: string[]
+  recommendedServices: string[]      // primary + complementary (backward compat)
+  primaryService: string             // primary service name
+  complementaryServices: string[]    // max 2 complementary service names
+  futureServices: string[]           // remaining matched services
   implementationDifficulty: ImplementationDifficulty
-  implementationTimeEstimate: string
-  estimatedProjectPriceMin: number
+  implementationTimeEstimate: string // primary service time estimate
+  estimatedProjectPriceMin: number   // primary + complementary only
   estimatedProjectPriceMax: number
+  priceLabel: string                 // "Rango preliminar" | "Estimado" | ""
 }
 
 // ─── Full evaluation computation result ───────────────────────────────────────

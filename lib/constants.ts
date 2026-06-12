@@ -207,76 +207,78 @@ export const SIGNAL_DEFINITIONS = [
 
 // ─── Kronos Services Catalog ──────────────────────────────────────────────────
 
+// Prices calibrated for LATAM SMB market (USD).
+// Total proposal = primary + complementary services only (not all matched).
 export const KRONOS_SERVICES: Record<string, KronosService> = {
   whatsapp_automation: {
     name: 'Automatización de WhatsApp',
     difficulty: 'low',
     timeEstimate: '1–2 semanas',
-    priceMin: 600,
+    priceMin: 500,
     priceMax: 1200,
   },
   appointment_booking: {
     name: 'Sistema de Reservas y Citas',
     difficulty: 'medium',
     timeEstimate: '2–3 semanas',
-    priceMin: 800,
-    priceMax: 1800,
+    priceMin: 500,
+    priceMax: 1500,
   },
   lead_capture_funnel: {
     name: 'Funnel de Captura de Leads',
     difficulty: 'medium',
-    timeEstimate: '2–4 semanas',
-    priceMin: 1000,
-    priceMax: 2500,
+    timeEstimate: '2–3 semanas',
+    priceMin: 500,
+    priceMax: 1200,
   },
   crm_followup_automation: {
     name: 'CRM y Automatización de Seguimiento',
     difficulty: 'medium',
     timeEstimate: '3–5 semanas',
-    priceMin: 1200,
-    priceMax: 2500,
+    priceMin: 800,
+    priceMax: 2000,
   },
   google_business_setup: {
     name: 'Configuración de Google Business',
     difficulty: 'low',
     timeEstimate: '1 semana',
-    priceMin: 300,
-    priceMax: 600,
+    priceMin: 150,
+    priceMax: 400,
   },
   review_management: {
     name: 'Gestión de Reseñas',
     difficulty: 'low',
     timeEstimate: '1–2 semanas',
-    priceMin: 400,
-    priceMax: 800,
+    priceMin: 200,
+    priceMax: 500,
   },
   social_media_presence: {
     name: 'Paquete de Presencia en Redes Sociales',
     difficulty: 'medium',
     timeEstimate: '3–4 semanas',
-    priceMin: 800,
-    priceMax: 1500,
+    priceMin: 400,
+    priceMax: 900,
   },
   website_development: {
     name: 'Desarrollo de Sitio Web',
     difficulty: 'high',
     timeEstimate: '6–10 semanas',
-    priceMin: 2500,
-    priceMax: 6000,
+    priceMin: 800,
+    priceMax: 2500,
   },
   sales_process_automation: {
     name: 'Automatización del Proceso de Ventas',
     difficulty: 'high',
     timeEstimate: '4–8 semanas',
-    priceMin: 2000,
-    priceMax: 5000,
+    priceMin: 1200,
+    priceMax: 3500,
   },
   digital_presence_audit: {
     name: 'Auditoría de Presencia Digital',
     difficulty: 'low',
     timeEstimate: '1 semana',
-    priceMin: 300,
-    priceMax: 500,
+    priceMin: 150,
+    priceMax: 350,
   },
 }
 

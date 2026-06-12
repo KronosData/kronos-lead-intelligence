@@ -89,6 +89,18 @@ model Evaluation {
   estimatedProjectPriceMin   Int?      @map("estimated_project_price_min")
   estimatedProjectPriceMax   Int?      @map("estimated_project_price_max")
 
+  // Tiered service recommendations
+  primaryService        String?  @map("primary_service")
+  complementaryServices String[] @map("complementary_services")
+  futureServices        String[] @map("future_services")
+  priceLabel            String?  @map("price_label")
+
+  // Evidence and quality
+  signalEvidence    Json?   @map("signal_evidence")
+  researchCoverage  Int?    @map("research_coverage")
+  scoreConfidence   String? @map("score_confidence")
+  evaluationStatus  String? @map("evaluation_status")
+
   evaluatedAt DateTime @default(now()) @map("evaluated_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

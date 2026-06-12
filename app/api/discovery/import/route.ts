@@ -1,19 +1,25 @@
 // POST /api/discovery/import
-// Imports a single discovered company: creates the DB record, analyzes its website,
-// runs all four scoring engines, and creates an initial evaluation — all in one request.
-// Called once per company from a client-side loop to stay within Vercel's 60s timeout.
+// Imports a single discovered company, runs all scoring engines with evidence model,
+// and creates an initial SalesNote. One request per company (Vercel 60s timeout).
 
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { analyzeUrl } from '@/lib/web-analyzer'
-import { computeScores } from '@/lib/scoring'
+import { computeScoresWithEvidence } from '@/lib/scoring'
 import { generateDiagnosis } from '@/lib/diagnosis'
 import { matchServices } from '@/lib/service-match'
 import { estimateRevenueOpportunity } from '@/lib/value-estimator'
+import {
+  evidenceNoWebsite,
+  evidenceFromWebAnalysis,
+  computeCoverage,
+  applyEvidence,
+} from '@/lib/evidence'
 import { ok, badRequest } from '@/lib/api-helpers'
 import type { SignalFlags } from '@/lib/types'
 import type { ResearchResult } from '@/lib/web-analyzer'
 import type { ImportedCompanyResult } from '@/lib/discovery/types'
+import type { SignalEvidenceMap } from '@/lib/evidence'
 
 const ImportSchema = z.object({
   externalId: z.string().min(1),
@@ -28,13 +34,15 @@ const ImportSchema = z.object({
   source:     z.enum(['here', 'osm']),
 })
 
+// Converts web analyzer result to boolean signals (value=null → false, others as-is).
+// Evidence map is built separately via evidenceFromWebAnalysis().
 function researchToSignals(r: ResearchResult): SignalFlags {
   const val = (key: keyof ResearchResult['signals']): boolean => {
     const s = r.signals[key]
-    return s.value === true
+    return s?.value === true
   }
   return {
-    signalHasWebsite:             val('signalHasWebsite'),
+    signalHasWebsite:             r.success,
     signalHasWhatsapp:            val('signalHasWhatsapp'),
     signalHasContactForm:         val('signalHasContactForm'),
     signalHasBookingSystem:       val('signalHasBookingSystem'),
@@ -52,23 +60,27 @@ function researchToSignals(r: ResearchResult): SignalFlags {
   }
 }
 
+// For companies without a website: only confirm what we actually know.
+// Confirmed: signalHasWebsite=false (from discovery source having no URL).
+// Inferred:  signalWeakOnlinePresence=true (derived from no website).
+// All others: unknown → neutral for scoring (do NOT assume problems).
 function noWebsiteSignals(): SignalFlags {
   return {
-    signalHasWebsite:           false,
-    signalHasWhatsapp:          false,
-    signalHasContactForm:       false,
-    signalHasBookingSystem:     false,
-    signalHasInstagram:         false,
-    signalHasLinkedin:          false,
-    signalHasGoogleBusiness:    false,
-    signalHasReviews:           false,
-    signalHasUnansweredReviews: false,
-    signalHasClearCta:          false,
-    signalHasLeadCapture:       false,
-    signalSlowResponse:         false,
-    signalWeakFollowup:         true,  // assume weak follow-up if no web presence
-    signalManualWork:           true,  // assume manual work if no web presence
-    signalWeakOnlinePresence:   true,  // no website → weak online presence
+    signalHasWebsite:           false,  // confirmed negative
+    signalHasWhatsapp:          true,   // unknown → neutral (assume present)
+    signalHasContactForm:       true,   // unknown → neutral
+    signalHasBookingSystem:     true,   // unknown → neutral
+    signalHasInstagram:         true,   // unknown → neutral
+    signalHasLinkedin:          true,   // unknown → neutral
+    signalHasGoogleBusiness:    true,   // unknown → neutral
+    signalHasReviews:           true,   // unknown → neutral
+    signalHasUnansweredReviews: false,  // unknown → neutral (assume absent = good)
+    signalHasClearCta:          true,   // unknown → neutral
+    signalHasLeadCapture:       true,   // unknown → neutral
+    signalSlowResponse:         false,  // unknown → neutral
+    signalWeakFollowup:         false,  // unknown → neutral (NOT assumed true)
+    signalManualWork:           false,  // unknown → neutral (NOT assumed true)
+    signalWeakOnlinePresence:   true,   // inferred positive from no website
   }
 }
 
@@ -82,7 +94,7 @@ export async function POST(request: Request): Promise<Response> {
 
     const candidate = parsed.data
 
-    // Check for existing company by name + country (double-check after client-side dedup)
+    // Server-side duplicate guard (after client-side dedup)
     const existing = await prisma.company.findFirst({
       where: {
         name:    { equals: candidate.name, mode: 'insensitive' },
@@ -108,49 +120,78 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Analyze website if available
-    let research:    ResearchResult | null = null
-    let webAnalyzed  = false
+    let research:     ResearchResult | null = null
+    let webAnalyzed   = false
     let detectedPhone: string | null = candidate.phone ?? null
+    let signals:      SignalFlags
+    let evidence:     SignalEvidenceMap
 
     if (candidate.website) {
       research    = await analyzeUrl(candidate.website)
       webAnalyzed = research.success
       if (research.detectedPhone) detectedPhone = research.detectedPhone
+      signals  = researchToSignals(research)
+      evidence = evidenceFromWebAnalysis(research)
+    } else {
+      signals  = noWebsiteSignals()
+      evidence = evidenceNoWebsite()
     }
 
-    const signals = research ? researchToSignals(research) : noWebsiteSignals()
+    // Coverage-aware scoring (unknown signals neutralized)
+    const coverage = computeCoverage(evidence)
+    const scores   = computeScoresWithEvidence(signals, evidence)
+    // Re-apply evidence for diagnosis (pass raw booleans for confirmed problems)
+    const neutralized = applyEvidence(signals, evidence)
+    const diagnosis = generateDiagnosis(neutralized, candidate.industry, scores.opportunityScore, coverage, evidence)
+    const services  = matchServices(neutralized, coverage)
+    const revenue   = estimateRevenueOpportunity(neutralized, candidate.industry, services.estimatedProjectPriceMin, coverage)
 
-    // Run all four scoring engines
-    const scores    = computeScores(signals)
-    const diagnosis = generateDiagnosis(signals, candidate.industry, scores.opportunityScore)
-    const services  = matchServices(signals)
-    const revenue   = estimateRevenueOpportunity(signals, candidate.industry, services.estimatedProjectPriceMin)
-
-    // Persist atomically
     const leadSource = candidate.source === 'here' ? 'here_discovery' : 'osm_discovery'
+
+    // Determine initial SalesNote action based on available contact info
+    const hasContactInfo = !!(detectedPhone || research?.detectedWhatsapp)
+    const nextAction = hasContactInfo
+      ? 'Revisar diagnóstico y realizar primer contacto'
+      : 'Investigar contacto y validar diagnóstico'
 
     const company = await prisma.$transaction(async (tx) => {
       const co = await tx.company.create({
         data: {
-          name:             candidate.name,
-          industry:         candidate.industry,
-          country:          candidate.country,
-          city:             candidate.city ?? null,
-          website:          candidate.website ?? null,
-          whatsapp:         research?.detectedWhatsapp ?? null,
-          instagram:        research?.detectedInstagram ?? null,
-          linkedin:         research?.detectedLinkedin ?? null,
+          name:              candidate.name,
+          industry:          candidate.industry,
+          country:           candidate.country,
+          city:              candidate.city ?? null,
+          website:           candidate.website ?? null,
+          whatsapp:          research?.detectedWhatsapp ?? null,
+          instagram:         research?.detectedInstagram ?? null,
+          linkedin:          research?.detectedLinkedin ?? null,
           googleBusinessUrl: candidate.googleBusinessUrl ?? null,
-          status:           'active',
-          leadSource,        // Prisma field is String? — accepts any string
+          status:            'active',
+          leadSource,
         },
       })
 
-      const ev = await tx.evaluation.create({
+      await tx.evaluation.create({
         data: {
           companyId:   co.id,
           evaluatedBy: 'discovery_engine',
-          ...signals,
+          // Store the raw boolean signals (before neutralization) for transparency
+          signalHasWebsite:           signals.signalHasWebsite,
+          signalHasWhatsapp:          signals.signalHasWhatsapp,
+          signalHasContactForm:       signals.signalHasContactForm,
+          signalHasBookingSystem:     signals.signalHasBookingSystem,
+          signalHasInstagram:         signals.signalHasInstagram,
+          signalHasLinkedin:          signals.signalHasLinkedin,
+          signalHasGoogleBusiness:    signals.signalHasGoogleBusiness,
+          signalHasReviews:           signals.signalHasReviews,
+          signalHasUnansweredReviews: signals.signalHasUnansweredReviews,
+          signalHasClearCta:          signals.signalHasClearCta,
+          signalHasLeadCapture:       signals.signalHasLeadCapture,
+          signalSlowResponse:         signals.signalSlowResponse,
+          signalWeakFollowup:         signals.signalWeakFollowup,
+          signalManualWork:           signals.signalManualWork,
+          signalWeakOnlinePresence:   signals.signalWeakOnlinePresence,
+          // Scores (evidence-aware)
           scoreLeadGeneration:        scores.scoreLeadGeneration,
           scoreFollowUp:              scores.scoreFollowUp,
           scoreConversionProcess:     scores.scoreConversionProcess,
@@ -158,20 +199,32 @@ export async function POST(request: Request): Promise<Response> {
           scoreOnlinePresence:        scores.scoreOnlinePresence,
           scoreReputation:            scores.scoreReputation,
           opportunityScore:           scores.opportunityScore,
+          // Diagnosis
           priorityLevel:              scores.priorityLevel,
           detectedProblems:           diagnosis.detectedProblems,
           probablePainPoint:          diagnosis.probablePainPoint,
           recommendedSolution:        diagnosis.recommendedSolution,
           estimatedValueMin:          diagnosis.estimatedValueMin,
           estimatedValueMax:          diagnosis.estimatedValueMax,
+          // Revenue
           estimatedLeadsLostPerMonth:   revenue.estimatedLeadsLostPerMonth,
           estimatedRevenueLostPerMonth: revenue.estimatedRevenueLostPerMonth,
           estimatedRoiPotential:        revenue.estimatedRoiPotential,
+          // Service match (tiered)
           recommendedServices:        services.recommendedServices,
+          primaryService:             services.primaryService,
+          complementaryServices:      services.complementaryServices,
+          futureServices:             services.futureServices,
           implementationDifficulty:   services.implementationDifficulty,
           implementationTimeEstimate: services.implementationTimeEstimate,
           estimatedProjectPriceMin:   services.estimatedProjectPriceMin,
           estimatedProjectPriceMax:   services.estimatedProjectPriceMax,
+          priceLabel:                 services.priceLabel,
+          // Evidence metadata
+          signalEvidence:   evidence as object,
+          researchCoverage: coverage,
+          scoreConfidence:  scores.scoreConfidence,
+          evaluationStatus: scores.evaluationStatus,
         },
       })
 
@@ -180,7 +233,19 @@ export async function POST(request: Request): Promise<Response> {
         data: {
           latestOpportunityScore: scores.opportunityScore,
           latestPriorityLevel:    scores.priorityLevel,
-          latestEvaluatedAt:      ev.evaluatedAt,
+          latestEvaluatedAt:      new Date(),
+        },
+      })
+
+      // Auto-initialize SalesNote — only empty fields, no overwrite
+      await tx.salesNote.create({
+        data: {
+          companyId:     co.id,
+          assignedTo:    'alejandro@kronosdata.tech',
+          contactStatus: 'not_contacted',
+          meetingStatus: 'not_scheduled',
+          nextAction,
+          contactPhone:  detectedPhone ?? null,
         },
       })
 
@@ -203,7 +268,6 @@ export async function POST(request: Request): Promise<Response> {
     return ok(result)
   } catch (err) {
     console.error('[discovery/import] Error:', err)
-    // Return a structured failure so the client loop can continue with next candidate
     const body: ImportedCompanyResult = {
       candidateExternalId: 'unknown',
       status:              'failed',

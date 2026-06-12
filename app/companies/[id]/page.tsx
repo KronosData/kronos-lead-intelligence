@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   getCompany, listEvaluations, listOutreach, createOutreach, upsertSalesNote,
-  evaluateCompany, deleteCompany,
+  evaluateCompany, deleteCompany, reprocessCompany,
   type CompanyDetail, type Evaluation, type OutreachRecord, type SalesNote,
 } from '@/lib/api-client'
 import { SIGNAL_DEFINITIONS, OUTREACH_CHANNELS, RESPONSE_TYPES, CONTACT_STATUSES, MEETING_STATUSES } from '@/lib/constants'
@@ -69,6 +69,10 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
     setShowHistory(true)
   }
 
+  const coverage = ev.researchCoverage ?? null
+  const evStatus = ev.evaluationStatus ?? null
+  const isLowCoverage = coverage !== null && coverage < 40
+
   const categoryScores = [
     { label: 'Generación de Leads', value: ev.scoreLeadGeneration },
     { label: 'Seguimiento', value: ev.scoreFollowUp },
@@ -78,8 +82,42 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
     { label: 'Reputación', value: ev.scoreReputation },
   ]
 
+  const statusConfig: Record<string, { label: string; cls: string }> = {
+    complete:              { label: 'Completa',          cls: 'bg-green-100 text-green-700 border-green-200' },
+    preliminary:           { label: 'Preliminar',        cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+    manual_review_required:{ label: 'Revisión manual',   cls: 'bg-amber-100 text-amber-700 border-amber-200' },
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Coverage / confidence banner */}
+      {coverage !== null && (
+        <div className={`rounded-lg border px-4 py-3 flex items-center gap-4 flex-wrap ${
+          isLowCoverage ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cobertura</span>
+            <span className={`text-sm font-bold ${isLowCoverage ? 'text-amber-700' : 'text-slate-800'}`}>{coverage}%</span>
+            <div className="w-20 bg-slate-200 rounded-full h-1.5">
+              <div
+                className={`h-1.5 rounded-full ${coverage >= 70 ? 'bg-green-500' : coverage >= 40 ? 'bg-yellow-500' : 'bg-amber-500'}`}
+                style={{ width: `${coverage}%` }}
+              />
+            </div>
+          </div>
+          {evStatus && statusConfig[evStatus] && (
+            <span className={`text-xs font-medium border rounded-full px-2 py-0.5 ${statusConfig[evStatus].cls}`}>
+              {statusConfig[evStatus].label}
+            </span>
+          )}
+          {isLowCoverage && (
+            <p className="text-xs text-amber-700 ml-auto">
+              Datos insuficientes para diagnóstico definitivo — score y precio son orientativos.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Key metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl border bg-white p-4">
@@ -108,7 +146,8 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
           <p className="text-lg font-bold text-slate-900">
             ${ev.estimatedProjectPriceMin.toLocaleString()} – ${ev.estimatedProjectPriceMax.toLocaleString()}
           </p>
-          <p className="text-xs text-slate-400 mt-1">ROI estimado: {ev.estimatedRoiPotential}×</p>
+          {ev.priceLabel && <p className="text-xs text-slate-400 mt-1">{ev.priceLabel} · ROI: {ev.estimatedRoiPotential}×</p>}
+          {!ev.priceLabel && <p className="text-xs text-slate-400 mt-1">ROI estimado: {ev.estimatedRoiPotential}×</p>}
         </div>
 
         <div className="rounded-xl border bg-white p-4">
@@ -125,7 +164,7 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-700">Dolor Probable</CardTitle>
+            <CardTitle className="text-sm text-slate-700">Diagnóstico</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-600 leading-relaxed">{ev.probablePainPoint}</p>
@@ -141,19 +180,49 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         </Card>
       </div>
 
-      {/* Recommended services */}
+      {/* Tiered services */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-700">Servicios Recomendados</CardTitle>
+          <CardTitle className="text-sm text-slate-700">Propuesta de Servicios</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {ev.recommendedServices.map((s) => (
-              <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">
-                {s}
+        <CardContent className="flex flex-col gap-3">
+          {/* Primary service */}
+          {ev.primaryService ? (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Servicio principal</p>
+              <span className="inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-800">
+                {ev.primaryService}
               </span>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {ev.recommendedServices.map((s) => (
+                <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">{s}</span>
+              ))}
+            </div>
+          )}
+          {/* Complementary */}
+          {(ev.complementaryServices?.length ?? 0) > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Complementarios</p>
+              <div className="flex flex-wrap gap-2">
+                {ev.complementaryServices!.map((s) => (
+                  <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm text-slate-700">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Future */}
+          {(ev.futureServices?.length ?? 0) > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Fases siguientes (tras implementación inicial)</p>
+              <div className="flex flex-wrap gap-2">
+                {ev.futureServices!.map((s) => (
+                  <span key={s} className="inline-flex items-center rounded-md border border-dashed bg-slate-50 px-3 py-1 text-xs text-slate-500">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -185,42 +254,70 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         >
           {showProblems ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           {ev.detectedProblems.length} problemas detectados
+          {isLowCoverage && <span className="text-xs text-amber-600">(evidencia limitada)</span>}
         </button>
         {showProblems && (
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {ev.detectedProblems.map((p) => (
-              <div key={p} className="flex items-start gap-2 rounded-md bg-red-50 border border-red-100 px-3 py-2">
-                <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
-                <span className="text-xs text-red-700">{p}</span>
-              </div>
-            ))}
+            {ev.detectedProblems.length === 0 ? (
+              <p className="text-sm text-slate-400 col-span-2">Sin problemas confirmados con la evidencia disponible.</p>
+            ) : (
+              ev.detectedProblems.map((p) => (
+                <div key={p} className={`flex items-start gap-2 rounded-md border px-3 py-2 ${
+                  p.startsWith('(posible)') ? 'bg-yellow-50 border-yellow-100' : 'bg-red-50 border-red-100'
+                }`}>
+                  <XCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${p.startsWith('(posible)') ? 'text-yellow-500' : 'text-red-400'}`} />
+                  <span className={`text-xs ${p.startsWith('(posible)') ? 'text-yellow-800' : 'text-red-700'}`}>{p}</span>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
 
-      {/* Signal summary */}
+      {/* Signal summary — evidence-aware */}
       <div>
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Señales evaluadas</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
           {SIGNAL_DEFINITIONS.map((s) => {
             const val = (ev as unknown as Record<string, boolean>)[s.key]
+            const evidenceEntry = ev.signalEvidence?.[s.key]
+            const status = evidenceEntry?.status ?? (val ? 'positive' : 'negative')
             const isGood = s.problemWhen ? !val : val
+
+            if (status === 'unknown') {
+              return (
+                <div key={s.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-slate-300">
+                  <span className="h-3 w-3 shrink-0 rounded-full border border-slate-300 inline-block" />
+                  {s.label}
+                </div>
+              )
+            }
+
             return (
               <div
                 key={s.key}
                 className={`flex items-center gap-2 rounded px-2 py-1.5 text-xs ${
-                  isGood ? 'text-slate-500' : 'bg-amber-50 text-amber-700'
+                  status === 'inferred'
+                    ? 'bg-yellow-50 text-yellow-700'
+                    : isGood ? 'text-slate-500' : 'bg-amber-50 text-amber-700'
                 }`}
               >
-                {isGood
-                  ? <CheckCircle2 className="h-3 w-3 text-green-400 shrink-0" />
-                  : <XCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                {status === 'inferred'
+                  ? <span className="h-3 w-3 shrink-0 text-yellow-400">~</span>
+                  : isGood
+                    ? <CheckCircle2 className="h-3 w-3 text-green-400 shrink-0" />
+                    : <XCircle className="h-3 w-3 text-amber-500 shrink-0" />
                 }
-                {s.label}
+                {status === 'inferred' ? `${s.label} (indicios)` : s.label}
               </div>
             )
           })}
         </div>
+        {ev.signalEvidence && (
+          <p className="text-xs text-slate-300 mt-2">
+            ○ = no investigado · ~ = inferido · ✓ = confirmado positivo · ✗ = confirmado problema
+          </p>
+        )}
       </div>
 
       {/* Evaluation history */}
@@ -274,6 +371,17 @@ function buildWhatsAppUrl(number: string, message: string): string {
   return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`
 }
 
+// Evidence level for outreach tone:
+// A = high coverage (≥65%), mention observed specifics + estimates.
+// B = medium coverage (40–64%), conditional language.
+// C = low coverage (<40%), exploratory — no loss claims, no unconfirmed facts.
+function outreachEvidenceLevel(ev: Evaluation): 'A' | 'B' | 'C' {
+  const coverage = ev.researchCoverage ?? 100
+  if (coverage >= 65) return 'A'
+  if (coverage >= 40) return 'B'
+  return 'C'
+}
+
 function generateOutreachTemplate(
   channel: 'whatsapp' | 'email' | 'linkedin',
   version: number,
@@ -284,65 +392,86 @@ function generateOutreachTemplate(
 ): string {
   const nombre = contactName?.trim() || companyName || 'equipo'
   const revenue = `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}`
-  const primary = (ev.recommendedServices[0] ?? '').toLowerCase()
+  const implTime = ev.implementationTimeEstimate ?? '1–2 semanas'
+  const primary = (ev.primaryService ?? ev.recommendedServices[0] ?? '').toLowerCase()
+  const level = outreachEvidenceLevel(ev)
   const v = version % 2
+
+  // Level C: low evidence → neutral exploratory message, no loss claims
+  if (level === 'C') {
+    if (channel === 'whatsapp') {
+      return v === 0
+        ? `Hola ${nombre} 👋\n\nSoy Alejandro de Kronos. Trabajamos con negocios de ${industry} en LATAM ayudándoles a captar y retener más clientes desde sus canales digitales.\n\nMe gustaría saber cómo está funcionando ${companyName} en ese aspecto — ¿tienes 10 minutos esta semana para una conversación inicial?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`
+        : `Hola ${nombre},\n\nEncontré ${companyName} en mi investigación de negocios de ${industry} en la región y me pareció interesante.\n\nEn Kronos ayudamos a empresas como la tuya a mejorar su captación de clientes online. ¿Podríamos hablar 15 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`
+    }
+    if (channel === 'email') {
+      return `Asunto: ${companyName} — conversación sobre captación digital\n\nHola ${nombre},\n\nSoy Alejandro de Kronos. Nos especializamos en ayudar a negocios de ${industry} a captar y retener más clientes desde sus canales digitales.\n\nMe gustaría explorar si hay oportunidades relevantes para ${companyName}. ¿Tienes 20 minutos esta semana?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+    }
+    return `${nombre}, soy Alejandro de Kronos — ayudamos a negocios de ${industry} a captar más clientes desde sus canales digitales.\n\nMe gustaría explorar si hay algo relevante para ${companyName}. ¿Tienes 15 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+  }
 
   let scenario = 'followup'
   if (primary.includes('reserva') || primary.includes('cita')) scenario = 'booking'
   else if (primary.includes('google')) scenario = 'google'
   else if (primary.includes('reseña')) scenario = 'reviews'
   else if (primary.includes('funnel') || primary.includes('captura')) scenario = 'leads'
-  else if (primary.includes('sitio web') || primary.includes('presencia') || primary.includes('redes')) scenario = 'presence'
+  else if (primary.includes('sitio web') || primary.includes('presencia') || primary.includes('redes') || primary.includes('auditor')) scenario = 'presence'
+
+  // Level B: conditional language ("podría", "es posible que")
+  const maybeRevenue = level === 'B' ? `posiblemente ${revenue}/mes` : `${revenue}/mes`
+  const maybeDetected = level === 'B' ? 'es posible que haya' : 'detecté'
+  const implText = level === 'B' ? `En aproximadamente ${implTime}` : `Lo resolvemos en ${implTime}`
 
   if (channel === 'whatsapp') {
     const tpl: Record<string, [string, string]> = {
       booking: [
-        `Hola [Nombre] 👋\n\nVi que ${companyName} no tiene reservas online. En ${industry}, el 40% de las citas se intenta agendar fuera de horario — y sin sistema, esos clientes se van con la competencia.\n\nEstimamos que eso representa ${revenue}/mes en citas perdidas.\n\nLo resolvemos en 2 semanas. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola [Nombre],\n\n¿Cuántas reservas pierde ${companyName} fuera de horario?\n\nSin sistema automático hay ${ev.estimatedLeadsLostPerMonth} leads/mes que no se concretan — ${revenue} en ingresos que se evaporan.\n\nSistema listo en 2–3 semanas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nVi que ${companyName} no tiene sistema de reservas online. En ${industry}, el 40% de las citas se intenta agendar fuera de horario — sin sistema, esos clientes eligen a quien responde primero.\n\nEso puede representar ${maybeRevenue} en citas no concretadas.\n\n${implText} lo resolvemos. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\n¿Cuántas reservas pierde ${companyName} fuera de horario?\n\nSin sistema automático hay prospectos que no se concretan — ${maybeRevenue} en ingresos que se evaporan.\n\n${implText} tenemos el sistema listo. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
       ],
       google: [
-        `Hola [Nombre] 👋\n\nBusqué "${companyName}" en Google Maps y el perfil no está optimizado.\n\nEl 76% de los clientes busca en Google antes de contactar. Sin perfil visible en ${industry}, ${companyName} no aparece cuando importa.\n\nEstimamos ${revenue}/mes en consultas que van a la competencia. Lo resolvemos en 1 semana. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola [Nombre],\n\nSi alguien busca "${industry} en [ciudad]" en Google, ¿${companyName} aparece en los primeros resultados?\n\nEstimamos ${revenue}/mes solo en pérdida por baja visibilidad local. 15 minutos y te muestro cómo cambiarlo.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nBusqué "${companyName}" en Google y el perfil digital tiene margen de mejora importante.\n\nEl 76% de los clientes busca en Google antes de contactar. En ${industry}, la visibilidad local marca la diferencia — ${maybeRevenue} en consultas van a quien aparece primero.\n\n${implText} lo optimizamos. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nSi alguien busca "${industry}" en Google, ¿${companyName} aparece entre los primeros resultados?\n\n${maybeRevenue} en visibilidad perdida. 15 minutos y te muestro cómo cambiarlo.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
       ],
       reviews: [
-        `Hola [Nombre] 👋\n\nVi reseñas de ${companyName} en Google sin responder.\n\nEl 68% de los clientes nuevos lee las respuestas antes de decidir. Sin respuesta = señal de que nadie atiende.\n\nEstimamos ${revenue}/mes en conversiones perdidas. Tenemos un sistema automático para gestionarlas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola [Nombre],\n\nLas reseñas sin responder de ${companyName} en Google están frenando a los prospectos.\n\nEstimamos ${revenue}/mes de impacto. Lo resolvemos con gestión automática en 1–2 semanas.\n\n¿15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nVi reseñas de ${companyName} en Google sin responder.\n\nEl 68% de los clientes lee las respuestas antes de decidir. Sin respuesta = señal negativa para los prospectos.\n\n${maybeRevenue} en conversiones en juego. Tenemos sistema automático de gestión. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nLas reseñas sin responder de ${companyName} en Google pueden estar frenando a nuevos clientes.\n\n${implText} lo resolvemos con gestión automática.\n\n¿15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
       ],
       presence: [
-        `Hola [Nombre] 👋\n\nBusqué ${companyName} online y la presencia digital es mínima para ${industry}.\n\nCada cliente que no te encuentra online elige a la competencia. Estimamos ${revenue}/mes en conversiones perdidas.\n\nLo resolvemos en 4–6 semanas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola [Nombre],\n\nAnalizamos ${companyName} y hay una brecha importante entre lo que tienes online y lo que los clientes de ${industry} esperan encontrar.\n\nImpacto estimado: ${revenue}/mes.\n\n¿Te muestro el análisis completo? 15 min.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nRevisé la presencia digital de ${companyName} y ${maybeDetected} margen significativo de mejora para un negocio de ${industry}.\n\nCada cliente que no te encuentra online elige a la competencia. Impacto estimado: ${maybeRevenue}.\n\n${implText} mejoramos el panorama. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nAnalizamos ${companyName} y hay una brecha entre tu presencia digital actual y lo que los clientes de ${industry} esperan encontrar.\n\nImpacto estimado: ${maybeRevenue}. ¿Te muestro el análisis? 15 min.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
       ],
       leads: [
-        `Hola [Nombre] 👋\n\nRevisé la web y redes de ${companyName} y no hay una forma clara para que un cliente interesado deje sus datos.\n\nEl tráfico que ya tienes no se convierte — estimamos ${revenue}/mes en oportunidades que se evaporan.\n\nFunnel en 2–3 semanas. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola [Nombre],\n\nEn ${companyName} no hay un "paso siguiente" claro para los visitantes.\n\nSin CTA ni captura de contacto, el interés se pierde. Estimamos ${revenue}/mes en leads que se van sin dejar datos.\n\n¿15 min para mostrarte la solución?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nRevisé ${companyName} y ${maybeDetected} oportunidad de capturar mejor los leads que ya llegan.\n\nEl tráfico que ya tienes no siempre se convierte — ${maybeRevenue} en oportunidades que se podrían retener.\n\nFunnel optimizado en ${implTime}. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nEn ${companyName} puede no haber un "paso siguiente" claro para los visitantes.\n\nSin CTA ni captura de contacto, el interés se pierde — ${maybeRevenue} en leads. ¿15 min para mostrarte la solución?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
       ],
       followup: [
-        `Hola [Nombre] 👋\n\nVi ${companyName} en ${industry} y detecté señales de que hay leads que no reciben seguimiento a tiempo.\n\nEso cuesta en promedio ${revenue}/mes en clientes que preguntan y se van con la competencia antes de recibir respuesta.\n\nLo resolvemos en 2 semanas. ¿Tienes 15 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola [Nombre],\n\n¿Los leads que llegan a ${companyName} reciben respuesta el mismo día?\n\nSi no siempre — ahí está la fuga. Son ${revenue}/mes en clientes que eligieron a la competencia por ser más rápidos.\n\n¿Hablamos 10 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nVi ${companyName} en ${industry} y ${maybeDetected} señales de que hay margen de mejora en seguimiento de leads.\n\nEso puede representar ${maybeRevenue} en clientes que eligen a la competencia por responder más rápido.\n\n${implText} lo mejoramos. ¿Tienes 15 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\n¿Los leads que llegan a ${companyName} reciben respuesta el mismo día?\n\nEn negocios de ${industry} esa velocidad marca la diferencia — ${maybeRevenue} de impacto estimado.\n\n¿Hablamos 10 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
       ],
     }
     const [t0, t1] = tpl[scenario] ?? tpl.followup
-    return (v === 0 ? t0 : t1).replace(/\[Nombre\]/g, nombre)
+    return (v === 0 ? t0 : t1)
   }
 
   if (channel === 'email') {
     const subjects: Record<string, [string, string]> = {
-      booking: [`${companyName}: cuántas citas se pierden fuera de horario`, `Sistema de reservas para ${companyName} — sin cambiar tu proceso`],
-      google: [`${companyName} no aparece cuando alguien busca ${industry} en Google`, `Visibilidad en Google para ${companyName}`],
-      reviews: [`Las reseñas de ${companyName} están frenando nuevos clientes`, `Gestión de reputación para ${companyName}`],
-      presence: [`Lo que un cliente ve cuando busca "${companyName}" en Google`, `Análisis de presencia digital — ${companyName}`],
-      leads: [`El tráfico de ${companyName} no está convirtiéndose en clientes`, `${companyName}: cómo capturar los leads que ya tienes`],
-      followup: [`Encontré dónde se están yendo los clientes de ${companyName}`, `${companyName}: optimización de seguimiento de leads`],
+      booking: [`${companyName}: citas que se pierden fuera de horario`, `Sistema de reservas para ${companyName}`],
+      google: [`${companyName} — visibilidad en Google para ${industry}`, `Presencia en Google para ${companyName}`],
+      reviews: [`Las reseñas de ${companyName} y su impacto en nuevos clientes`, `Gestión de reputación para ${companyName}`],
+      presence: [`Presencia digital de ${companyName} — análisis`, `Análisis de presencia digital — ${companyName}`],
+      leads: [`Captación de leads en ${companyName}`, `${companyName}: cómo capturar el tráfico que ya tienes`],
+      followup: [`Seguimiento de leads en ${companyName}`, `${companyName}: optimización comercial`],
     }
     const [s0, s1] = subjects[scenario] ?? subjects.followup
     const subject = v === 0 ? s0 : s1
-    return `Asunto: ${subject}\n\nHola ${nombre},\n\nAnalizamos el perfil digital de ${companyName} y detectamos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso representa una pérdida estimada de ${revenue} al mes — ${ev.estimatedLeadsLostPerMonth} leads que no se convierten.\n\nServicios que resuelven esto directamente:\n${ev.recommendedServices.map((s) => `→ ${s}`).join('\n')}\n\nTiempo de implementación: ${ev.implementationTimeEstimate}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+    const serviceList = [ev.primaryService, ...(ev.complementaryServices ?? [])].filter(Boolean)
+    return `Asunto: ${subject}\n\nHola ${nombre},\n\nAnalizamos el perfil digital de ${companyName} y encontramos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso puede representar ${maybeRevenue} al mes.\n\nServicios que resuelven esto directamente:\n${serviceList.map((s) => `→ ${s}`).join('\n')}\n\nTiempo estimado de implementación: ${implTime}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
   }
 
   // LinkedIn
   return v === 0
-    ? `${nombre}, analicé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${revenue}/mes en clientes que no se convierten.\n\nEn Kronos lo resolvemos en ${ev.implementationTimeEstimate}. ¿Tienes 20 min esta semana?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
-    : `${nombre}, una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn la mayoría de negocios de ${industry} que analizamos, ahí está la mayor fuga — ${revenue}/mes de impacto.\n\n¿Hablamos 20 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+    ? `${nombre}, revisé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en clientes que no se convierten.\n\n${implText}. ¿Tienes 20 min esta semana?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+    : `${nombre}, una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn negocios de ${industry} esa velocidad es clave — ${maybeRevenue} de impacto estimado.\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
 }
 
 function OutreachPanel({
@@ -462,11 +591,33 @@ function OutreachPanel({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400 inline-block" />
               <span className="text-sm font-semibold text-amber-900">Plantilla Sugerida</span>
-              <span className="text-xs text-slate-500">· Score {evaluation.opportunityScore} · {evaluation.recommendedServices[0]}</span>
+              <span className="text-xs text-slate-500">· Score {evaluation.opportunityScore} · {evaluation.primaryService ?? evaluation.recommendedServices[0]}</span>
+              {evaluation.evaluationStatus === 'manual_review_required' && (
+                <span className="text-xs rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-amber-700 font-medium">
+                  Nivel C — exploratoria (datos insuficientes)
+                </span>
+              )}
+              {evaluation.evaluationStatus === 'preliminary' && (
+                <span className="text-xs rounded-full bg-yellow-100 border border-yellow-300 px-2 py-0.5 text-yellow-700 font-medium">
+                  Nivel B — lenguaje condicional
+                </span>
+              )}
             </div>
             <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-xs text-amber-700 font-medium shrink-0">
               No enviada
             </span>
+          </div>
+          {/* Contact availability */}
+          <div className="px-4 pt-3 pb-0 flex flex-wrap gap-3 text-xs">
+            <span className="font-semibold text-slate-500">Contactos localizados:</span>
+            {whatsapp
+              ? <span className="text-green-700 font-medium">💬 WhatsApp {whatsapp}</span>
+              : <span className="text-slate-400">💬 Sin WhatsApp</span>
+            }
+            {contactName
+              ? <span className="text-green-700 font-medium">👤 {contactName}</span>
+              : <span className="text-slate-400">👤 Sin contacto identificado</span>
+            }
           </div>
 
           <div className="flex gap-1 px-4 pt-3">
@@ -864,6 +1015,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [revaluating, setRevaluating] = useState(false)
+  const [reprocessing, setReprocessing] = useState(false)
 
   useEffect(() => {
     getCompany(id)
@@ -889,6 +1041,16 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
       setCompany((prev) => prev ? { ...prev, latestEvaluation: newEv, latestOpportunityScore: newEv.opportunityScore, latestPriorityLevel: newEv.priorityLevel } : prev)
     } catch { /* ignore */ }
     finally { setRevaluating(false) }
+  }
+
+  async function handleReprocess() {
+    setReprocessing(true)
+    try {
+      await reprocessCompany(id)
+      const updated = await getCompany(id)
+      setCompany(updated)
+    } catch { /* ignore */ }
+    finally { setReprocessing(false) }
   }
 
   if (loading) return (
@@ -943,6 +1105,12 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="flex items-center gap-2">
+          {company.latestEvaluation && (
+            <Button variant="outline" size="sm" onClick={handleReprocess} disabled={reprocessing}
+              title="Recalcula con el modelo de evidencia (corrige señales sin datos)">
+              <RefreshCw className={`h-4 w-4 ${reprocessing ? 'animate-spin' : ''}`} /> Reprocesar
+            </Button>
+          )}
           {company.latestEvaluation && (
             <Button variant="outline" size="sm" onClick={handleRevaluate} disabled={revaluating}>
               <RefreshCw className={`h-4 w-4 ${revaluating ? 'animate-spin' : ''}`} /> Re-evaluar

@@ -71,10 +71,18 @@ export interface Evaluation {
   estimatedRevenueLostPerMonth: number
   estimatedRoiPotential: number
   recommendedServices: string[]
+  primaryService: string | null
+  complementaryServices: string[]
+  futureServices: string[]
   implementationDifficulty: string
   implementationTimeEstimate: string
   estimatedProjectPriceMin: number
   estimatedProjectPriceMax: number
+  priceLabel: string | null
+  signalEvidence: Record<string, { status: string; source: string; confidence: string; evidence: string | null }> | null
+  researchCoverage: number | null
+  scoreConfidence: string | null
+  evaluationStatus: string | null
   evaluatedAt: string
   updatedAt: string
 }
@@ -196,6 +204,10 @@ export async function evaluateCompany(
 
 export async function listEvaluations(id: string): Promise<{ data: Evaluation[]; total: number }> {
   return req(`/companies/${id}/evaluations`)
+}
+
+export async function reprocessCompany(id: string): Promise<Record<string, unknown>> {
+  return req(`/companies/${id}/reprocess`, { method: 'POST' })
 }
 
 // ─── Outreach ─────────────────────────────────────────────────────────────────
