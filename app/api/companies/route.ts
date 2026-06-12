@@ -19,7 +19,14 @@ export async function GET(request: Request): Promise<Response> {
     const parsed = CompanyListQuerySchema.safeParse(raw)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { country, industry, priority, status, minScore, maxScore, package: pkg, confidence, minCoverage, evaluationStatus, sort, limit, offset } = parsed.data
+    const {
+      country, industry, priority, status,
+      minScore, maxScore,
+      package: pkg, confidence, minCoverage, evaluationStatus,
+      prospectProfile, estimatedBusinessSize, chainDetected,
+      minProspectFitScore, minSalesPriorityScore,
+      sort, limit, offset,
+    } = parsed.data
 
     // Build filter
     const where: Record<string, unknown> = {}
@@ -29,12 +36,23 @@ export async function GET(request: Request): Promise<Response> {
     if (priority)         where.latestPriorityLevel = priority
     if (pkg)              where.latestPackageSlug = pkg
     if (confidence)       where.latestScoreConfidence = confidence
+    if (prospectProfile)  where.prospectProfile = prospectProfile
+    if (estimatedBusinessSize) where.estimatedBusinessSize = estimatedBusinessSize
+    if (chainDetected !== undefined) where.chainDetected = chainDetected
 
     if (minScore !== undefined || maxScore !== undefined) {
       const scoreFilter: Record<string, number> = {}
       if (minScore !== undefined) scoreFilter.gte = minScore
       if (maxScore !== undefined) scoreFilter.lte = maxScore
       where.latestOpportunityScore = scoreFilter
+    }
+
+    if (minProspectFitScore !== undefined) {
+      where.prospectFitScore = { gte: minProspectFitScore }
+    }
+
+    if (minSalesPriorityScore !== undefined) {
+      where.salesPriorityScore = { gte: minSalesPriorityScore }
     }
 
     if (minCoverage !== undefined || evaluationStatus !== undefined) {
@@ -49,10 +67,12 @@ export async function GET(request: Request): Promise<Response> {
     // Build sort
     const orderBy = (() => {
       switch (sort) {
-        case 'score_asc':    return { latestOpportunityScore: 'asc'  as const }
-        case 'created_asc':  return { createdAt:              'asc'  as const }
-        case 'updated_desc': return { updatedAt:              'desc' as const }
-        default:             return { latestOpportunityScore: 'desc' as const }
+        case 'score_asc':           return { latestOpportunityScore: 'asc'  as const }
+        case 'created_asc':         return { createdAt:              'asc'  as const }
+        case 'updated_desc':        return { updatedAt:              'desc' as const }
+        case 'sales_priority_desc': return { salesPriorityScore:     'desc' as const }
+        case 'prospect_fit_desc':   return { prospectFitScore:       'desc' as const }
+        default:                    return { latestOpportunityScore: 'desc' as const }
       }
     })()
 
@@ -76,6 +96,22 @@ export async function GET(request: Request): Promise<Response> {
           latestPackageSlug:      true,
           latestPrimaryService:   true,
           latestScoreConfidence:  true,
+          // Phase 3.8
+          prospectFitScore:       true,
+          salesPriorityScore:     true,
+          estimatedBusinessSize:  true,
+          businessSizeConfidence: true,
+          chainDetected:          true,
+          prospectProfile:        true,
+          contactabilityScore:    true,
+          opportunityReasons:     true,
+          prospectRisks:          true,
+          discoverySearchCountry: true,
+          discoverySearchCity:    true,
+          discoverySearchDistrict: true,
+          discoveryMode:          true,
+          discoveryRankBefore:    true,
+          discoveryRankAfter:     true,
           createdAt:              true,
           updatedAt:              true,
         },

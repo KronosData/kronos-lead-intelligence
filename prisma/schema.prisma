@@ -29,6 +29,25 @@ model Company {
   latestPrimaryService   String?   @map("latest_primary_service")
   latestScoreConfidence  String?   @map("latest_score_confidence")
 
+  // Phase 3.8 — Prospect Fit Score (discovery-stage, before web analysis)
+  prospectFitScore        Int?    @map("prospect_fit_score")
+  salesPriorityScore      Int?    @map("sales_priority_score")
+  estimatedBusinessSize   String? @map("estimated_business_size")
+  businessSizeConfidence  String? @map("business_size_confidence")
+  chainDetected           Boolean @default(false) @map("chain_detected")
+  prospectProfile         String? @map("prospect_profile")
+  contactabilityScore     Int?    @map("contactability_score")
+  opportunityReasons      String[] @map("opportunity_reasons")
+  prospectRisks           String[] @map("prospect_risks")
+
+  // Phase 3.8 — Discovery provenance
+  discoverySearchCountry  String? @map("discovery_search_country")
+  discoverySearchCity     String? @map("discovery_search_city")
+  discoverySearchDistrict String? @map("discovery_search_district")
+  discoveryMode           String? @map("discovery_mode")
+  discoveryRankBefore     Int?    @map("discovery_rank_before")
+  discoveryRankAfter      Int?    @map("discovery_rank_after")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

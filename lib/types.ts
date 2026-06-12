@@ -6,6 +6,7 @@ export type Country =
   | 'peru' | 'mexico' | 'colombia' | 'chile' | 'spain'
   | 'argentina' | 'ecuador' | 'bolivia' | 'uruguay' | 'paraguay'
   | 'costa_rica' | 'panama' | 'guatemala' | 'honduras' | 'el_salvador' | 'nicaragua'
+  | 'venezuela' | 'dominican_republic' | 'puerto_rico'
 
 export type CompanyStatus = 'active' | 'contacted' | 'client' | 'archived'
 

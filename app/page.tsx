@@ -19,7 +19,7 @@ import { listCompanies, createCompany, type Company } from '@/lib/api-client'
 import { exportCompaniesCSV, importCompaniesCSV, type ParsedCSVRow } from '@/lib/csv'
 import { INDUSTRY_SUGGESTIONS } from '@/lib/constants'
 
-type SortKey = 'score_desc' | 'score_asc' | 'created_asc' | 'updated_desc'
+type SortKey = 'score_desc' | 'score_asc' | 'created_asc' | 'updated_desc' | 'sales_priority_desc' | 'prospect_fit_desc'
 
 function priorityVariant(p: string): 'hot' | 'high' | 'medium' | 'low' | 'secondary' {
   if (p === 'hot') return 'hot'
@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [industry, setIndustry] = useState('')
   const [pkgFilter, setPkgFilter] = useState('')
   const [confidenceFilter, setConfidenceFilter] = useState('')
+  const [prospectProfileFilter, setProspectProfileFilter] = useState('')
   const [sort, setSort] = useState<SortKey>('score_desc')
 
   const [importOpen, setImportOpen] = useState(false)
@@ -78,9 +79,10 @@ export default function DashboardPage() {
     setError('')
     try {
       const res = await listCompanies({
-        priority:   priority.trim() || undefined,
-        package:    pkgFilter.trim() || undefined,
-        confidence: confidenceFilter.trim() || undefined,
+        priority:        priority.trim() || undefined,
+        package:         pkgFilter.trim() || undefined,
+        confidence:      confidenceFilter.trim() || undefined,
+        prospectProfile: prospectProfileFilter.trim() || undefined,
         sort,
         limit: 200,
       })
@@ -99,7 +101,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [priority, pkgFilter, confidenceFilter, sort, search, industry])
+  }, [priority, pkgFilter, confidenceFilter, prospectProfileFilter, sort, search, industry])
 
   useEffect(() => { fetchCompanies() }, [fetchCompanies])
 
@@ -134,7 +136,7 @@ export default function DashboardPage() {
     return 'bg-slate-50 text-slate-500 border-slate-200'
   }
 
-  const hasFilters = !!(search || priority || industry || pkgFilter || confidenceFilter)
+  const hasFilters = !!(search || priority || industry || pkgFilter || confidenceFilter || prospectProfileFilter)
 
   return (
     <div className="p-8">
@@ -226,13 +228,28 @@ export default function DashboardPage() {
           </SelectContent>
         </Select>
 
+        <Select value={prospectProfileFilter} onValueChange={setProspectProfileFilter}>
+          <SelectTrigger className="w-44 bg-white">
+            <SelectValue placeholder="Perfil prospecto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value=" ">Todos los perfiles</SelectItem>
+            <SelectItem value="ideal">Ideal</SelectItem>
+            <SelectItem value="good_opportunity">Oportunidad</SelectItem>
+            <SelectItem value="investigate">Investigar</SelectItem>
+            <SelectItem value="low_priority">Baja prioridad</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger className="w-48 bg-white">
+          <SelectTrigger className="w-52 bg-white">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="score_desc">Mayor score primero</SelectItem>
             <SelectItem value="score_asc">Menor score primero</SelectItem>
+            <SelectItem value="sales_priority_desc">Sales Priority Score</SelectItem>
+            <SelectItem value="prospect_fit_desc">Prospect Fit Score</SelectItem>
             <SelectItem value="updated_desc">Actualizado recientemente</SelectItem>
             <SelectItem value="created_asc">Más antiguo primero</SelectItem>
           </SelectContent>
@@ -278,6 +295,7 @@ export default function DashboardPage() {
                 <TableHead>Industria</TableHead>
                 <TableHead>País</TableHead>
                 <TableHead className="text-center w-20">Score</TableHead>
+                <TableHead className="text-center w-20">PFS</TableHead>
                 <TableHead className="w-28">Prioridad</TableHead>
                 <TableHead className="w-40">Paquete Kronos</TableHead>
                 <TableHead className="w-24">Confianza</TableHead>
@@ -301,6 +319,18 @@ export default function DashboardPage() {
                       <span className={`text-lg ${scoreColor(c.latestOpportunityScore)}`}>
                         {c.latestOpportunityScore}
                       </span>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {c.prospectFitScore !== null && c.prospectFitScore !== undefined ? (
+                      <span className={`text-sm font-semibold ${
+                        c.prospectFitScore >= 70 ? 'text-emerald-600' :
+                        c.prospectFitScore >= 50 ? 'text-blue-600' :
+                        c.prospectFitScore >= 30 ? 'text-amber-600' :
+                        'text-slate-400'
+                      }`}>{c.prospectFitScore}</span>
                     ) : (
                       <span className="text-xs text-slate-300">—</span>
                     )}

@@ -5,6 +5,7 @@ import { z } from 'zod'
 const Country = z.enum([
   'peru', 'mexico', 'colombia', 'chile', 'spain',
   'argentina', 'ecuador', 'bolivia', 'uruguay', 'paraguay',
+  'venezuela', 'dominican_republic', 'puerto_rico',
   'costa_rica', 'panama', 'guatemala', 'honduras', 'el_salvador', 'nicaragua',
 ])
 
@@ -137,7 +138,12 @@ export const CompanyListQuerySchema = z.object({
   confidence:       z.enum(['high', 'medium', 'low']).optional(),
   minCoverage:      z.coerce.number().int().min(0).max(100).optional(),
   evaluationStatus: z.string().optional(),
-  sort:             z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc']).default('score_desc'),
+  prospectProfile:        z.enum(['ideal', 'good_opportunity', 'investigate', 'low_priority', 'discard']).optional(),
+  estimatedBusinessSize:  z.enum(['micro', 'small', 'medium', 'large', 'unknown']).optional(),
+  chainDetected:          z.coerce.boolean().optional(),
+  minProspectFitScore:    z.coerce.number().int().min(0).max(100).optional(),
+  minSalesPriorityScore:  z.coerce.number().int().min(0).max(100).optional(),
+  sort:             z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc', 'sales_priority_desc', 'prospect_fit_desc']).default('score_desc'),
   limit:            z.coerce.number().int().positive().max(200).default(100),
   offset:           z.coerce.number().int().nonnegative().default(0),
 })

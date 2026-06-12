@@ -34,6 +34,22 @@ export interface Company {
   latestPackageSlug: string | null
   latestPrimaryService: string | null
   latestScoreConfidence: string | null
+  // Phase 3.8 — Prospect fit fields
+  prospectFitScore: number | null
+  salesPriorityScore: number | null
+  estimatedBusinessSize: string | null
+  businessSizeConfidence: string | null
+  chainDetected: boolean
+  prospectProfile: string | null
+  contactabilityScore: number | null
+  opportunityReasons: string[]
+  prospectRisks: string[]
+  discoverySearchCountry: string | null
+  discoverySearchCity: string | null
+  discoverySearchDistrict: string | null
+  discoveryMode: string | null
+  discoveryRankBefore: number | null
+  discoveryRankAfter: number | null
   createdAt: string
   updatedAt: string
 }
@@ -167,6 +183,11 @@ export interface CompanyListParams {
   confidence?: string
   minCoverage?: number
   evaluationStatus?: string
+  prospectProfile?: string
+  estimatedBusinessSize?: string
+  chainDetected?: boolean
+  minProspectFitScore?: number
+  minSalesPriorityScore?: number
   sort?: string
   limit?: number
   offset?: number

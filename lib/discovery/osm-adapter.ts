@@ -1,36 +1,26 @@
 // OpenStreetMap adapter.
-// Uses Nominatim for geocoding and Overpass API for business discovery.
-// Both services are free and require no API key.
-// IMPORTANT: Nominatim ToS requires a valid User-Agent with contact email.
+// Uses Overpass API for business discovery within a pre-geocoded bounding box.
+// No API key required. Nominatim ToS: must send valid User-Agent with contact.
 
-import type { DiscoveryCandidate, DiscoverySearchParams } from './types'
+import type { RawCandidate, OsmAdapterParams } from './types'
+import { ISO2_TO_SLUG } from '@/lib/locations/countries'
 
-const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/search'
-const OVERPASS_BASE  = 'https://overpass-api.de/api/interpreter'
+const OVERPASS_BASE = 'https://overpass-api.de/api/interpreter'
 const UA = 'KronosLeadIntelligence/1.0 (alejandro@kronosdata.tech)'
 
-// ── OSM response types ─────────────────────────────────────────────────────
-
-interface NominatimResult {
-  lat: string
-  lon: string
-  boundingbox: [string, string, string, string] // [minlat, maxlat, minlon, maxlon]
-  display_name: string
-  address?: { country_code?: string; country?: string }
-}
+// ── OSM element types ──────────────────────────────────────────────────────────
 
 interface OverpassTags {
-  name?:               string
-  'addr:street'?:      string
-  'addr:housenumber'?: string
-  'addr:city'?:        string
-  'addr:country'?:     string
-  phone?:              string
-  'contact:phone'?:    string
-  website?:            string
-  'contact:website'?:  string
-  'contact:instagram'?: string
-  [key: string]:       string | undefined
+  name?:                string
+  'addr:street'?:       string
+  'addr:housenumber'?:  string
+  'addr:city'?:         string
+  'addr:country'?:      string
+  phone?:               string
+  'contact:phone'?:     string
+  website?:             string
+  'contact:website'?:   string
+  [key: string]:        string | undefined
 }
 
 interface OverpassElement {
@@ -42,19 +32,18 @@ interface OverpassElement {
   tags?:   OverpassTags
 }
 
-// ── Industry → OSM tag mapping ─────────────────────────────────────────────
-// Each entry maps a keyword (matched against the query) to OSM key=value pairs.
+// ── Industry → OSM tag mapping ─────────────────────────────────────────────────
 
 const INDUSTRY_TAGS: Array<{ keywords: string[]; tags: Array<[string, string]> }> = [
-  { keywords: ['dental', 'dentist', 'odontolog', 'clínica dental', 'clinica dental'],
+  { keywords: ['dental', 'dentist', 'odontolog', 'clinica dental'],
     tags: [['amenity', 'dentist']] },
-  { keywords: ['clinic', 'clínica', 'clinica', 'healthcare'],
+  { keywords: ['clinic', 'clínica', 'clinica', 'healthcare', 'medico', 'médico', 'salud'],
     tags: [['amenity', 'clinic'], ['amenity', 'hospital'], ['healthcare', 'clinic']] },
   { keywords: ['hospital'],
     tags: [['amenity', 'hospital']] },
   { keywords: ['farmacia', 'pharmacy', 'drug'],
     tags: [['amenity', 'pharmacy']] },
-  { keywords: ['restaurant', 'restaurante', 'comida', 'food'],
+  { keywords: ['restaurant', 'restaurante', 'comida', 'food', 'gastronomia'],
     tags: [['amenity', 'restaurant'], ['amenity', 'fast_food']] },
   { keywords: ['café', 'cafe', 'coffee'],
     tags: [['amenity', 'cafe']] },
@@ -68,18 +57,26 @@ const INDUSTRY_TAGS: Array<{ keywords: string[]; tags: Array<[string, string]> }
     tags: [['office', 'construction']] },
   { keywords: ['gym', 'gimnasio', 'fitness', 'crossfit'],
     tags: [['leisure', 'fitness_centre']] },
-  { keywords: ['escuela', 'school', 'colegio', 'instituto'],
+  { keywords: ['escuela', 'school', 'colegio'],
     tags: [['amenity', 'school']] },
   { keywords: ['universidad', 'university'],
     tags: [['amenity', 'university']] },
-  { keywords: ['supermarket', 'supermercado', 'market'],
+  { keywords: ['supermarket', 'supermercado'],
     tags: [['shop', 'supermarket']] },
-  { keywords: ['beauty', 'salon', 'salón', 'estética', 'estetica', 'peluquería'],
+  { keywords: ['beauty', 'salon', 'salón', 'estética', 'estetica', 'peluquería', 'spa'],
     tags: [['shop', 'hairdresser'], ['shop', 'beauty']] },
   { keywords: ['veterinaria', 'veterinario', 'vet'],
     tags: [['amenity', 'veterinary']] },
   { keywords: ['banco', 'bank'],
     tags: [['amenity', 'bank']] },
+  { keywords: ['taller', 'automotriz', 'mecanico', 'mecánico', 'autorepair'],
+    tags: [['shop', 'car_repair']] },
+  { keywords: ['notaria', 'notaría', 'notary'],
+    tags: [['office', 'notary']] },
+  { keywords: ['consultor', 'consultoria', 'agencia'],
+    tags: [['office', 'consulting']] },
+  { keywords: ['logistica', 'logística', 'transporte', 'envios'],
+    tags: [['office', 'logistics']] },
 ]
 
 function inferOSMTags(query: string): Array<[string, string]> {
@@ -96,54 +93,25 @@ function extractSearchTerms(query: string): string[] {
     .toLowerCase()
     .split(/\s+/)
     .filter(w => w.length >= 4 && !stop.has(w))
-    .slice(0, 3) // use at most 3 terms to keep regex manageable
+    .slice(0, 3)
 }
 
-// ── Country normalizer ─────────────────────────────────────────────────────
-
-const CC_TO_VALUE: Record<string, string> = {
-  pe: 'peru', mx: 'mexico', co: 'colombia', cl: 'chile',
-  ar: 'argentina', es: 'spain', ec: 'ecuador', bo: 'bolivia',
-  uy: 'uruguay', py: 'paraguay', cr: 'costa_rica', pa: 'panama',
-  gt: 'guatemala', hn: 'honduras', sv: 'el_salvador', ni: 'nicaragua',
-}
+// ── Country normalizer ─────────────────────────────────────────────────────────
 
 function normalizeCountry(cc: string | undefined, fallback: string): string {
   if (!cc) return fallback.toLowerCase()
-  return CC_TO_VALUE[cc.toLowerCase()] ?? fallback.toLowerCase()
+  return ISO2_TO_SLUG[cc.toLowerCase()] ?? fallback.toLowerCase()
 }
 
-// ── Nominatim geocode ──────────────────────────────────────────────────────
-
-async function geocodeNominatim(city: string, country: string): Promise<NominatimResult | null> {
-  const url = new URL(NOMINATIM_BASE)
-  url.searchParams.set('q', `${city}, ${country}`)
-  url.searchParams.set('format', 'json')
-  url.searchParams.set('limit', '1')
-  url.searchParams.set('addressdetails', '1')
-
-  try {
-    const res = await fetch(url.toString(), {
-      headers: { 'User-Agent': UA, Accept: 'application/json' },
-      signal: AbortSignal.timeout(12_000),
-    })
-    if (!res.ok) return null
-    const data = await res.json() as NominatimResult[]
-    return data?.[0] ?? null
-  } catch {
-    return null
-  }
-}
-
-// ── Overpass query ─────────────────────────────────────────────────────────
+// ── Overpass query ─────────────────────────────────────────────────────────────
 
 async function queryOverpass(
-  bbox: [string, string, string, string], // [minlat, maxlat, minlon, maxlon]
+  bbox: [number, number, number, number], // [south, north, west, east]
   query: string,
   limit: number,
 ): Promise<OverpassElement[]> {
-  const [minlat, maxlat, minlon, maxlon] = bbox
-  const bboxStr = `${minlat},${minlon},${maxlat},${maxlon}`
+  const [south, north, west, east] = bbox
+  const bboxStr = `${south},${west},${north},${east}`
 
   const tagFilters = inferOSMTags(query)
   const terms      = extractSearchTerms(query)
@@ -154,17 +122,14 @@ async function queryOverpass(
   let filters: string
 
   if (tagFilters.length > 0) {
-    // Use specific tag filters — more precise
     const tagParts = tagFilters.map(([k, v]) => nodeWay(`["${k}"="${v}"]`)).join('')
     if (terms.length > 0) {
-      // Also include name~ fallback for same tags
       const pattern = terms.join('|')
       filters = tagParts + nodeWay(`["name"~"${pattern}",i]`)
     } else {
       filters = tagParts
     }
   } else if (terms.length > 0) {
-    // Fall back to name~ search only
     const pattern = terms.join('|')
     filters = nodeWay(`["name"~"${pattern}",i]`)
   } else {
@@ -195,26 +160,25 @@ async function queryOverpass(
   }
 }
 
-// ── Normalize OSM element → DiscoveryCandidate ─────────────────────────────
+// ── Normalize OSM element ──────────────────────────────────────────────────────
 
 function normalizeElement(
   el: OverpassElement,
   queryIndustry: string,
   fallbackCity: string,
   fallbackCountry: string,
-): DiscoveryCandidate | null {
+): RawCandidate | null {
   const tags = el.tags ?? {}
   const name = tags.name?.trim()
   if (!name || name.length < 2) return null
 
-  const lat  = el.lat  ?? el.center?.lat ?? null
-  const lon  = el.lon  ?? el.center?.lon ?? null
-  const city = tags['addr:city'] ?? fallbackCity
-  const cc   = tags['addr:country']
+  const lat    = el.lat  ?? el.center?.lat ?? null
+  const lon    = el.lon  ?? el.center?.lon ?? null
+  const city   = tags['addr:city'] ?? fallbackCity
+  const cc     = tags['addr:country']
   const country = normalizeCountry(cc, fallbackCountry)
 
-  const street = [tags['addr:street'], tags['addr:housenumber']]
-    .filter(Boolean).join(' ')
+  const street  = [tags['addr:street'], tags['addr:housenumber']].filter(Boolean).join(' ')
   const address = street ? `${street}, ${city}` : `${city}, ${country}`
 
   const phone   = tags.phone ?? tags['contact:phone'] ?? null
@@ -225,7 +189,7 @@ function normalizeElement(
   if (phone)        confidence += 15
   if (lat !== null) confidence += 10
   if (street)       confidence += 10
-  if (city !== fallbackCity) confidence += 5 // city detected from tags
+  if (city !== fallbackCity) confidence += 5
 
   return {
     source:            'osm',
@@ -247,21 +211,19 @@ function normalizeElement(
   }
 }
 
-// ── Public API ─────────────────────────────────────────────────────────────
+// ── Public API ─────────────────────────────────────────────────────────────────
 
-export async function searchOSM(params: DiscoverySearchParams): Promise<DiscoveryCandidate[]> {
-  const { query, city, country, limit } = params
+export async function searchOSM(params: OsmAdapterParams): Promise<RawCandidate[]> {
+  const { query, country, city, bbox, limit } = params
 
-  const geo = await geocodeNominatim(city, country)
-  if (!geo) {
-    console.warn('[OSM] Could not geocode:', city, country)
+  if (!bbox) {
+    console.warn('[OSM] No bounding box provided for:', city, country)
     return []
   }
 
-  const bbox = geo.boundingbox
-  const elements = await queryOverpass(bbox, query, Math.min(limit + 10, 40))
+  const elements = await queryOverpass(bbox, query, Math.min(limit + 20, 60))
 
   return elements
     .map(el => normalizeElement(el, query, city, country))
-    .filter((c): c is DiscoveryCandidate => c !== null)
+    .filter((c): c is RawCandidate => c !== null)
 }

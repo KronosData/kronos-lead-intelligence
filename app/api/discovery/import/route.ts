@@ -33,6 +33,22 @@ const ImportSchema = z.object({
   phone:      z.string().max(40).nullable().optional(),
   googleBusinessUrl: z.string().url().nullable().optional(),
   source:     z.enum(['here', 'osm']),
+
+  // Phase 3.8 — Prospect Fit fields from discovery normalizer
+  prospectFitScore:       z.number().int().min(0).max(100).optional(),
+  estimatedBusinessSize:  z.string().optional(),
+  businessSizeConfidence: z.string().optional(),
+  chainDetected:          z.boolean().optional(),
+  prospectProfile:        z.string().optional(),
+  contactabilityScore:    z.number().int().min(0).max(100).optional(),
+  opportunityReasons:     z.array(z.string()).optional(),
+  prospectRisks:          z.array(z.string()).optional(),
+  discoverySearchCountry: z.string().optional(),
+  discoverySearchCity:    z.string().optional(),
+  discoverySearchDistrict: z.string().optional(),
+  discoveryMode:          z.string().optional(),
+  discoveryRankBefore:    z.number().int().optional(),
+  discoveryRankAfter:     z.number().int().optional(),
 })
 
 // Converts web analyzer result to boolean signals (value=null → false, others as-is).
@@ -170,6 +186,21 @@ export async function POST(request: Request): Promise<Response> {
           googleBusinessUrl: candidate.googleBusinessUrl ?? null,
           status:            'active',
           leadSource,
+          // Phase 3.8 — discovery-stage prospect analysis
+          prospectFitScore:        candidate.prospectFitScore ?? null,
+          estimatedBusinessSize:   candidate.estimatedBusinessSize ?? null,
+          businessSizeConfidence:  candidate.businessSizeConfidence ?? null,
+          chainDetected:           candidate.chainDetected ?? false,
+          prospectProfile:         candidate.prospectProfile ?? null,
+          contactabilityScore:     candidate.contactabilityScore ?? null,
+          opportunityReasons:      candidate.opportunityReasons ?? [],
+          prospectRisks:           candidate.prospectRisks ?? [],
+          discoverySearchCountry:  candidate.discoverySearchCountry ?? null,
+          discoverySearchCity:     candidate.discoverySearchCity ?? null,
+          discoverySearchDistrict: candidate.discoverySearchDistrict ?? null,
+          discoveryMode:           candidate.discoveryMode ?? null,
+          discoveryRankBefore:     candidate.discoveryRankBefore ?? null,
+          discoveryRankAfter:      candidate.discoveryRankAfter ?? null,
         },
       })
 
