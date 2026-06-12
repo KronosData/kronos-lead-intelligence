@@ -25,6 +25,7 @@ import { computeSalesQualificationScore } from '@/lib/qualification/sales-qualif
 import { getIndustryProfile }   from '@/lib/economics/industry-models'
 import { computeProspectFitScore } from '@/lib/prospecting/prospect-fit'
 import { estimateBusinessSizeFromDiscovery } from '@/lib/prospecting/business-size'
+import { buildCompositeUpdatePayload } from '@/lib/scoring/apply-composite'
 import { ok, notFound, serverError } from '@/lib/api-helpers'
 import type { SignalFlags } from '@/lib/types'
 import type { SignalEvidenceMap } from '@/lib/evidence'
@@ -39,8 +40,14 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
       where: { id },
       select: {
         id: true, name: true, industry: true, website: true, leadSource: true,
-        city: true, country: true, whatsapp: true,
-        estimatedBusinessSize: true,
+        city: true, country: true, whatsapp: true, instagram: true, linkedin: true,
+        googleBusinessUrl: true, estimatedBusinessSize: true,
+        // For composite scorer (Phase 4)
+        entityIsCommercial: true, entityType: true, sellabilityClass: true,
+        budgetCapacityScore: true, budgetCapacityLabel: true, roiFitLabel: true,
+        roiFitScore: true, salesQualificationScore: true, contactabilityScore: true,
+        whyContact: true, whyNotContact: true, entityExclusionReason: true,
+        qualificationQuestions: true,
       },
     })
     if (!company) return notFound('Company')
@@ -253,6 +260,54 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
           whyContact:              sqsResult.whyContact,
           whyNotContact:           sqsResult.whyNotContact,
           qualificationQuestions:  sqsResult.qualificationQuestions,
+          // Phase 4 — Composite scoring
+          ...buildCompositeUpdatePayload(
+            {
+              ...company,
+              sellabilityClass:        sqsResult.sellabilityClass,
+              budgetCapacityScore:     budgetCap.score,
+              budgetCapacityLabel:     budgetCap.label,
+              roiFitLabel:             roiFit.label,
+              roiFitScore:             roiFit.score,
+              salesQualificationScore: sqsResult.score,
+              contactabilityScore:     pfsResult.contactabilityScore,
+              estimatedBusinessSize:   bsResult.size,
+              whyContact:              sqsResult.whyContact,
+              whyNotContact:           sqsResult.whyNotContact,
+              entityExclusionReason:   entityClass.exclusionReason,
+              qualificationQuestions:  sqsResult.qualificationQuestions,
+              entityIsCommercial:      entityClass.isCommerciallyViable,
+              entityType:              entityClass.entityType,
+            },
+            scores ? {
+              opportunityScore:           scores.opportunityScore,
+              scoreLeadGeneration:        scores.scoreLeadGeneration,
+              scoreFollowUp:              scores.scoreFollowUp,
+              scoreConversionProcess:     scores.scoreConversionProcess,
+              scoreAutomationOpportunity: scores.scoreAutomationOpportunity,
+              scoreOnlinePresence:        scores.scoreOnlinePresence,
+              scoreReputation:            scores.scoreReputation,
+              researchCoverage:           coverage,
+              scoreConfidence:            scores.scoreConfidence ?? null,
+              signalHasWebsite:           signals.signalHasWebsite,
+              signalHasWhatsapp:          signals.signalHasWhatsapp,
+              signalHasContactForm:       signals.signalHasContactForm,
+              signalHasBookingSystem:     signals.signalHasBookingSystem,
+              signalHasGoogleBusiness:    signals.signalHasGoogleBusiness,
+              signalHasReviews:           signals.signalHasReviews,
+              signalHasUnansweredReviews: signals.signalHasUnansweredReviews,
+              signalHasClearCta:          signals.signalHasClearCta,
+              signalHasLeadCapture:       signals.signalHasLeadCapture,
+              signalSlowResponse:         signals.signalSlowResponse,
+              signalWeakFollowup:         signals.signalWeakFollowup,
+              signalManualWork:           signals.signalManualWork,
+              signalWeakOnlinePresence:   signals.signalWeakOnlinePresence,
+              detectedProblems:           diagnosis.detectedProblems,
+              probablePainPoint:          diagnosis.probablePainPoint,
+              recommendedPackageSlug:     pkgRec.recommendedPackageSlug,
+              primaryService:             services.primaryService,
+            } : undefined,
+          ),
           // Phase 3.8 — Also refresh PFS
           prospectFitScore:        pfsResult.score,
           prospectProfile:         pfsResult.profile,

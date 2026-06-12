@@ -6,7 +6,7 @@ import {
   ArrowLeft, Edit, Trash2, RefreshCw, AlertCircle, Loader2,
   TrendingDown, DollarSign, Zap, Clock, CheckCircle2, XCircle,
   MessageSquare, Phone, Mail, Calendar, ChevronDown, ChevronUp, Send,
-  Copy, Pencil, Plus, X
+  Copy, Pencil, Plus, X, BarChart2, Target, ClipboardList,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,9 +25,10 @@ import {
 import {
   getCompany, listEvaluations, listOutreach, createOutreach, upsertSalesNote,
   evaluateCompany, deleteCompany, reprocessCompany,
-  type CompanyDetail, type Evaluation, type OutreachRecord, type SalesNote,
+  listAudits, createAudit, updateAudit,
+  type CompanyDetail, type Evaluation, type OutreachRecord, type SalesNote, type Audit,
 } from '@/lib/api-client'
-import { SIGNAL_DEFINITIONS, OUTREACH_CHANNELS, RESPONSE_TYPES, CONTACT_STATUSES, MEETING_STATUSES } from '@/lib/constants'
+import { SIGNAL_DEFINITIONS, OUTREACH_CHANNELS, RESPONSE_TYPES, CONTACT_STATUSES, MEETING_STATUSES, PIPELINE_STAGES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 function priorityVariant(p: string): 'hot' | 'high' | 'medium' | 'low' | 'secondary' {
@@ -448,6 +449,484 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── Composite scoring panel ───────────────────────────────────────────────────
+
+const SALES_PRIORITY_CONFIG: Record<string, { label: string; cls: string }> = {
+  HOT:     { label: 'HOT 🔥',    cls: 'bg-red-100 text-red-700 border-red-300' },
+  HIGH:    { label: 'HIGH',      cls: 'bg-orange-100 text-orange-700 border-orange-300' },
+  MEDIUM:  { label: 'MEDIUM',    cls: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+  LOW:     { label: 'LOW',       cls: 'bg-slate-100 text-slate-600 border-slate-300' },
+  REVIEW:  { label: 'REVIEW',    cls: 'bg-purple-100 text-purple-700 border-purple-300' },
+  DISCARD: { label: 'DISCARD',   cls: 'bg-slate-100 text-slate-400 border-slate-200' },
+}
+
+const EVIDENCE_TIER_CONFIG: Record<string, { label: string; cls: string }> = {
+  HIGH:   { label: 'Evidencia ALTA',   cls: 'bg-green-100 text-green-700 border-green-300' },
+  MEDIUM: { label: 'Evidencia MEDIA',  cls: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+  LOW:    { label: 'Evidencia BAJA',   cls: 'bg-amber-100 text-amber-700 border-amber-300' },
+}
+
+function CompositeMeter({ label, value }: { label: string; value: number | null }) {
+  const v = value ?? 0
+  const color = v >= 75 ? 'bg-green-500' : v >= 55 ? 'bg-blue-500' : v >= 35 ? 'bg-yellow-400' : 'bg-slate-300'
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1">
+        <span className="text-slate-600">{label}</span>
+        <span className={`font-semibold ${v >= 60 ? 'text-slate-900' : 'text-slate-400'}`}>{value ?? '—'}</span>
+      </div>
+      <div className="w-full bg-slate-100 rounded-full h-1.5">
+        <div className={`${color} h-1.5 rounded-full transition-all`} style={{ width: `${v}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function CompositeScorePanel({ company }: { company: CompanyDetail }) {
+  const sp = company.salesPriority ? SALES_PRIORITY_CONFIG[company.salesPriority] : null
+  const et = company.evidenceTier ? EVIDENCE_TIER_CONFIG[company.evidenceTier] : null
+
+  const hasAny = company.salesOpportunityScore !== null || company.icpFitScore !== null
+
+  if (!hasAny) {
+    return (
+      <div className="rounded-xl border-2 border-dashed border-slate-200 px-6 py-8 text-center text-slate-400 text-sm">
+        <BarChart2 className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+        <p>Scoring compuesto no disponible.</p>
+        <p className="text-xs mt-1">Evalúa y reprocesa la empresa para calcularlo.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Priority + tier badges */}
+      <div className="flex flex-wrap items-center gap-3">
+        {sp && (
+          <span className={`text-sm font-bold border rounded-full px-3 py-1 ${sp.cls}`}>{sp.label}</span>
+        )}
+        {et && (
+          <span className={`text-xs font-medium border rounded-full px-3 py-1 ${et.cls}`}>{et.label}</span>
+        )}
+        {company.salesOpportunityScore !== null && (
+          <div className="ml-auto text-right">
+            <p className="text-xs text-slate-400">Sales Opp. Score</p>
+            <p className={`text-3xl font-bold ${scoreColor(company.salesOpportunityScore)}`}>{company.salesOpportunityScore}</p>
+          </div>
+        )}
+      </div>
+
+      {/* 5 dimension scores */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <CompositeMeter label="ICP Fit"           value={company.icpFitScore} />
+        <CompositeMeter label="Pain"              value={company.painScore} />
+        <CompositeMeter label="Payment Capacity"  value={company.paymentCapacityScore} />
+        <CompositeMeter label="Evidence Coverage" value={company.evidenceCoverageScore} />
+        <CompositeMeter label="Commercial Intent" value={company.commercialIntentScore} />
+      </div>
+
+      {/* Qualification / disqualification reasons */}
+      {company.qualificationReason && (
+        <div className="rounded-lg bg-green-50 border border-green-100 px-4 py-3">
+          <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Por qué califica</p>
+          <p className="text-sm text-green-800 leading-relaxed">{company.qualificationReason}</p>
+        </div>
+      )}
+      {company.disqualificationReason && (
+        <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3">
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Por qué no califica / riesgo</p>
+          <p className="text-sm text-red-800 leading-relaxed">{company.disqualificationReason}</p>
+        </div>
+      )}
+      {company.recommendedFirstAction && (
+        <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3">
+          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Primera acción recomendada</p>
+          <p className="text-sm text-blue-900 leading-relaxed">{company.recommendedFirstAction}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── CRM Pipeline panel ────────────────────────────────────────────────────────
+
+function PipelinePanel({
+  companyId,
+  initialNote,
+  company,
+}: {
+  companyId: string
+  initialNote: SalesNote | null
+  company: CompanyDetail
+}) {
+  const currentStage = initialNote?.pipelineStage ?? 'discovered'
+  const [stage, setStage] = useState(currentStage)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [potentialValue, setPotentialValue] = useState(initialNote?.potentialValue?.toString() ?? '')
+  const [proposedPackage, setProposedPackage] = useState(initialNote?.proposedPackageSlug ?? '')
+  const [internalNotes, setInternalNotes] = useState(initialNote?.internalNotes ?? '')
+
+  const currentIdx = PIPELINE_STAGES.findIndex((s) => s.value === stage)
+
+  async function save(newStage?: string) {
+    setSaving(true)
+    try {
+      await upsertSalesNote(companyId, {
+        pipelineStage:       newStage ?? stage,
+        potentialValue:      potentialValue ? parseFloat(potentialValue) : undefined,
+        proposedPackageSlug: proposedPackage || undefined,
+        internalNotes:       internalNotes.trim() || undefined,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  async function handleStageClick(val: string) {
+    setStage(val)
+    await save(val)
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Stage selector */}
+      <div>
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Etapa del pipeline</p>
+        <div className="flex flex-wrap gap-2">
+          {PIPELINE_STAGES.map((s, i) => (
+            <button
+              key={s.value}
+              onClick={() => handleStageClick(s.value)}
+              disabled={saving}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
+                stage === s.value
+                  ? s.color + ' border-current ring-2 ring-offset-1 ring-slate-400'
+                  : i < currentIdx
+                    ? 'bg-slate-50 text-slate-400 border-slate-200'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+              }`}
+            >
+              {i < currentIdx && <CheckCircle2 className="h-3 w-3 text-green-400" />}
+              {stage === s.value && <span className="h-2 w-2 rounded-full bg-current inline-block" />}
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Pipeline metadata */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label className="text-xs">Valor potencial (USD)</Label>
+          <Input
+            type="number"
+            value={potentialValue}
+            onChange={(e) => setPotentialValue(e.target.value)}
+            placeholder="Ej: 2500"
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Paquete propuesto (slug)</Label>
+          <Input
+            value={proposedPackage}
+            onChange={(e) => setProposedPackage(e.target.value)}
+            placeholder="ej: starter_autonomy"
+            className="mt-1"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">Notas internas</Label>
+        <Textarea
+          value={internalNotes}
+          onChange={(e) => setInternalNotes(e.target.value)}
+          placeholder="Notas del proceso de ventas (no se muestran al cliente)..."
+          className="mt-1 min-h-[80px]"
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={() => save()} disabled={saving} size="sm">
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : saved ? <CheckCircle2 className="h-3 w-3 text-green-400" /> : null}
+          {saved ? 'Guardado' : 'Guardar pipeline'}
+        </Button>
+      </div>
+
+      {/* Composite scores in pipeline context */}
+      <Separator />
+      <div>
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Scoring compuesto</p>
+        <CompositeScorePanel company={company} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Audit panel ───────────────────────────────────────────────────────────────
+
+function AuditPanel({ companyId, industry }: { companyId: string; industry: string }) {
+  const [audits, setAudits] = useState<Audit[]>([])
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [selected, setSelected] = useState<Audit | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  // Edit state for the selected audit
+  const [checklist, setChecklist] = useState<Audit['checklist']>(null)
+  const [findings, setFindings] = useState('')
+  const [hypothesis, setHypothesis] = useState('')
+  const [validatedDiagnosis, setValidatedDiagnosis] = useState('')
+  const [recommendedPkg, setRecommendedPkg] = useState('')
+  const [packageReason, setPackageReason] = useState('')
+  const [meetingSummary, setMeetingSummary] = useState('')
+  const [status, setStatus] = useState('in_progress')
+
+  useEffect(() => {
+    listAudits(companyId)
+      .then((r) => { setAudits(r.data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [companyId])
+
+  function selectAudit(a: Audit) {
+    setSelected(a)
+    setChecklist(a.checklist)
+    setFindings(a.findings ?? '')
+    setHypothesis(a.hypothesis ?? '')
+    setValidatedDiagnosis(a.validatedDiagnosis ?? '')
+    setRecommendedPkg(a.recommendedPackageSlug ?? '')
+    setPackageReason(a.packageReason ?? '')
+    setMeetingSummary(a.meetingSummary ?? '')
+    setStatus(a.status)
+  }
+
+  async function handleCreate() {
+    setCreating(true)
+    try {
+      const a = await createAudit(companyId, { sector: industry })
+      setAudits([a, ...audits])
+      selectAudit(a)
+    } catch { /* ignore */ }
+    finally { setCreating(false) }
+  }
+
+  async function handleSave() {
+    if (!selected) return
+    setSaving(true)
+    try {
+      const updated = await updateAudit(companyId, {
+        auditId:               selected.id,
+        status,
+        checklist:             checklist ?? undefined,
+        findings:              findings.trim() || undefined,
+        hypothesis:            hypothesis.trim() || undefined,
+        validatedDiagnosis:    validatedDiagnosis.trim() || undefined,
+        recommendedPackageSlug: recommendedPkg.trim() || undefined,
+        packageReason:         packageReason.trim() || undefined,
+        meetingSummary:        meetingSummary.trim() || undefined,
+      })
+      setSelected(updated)
+      setAudits((prev) => prev.map((a) => a.id === updated.id ? updated : a))
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  function toggleChecklistItem(id: string, newStatus: 'pending' | 'confirmed' | 'not_applicable' | 'flagged') {
+    setChecklist((prev) => (prev ?? []).map((item) => item.id === id ? { ...item, status: newStatus } : item))
+  }
+
+  const STATUS_LABEL: Record<string, string> = {
+    in_progress: 'En progreso',
+    completed: 'Completada',
+    converted_to_proposal: 'Convertida a propuesta',
+    draft: 'Borrador',
+  }
+
+  const CHECKLIST_STATUS_CYCLE: Record<string, 'confirmed' | 'flagged' | 'not_applicable' | 'pending'> = {
+    pending: 'confirmed',
+    confirmed: 'flagged',
+    flagged: 'not_applicable',
+    not_applicable: 'pending',
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-700">
+          Auditorías gratuitas
+          <span className="ml-2 text-slate-400 font-normal">({audits.length})</span>
+        </p>
+        <Button size="sm" variant="outline" onClick={handleCreate} disabled={creating}>
+          {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+          Nueva auditoría
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center p-8">
+          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+        </div>
+      ) : audits.length === 0 ? (
+        <div className="text-center py-10 text-slate-400 text-sm rounded-xl border-2 border-dashed border-slate-200">
+          <ClipboardList className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+          <p>Sin auditorías todavía.</p>
+          <p className="text-xs mt-1">Crea una para iniciar el proceso de diagnóstico estructurado.</p>
+        </div>
+      ) : (
+        <>
+          {/* Audit list tabs */}
+          <div className="flex flex-wrap gap-2">
+            {audits.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => selectAudit(a)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                  selected?.id === a.id
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                }`}
+              >
+                {new Date(a.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
+                {' · '}
+                <span className={a.status === 'completed' ? 'text-green-400' : 'text-amber-400'}>
+                  {STATUS_LABEL[a.status] ?? a.status}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {selected && (
+            <div className="flex flex-col gap-5 rounded-xl border bg-white p-5">
+              {/* Status selector */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <Label className="text-xs shrink-0">Estado</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_LABEL).map(([v, l]) => (
+                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400 ml-auto">Sector: {selected.sector ?? '—'}</p>
+              </div>
+
+              {/* Checklist */}
+              {checklist && checklist.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Checklist de auditoría</p>
+                  <div className="flex flex-col gap-1.5">
+                    {checklist.map((item) => {
+                      const statusConfig = {
+                        pending:        { cls: 'bg-slate-50 border-slate-200 text-slate-500', label: '○' },
+                        confirmed:      { cls: 'bg-green-50 border-green-200 text-green-700', label: '✓' },
+                        flagged:        { cls: 'bg-red-50 border-red-200 text-red-700',       label: '✗' },
+                        not_applicable: { cls: 'bg-slate-50 border-slate-200 text-slate-300', label: 'N/A' },
+                      }
+                      const cfg = statusConfig[item.status as keyof typeof statusConfig] ?? statusConfig.pending
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => toggleChecklistItem(item.id, CHECKLIST_STATUS_CYCLE[item.status] as 'confirmed' | 'flagged' | 'not_applicable' | 'pending')}
+                          className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-all hover:shadow-sm ${cfg.cls}`}
+                        >
+                          <span className="font-mono text-xs w-6 shrink-0 text-center">{cfg.label}</span>
+                          <span>{item.item}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1.5">Haz clic para cambiar el estado: ○ → ✓ → ✗ → N/A</p>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Findings */}
+              <div>
+                <Label className="text-xs">Hallazgos principales</Label>
+                <Textarea
+                  value={findings}
+                  onChange={(e) => setFindings(e.target.value)}
+                  placeholder="¿Qué encontraste durante la auditoría?"
+                  className="mt-1 min-h-[80px]"
+                />
+              </div>
+
+              {/* Hypothesis */}
+              <div>
+                <Label className="text-xs">Hipótesis de problema central</Label>
+                <Textarea
+                  value={hypothesis}
+                  onChange={(e) => setHypothesis(e.target.value)}
+                  placeholder="¿Cuál es el problema principal identificado?"
+                  className="mt-1 min-h-[70px]"
+                />
+              </div>
+
+              {/* Validated diagnosis */}
+              <div>
+                <Label className="text-xs">Diagnóstico validado</Label>
+                <Textarea
+                  value={validatedDiagnosis}
+                  onChange={(e) => setValidatedDiagnosis(e.target.value)}
+                  placeholder="Diagnóstico confirmado después de la reunión..."
+                  className="mt-1 min-h-[70px]"
+                />
+              </div>
+
+              {/* Package recommendation */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs">Paquete recomendado (slug)</Label>
+                  <Input
+                    value={recommendedPkg}
+                    onChange={(e) => setRecommendedPkg(e.target.value)}
+                    placeholder="ej: starter_autonomy"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Razón del paquete</Label>
+                  <Input
+                    value={packageReason}
+                    onChange={(e) => setPackageReason(e.target.value)}
+                    placeholder="¿Por qué este paquete?"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              {/* Meeting summary */}
+              <div>
+                <Label className="text-xs">Resumen de reunión</Label>
+                <Textarea
+                  value={meetingSummary}
+                  onChange={(e) => setMeetingSummary(e.target.value)}
+                  placeholder="Notas de la conversación / reunión de diagnóstico..."
+                  className="mt-1 min-h-[70px]"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSave} disabled={saving} size="sm">
+                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                  Guardar auditoría
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -1037,6 +1516,11 @@ function SalesNotePanel({ companyId, initial }: { companyId: string; initial: Sa
   const [closeProbability, setCloseProbability] = useState(initial?.closeProbability?.toString() ?? '')
   const [assignedTo, setAssignedTo] = useState(initial?.assignedTo ?? '')
   const [salesObservations, setSalesObservations] = useState(initial?.salesObservations ?? '')
+  // Phase 4 CRM fields
+  const [preferredChannel, setPreferredChannel] = useState(initial?.preferredChannel ?? '')
+  const [potentialValue, setPotentialValue] = useState(initial?.potentialValue?.toString() ?? '')
+  const [proposedPackageSlug, setProposedPackageSlug] = useState(initial?.proposedPackageSlug ?? '')
+  const [internalNotes, setInternalNotes] = useState(initial?.internalNotes ?? '')
 
   async function save() {
     setSaving(true)
@@ -1053,6 +1537,10 @@ function SalesNotePanel({ companyId, initial }: { companyId: string; initial: Sa
         closeProbability: closeProbability ? parseInt(closeProbability) : undefined,
         assignedTo: assignedTo.trim() || undefined,
         salesObservations: salesObservations.trim() || undefined,
+        preferredChannel: preferredChannel || undefined,
+        potentialValue: potentialValue ? parseFloat(potentialValue) : undefined,
+        proposedPackageSlug: proposedPackageSlug.trim() || undefined,
+        internalNotes: internalNotes.trim() || undefined,
       })
       setNote(updated)
       setSaved(true)
@@ -1084,7 +1572,7 @@ function SalesNotePanel({ companyId, initial }: { companyId: string; initial: Sa
 
       <Separator />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
           <Label className="text-xs">Estado de contacto</Label>
           <Select value={contactStatus} onValueChange={setContactStatus}>
@@ -1112,6 +1600,19 @@ function SalesNotePanel({ companyId, initial }: { companyId: string; initial: Sa
           </Select>
         </div>
         <div>
+          <Label className="text-xs">Canal preferido</Label>
+          <Select value={preferredChannel} onValueChange={setPreferredChannel}>
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder="Canal" />
+            </SelectTrigger>
+            <SelectContent>
+              {OUTREACH_CHANNELS.map((c) => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
           <Label className="text-xs">% de cierre estimado</Label>
           <Input
             type="number"
@@ -1120,6 +1621,28 @@ function SalesNotePanel({ companyId, initial }: { companyId: string; initial: Sa
             value={closeProbability}
             onChange={(e) => setCloseProbability(e.target.value)}
             placeholder="0–100"
+            className="mt-1"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-xs">Valor potencial (USD)</Label>
+          <Input
+            type="number"
+            value={potentialValue}
+            onChange={(e) => setPotentialValue(e.target.value)}
+            placeholder="Ej: 2500"
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Paquete propuesto (slug)</Label>
+          <Input
+            value={proposedPackageSlug}
+            onChange={(e) => setProposedPackageSlug(e.target.value)}
+            placeholder="ej: starter_autonomy"
             className="mt-1"
           />
         </div>
@@ -1138,6 +1661,11 @@ function SalesNotePanel({ companyId, initial }: { companyId: string; initial: Sa
       <div>
         <Label className="text-xs">Observaciones de ventas</Label>
         <Textarea value={salesObservations} onChange={(e) => setSalesObservations(e.target.value)} placeholder="Notas internas del vendedor..." className="mt-1 min-h-[80px]" />
+      </div>
+
+      <div>
+        <Label className="text-xs">Notas internas (solo equipo)</Label>
+        <Textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Contexto interno, alertas, recordatorios..." className="mt-1 min-h-[60px]" />
       </div>
 
       <div>
@@ -1274,12 +1802,35 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
+      {/* Composite score summary bar */}
+      {(company.salesPriority || company.evidenceTier || company.salesOpportunityScore !== null) && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-slate-50 px-4 py-3">
+          <Target className="h-4 w-4 text-slate-400" />
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Scoring compuesto</span>
+          {company.salesPriority && (
+            <span className={`text-xs font-bold border rounded-full px-2.5 py-0.5 ${SALES_PRIORITY_CONFIG[company.salesPriority]?.cls ?? 'bg-slate-100 text-slate-500'}`}>
+              {SALES_PRIORITY_CONFIG[company.salesPriority]?.label ?? company.salesPriority}
+            </span>
+          )}
+          {company.evidenceTier && (
+            <span className={`text-xs font-medium border rounded-full px-2.5 py-0.5 ${EVIDENCE_TIER_CONFIG[company.evidenceTier]?.cls ?? 'bg-slate-100 text-slate-500'}`}>
+              {EVIDENCE_TIER_CONFIG[company.evidenceTier]?.label ?? company.evidenceTier}
+            </span>
+          )}
+          {company.salesOpportunityScore !== null && (
+            <span className="text-xs text-slate-400 ml-auto">Sales Opp: <strong className="text-slate-700">{company.salesOpportunityScore}</strong></span>
+          )}
+        </div>
+      )}
+
       {/* Main content */}
       <Tabs defaultValue="evaluation">
         <TabsList className="mb-4">
           <TabsTrigger value="evaluation">Evaluación</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="outreach">Outreach</TabsTrigger>
           <TabsTrigger value="sales">Notas de Venta</TabsTrigger>
+          <TabsTrigger value="audit">Auditoría</TabsTrigger>
         </TabsList>
 
         <TabsContent value="evaluation">
@@ -1299,6 +1850,14 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           )}
         </TabsContent>
 
+        <TabsContent value="pipeline">
+          <PipelinePanel
+            companyId={id}
+            initialNote={company.salesNote}
+            company={company}
+          />
+        </TabsContent>
+
         <TabsContent value="outreach">
           <OutreachPanel
             companyId={id}
@@ -1312,6 +1871,10 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
 
         <TabsContent value="sales">
           <SalesNotePanel companyId={id} initial={company.salesNote} />
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <AuditPanel companyId={id} industry={company.industry} />
         </TabsContent>
       </Tabs>
 

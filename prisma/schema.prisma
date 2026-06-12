@@ -67,12 +67,41 @@ model Company {
   whyNotContact           String[] @map("why_not_contact")
   qualificationQuestions  String[] @map("qualification_questions")
 
+  // Phase 4 — Composite scoring model (multi-dimensional)
+  icpFitScore            Int?    @map("icp_fit_score")            // 0-100 ICP alignment
+  painScore              Int?    @map("pain_score")               // 0-100 commercial pain visibility
+  paymentCapacityScore   Int?    @map("payment_capacity_score")   // 0-100 inferred payment capacity
+  evidenceCoverageScore  Int?    @map("evidence_coverage_score")  // 0-100 evidence quality
+  commercialIntentScore  Int?    @map("commercial_intent_score")  // 0-100 digital investment signals
+  salesOpportunityScore  Int?    @map("sales_opportunity_score")  // 0-100 master composite score
+  evidenceTier           String? @map("evidence_tier")            // HIGH | MEDIUM | LOW
+  salesPriority          String? @map("sales_priority")           // HOT | HIGH | MEDIUM | LOW | REVIEW | DISCARD
+  qualificationReason    String? @map("qualification_reason")     // 1-2 sentence positive reason
+  disqualificationReason String? @map("disqualification_reason")  // why not commercial/qualified
+  recommendedFirstAction String? @map("recommended_first_action") // immediate next step
+
+  // Phase 4 — Direct contact info (denormalized for quick outreach)
+  contactName      String?   @map("contact_name")
+  contactRole      String?   @map("contact_role")
+  contactPhone     String?   @map("contact_phone")
+  contactEmail     String?   @map("contact_email")
+  preferredChannel String?   @map("preferred_channel")   // whatsapp | email | linkedin | call
+
+  // Phase 4 — Compliance & data provenance
+  doNotContact    Boolean   @default(false) @map("do_not_contact")
+  optOut          Boolean   @default(false) @map("opt_out")
+  dataSource      String?   @map("data_source")
+  dataCollectedAt DateTime? @map("data_collected_at")
+  legalRisk       String?   @map("legal_risk")   // LOW | MEDIUM | HIGH
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   evaluations     Evaluation[]
   salesNotes      SalesNote[]
   outreachHistory OutreachHistory[]
+  outreachDrafts  OutreachDraft[]
+  audits          Audit[]
 
   @@map("companies")
 }
@@ -177,6 +206,12 @@ model SalesNote {
   contactPhone String? @map("contact_phone")
   contactEmail String? @map("contact_email")
 
+  // CRM pipeline stage (expanded 14-stage funnel)
+  // discovered | evaluated | manual_review | approved_for_contact
+  // contacted | responded | audit_scheduled | audit_completed
+  // proposal_sent | negotiating | won | lost | nurturing | discarded
+  pipelineStage String @default("discovered") @map("pipeline_stage")
+
   // not_contacted | attempted | contacted | in_conversation
   // proposal_sent | negotiating | closed_won | closed_lost
   contactStatus String @default("not_contacted") @map("contact_status")
@@ -197,8 +232,14 @@ model SalesNote {
   nextActionDate DateTime? @map("next_action_date")
   assignedTo     String?   @map("assigned_to")
 
-  closeProbability Int?    @map("close_probability")
-  lostReason       String? @map("lost_reason")
+  closeProbability  Int?    @map("close_probability")
+  potentialValue    Int?    @map("potential_value")      // USD estimate
+  proposedPackageSlug String? @map("proposed_package_slug")
+  proposedServiceSlug String? @map("proposed_service_slug")
+  preferredChannel  String? @map("preferred_channel")   // whatsapp | email | linkedin | call
+  lostReason        String? @map("lost_reason")
+  internalNotes     String? @map("internal_notes")
+  activityLog       Json?   @map("activity_log")        // [{date, action, note}]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -252,4 +293,66 @@ model OutreachHistory {
   @@index([responseType])
   @@index([nextFollowUpAt])
   @@map("outreach_history")
+}
+
+// Phase 4 — Generated outreach message drafts (pre-send queue)
+model OutreachDraft {
+  id           String  @id @default(uuid())
+  companyId    String  @map("company_id")
+  channel      String  // email | whatsapp | linkedin
+  evidenceTier String? @map("evidence_tier")  // HIGH | MEDIUM | LOW
+  subject      String? // email only
+  body         String  @db.Text
+  version      Int     @default(1)
+
+  // draft | queued | copied | discarded
+  status   String    @default("draft")
+  copiedAt DateTime? @map("copied_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([channel])
+  @@map("outreach_drafts")
+}
+
+// Phase 4 — Free audit / diagnostic flow
+model Audit {
+  id        String @id @default(uuid())
+  companyId String @map("company_id")
+  createdBy String? @map("created_by")
+
+  // draft | in_progress | completed | converted_to_proposal
+  status String @default("draft")
+  sector String?
+
+  // JSON array: [{id, item, status: "pending"|"confirmed"|"not_applicable"|"flagged", notes}]
+  checklist Json?
+
+  findings           String? @db.Text
+  confirmedProblems  String[] @map("confirmed_problems")
+  hypothesis         String? @db.Text
+  validatedDiagnosis String? @map("validated_diagnosis") @db.Text
+  qualificationQuestions String[] @map("qualification_questions")
+
+  recommendedPackageSlug  String? @map("recommended_package_slug")
+  recommendedServiceSlug  String? @map("recommended_service_slug")
+  packageReason           String? @map("package_reason") @db.Text
+
+  meetingSummary String? @map("meeting_summary") @db.Text
+  meetingDate    DateTime? @map("meeting_date")
+
+  convertedToProposal Boolean   @default(false) @map("converted_to_proposal")
+  convertedAt         DateTime? @map("converted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("audits")
 }

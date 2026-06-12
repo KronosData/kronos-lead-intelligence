@@ -98,6 +98,13 @@ export const SalesNoteSchema = z.object({
   assignedTo:        z.string().max(255).optional(),
   closeProbability:  z.number().int().min(0).max(100).optional(),
   lostReason:        z.string().optional(),
+  // Phase 4 — CRM pipeline fields
+  pipelineStage:       z.string().optional(),
+  potentialValue:      z.number().nonnegative().optional(),
+  proposedPackageSlug: z.string().optional(),
+  proposedServiceSlug: z.string().optional(),
+  preferredChannel:    z.string().optional(),
+  internalNotes:       z.string().optional(),
 })
 
 // ─── Outreach history schema ───────────────────────────────────────────────────
@@ -148,7 +155,10 @@ export const CompanyListQuerySchema = z.object({
   entityType:             z.string().optional(),
   minSalesQualScore:      z.coerce.number().int().min(0).max(100).optional(),
   entityIsCommercial:     z.coerce.boolean().optional(),
-  sort:             z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc', 'sales_priority_desc', 'prospect_fit_desc', 'sqs_desc']).default('score_desc'),
+  // Phase 4 — Composite scoring filters
+  salesPriority:          z.enum(['HOT', 'HIGH', 'MEDIUM', 'LOW', 'REVIEW', 'DISCARD']).optional(),
+  evidenceTier:           z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
+  sort:             z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc', 'sales_priority_desc', 'prospect_fit_desc', 'sqs_desc', 'sales_opp_desc', 'pain_desc', 'icp_desc']).default('score_desc'),
   limit:            z.coerce.number().int().positive().max(200).default(100),
   offset:           z.coerce.number().int().nonnegative().default(0),
 })

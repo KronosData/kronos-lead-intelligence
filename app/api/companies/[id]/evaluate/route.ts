@@ -6,6 +6,7 @@ import { matchServices } from '@/lib/service-match'
 import { estimateRevenueOpportunity } from '@/lib/value-estimator'
 import { evidenceAllManual } from '@/lib/evidence'
 import { recommendPackage } from '@/lib/recommendations/package-mapper'
+import { buildCompositeUpdatePayload } from '@/lib/scoring/apply-composite'
 import {
   created,
   notFound,
@@ -24,7 +25,15 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
 
     const company = await prisma.company.findUnique({
       where: { id },
-      select: { id: true, industry: true },
+      select: {
+        id: true, name: true, industry: true, country: true, website: true,
+        whatsapp: true, instagram: true, linkedin: true, googleBusinessUrl: true,
+        entityIsCommercial: true, entityType: true, sellabilityClass: true,
+        budgetCapacityScore: true, budgetCapacityLabel: true, roiFitLabel: true,
+        roiFitScore: true, salesQualificationScore: true, contactabilityScore: true,
+        estimatedBusinessSize: true, whyContact: true, whyNotContact: true,
+        entityExclusionReason: true, qualificationQuestions: true,
+      },
     })
     if (!company) return notFound('Company')
 
@@ -108,6 +117,36 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
         },
       })
 
+      // Phase 4 — Composite scoring (runs after evaluation is created)
+      const compositePayload = buildCompositeUpdatePayload(company, {
+        opportunityScore:           scores.opportunityScore,
+        scoreLeadGeneration:        scores.scoreLeadGeneration,
+        scoreFollowUp:              scores.scoreFollowUp,
+        scoreConversionProcess:     scores.scoreConversionProcess,
+        scoreAutomationOpportunity: scores.scoreAutomationOpportunity,
+        scoreOnlinePresence:        scores.scoreOnlinePresence,
+        scoreReputation:            scores.scoreReputation,
+        researchCoverage:           coverage,
+        scoreConfidence:            scores.scoreConfidence ?? null,
+        signalHasWebsite:           typedSignals.signalHasWebsite,
+        signalHasWhatsapp:          typedSignals.signalHasWhatsapp,
+        signalHasContactForm:       typedSignals.signalHasContactForm,
+        signalHasBookingSystem:     typedSignals.signalHasBookingSystem,
+        signalHasGoogleBusiness:    typedSignals.signalHasGoogleBusiness,
+        signalHasReviews:           typedSignals.signalHasReviews,
+        signalHasUnansweredReviews: typedSignals.signalHasUnansweredReviews,
+        signalHasClearCta:          typedSignals.signalHasClearCta,
+        signalHasLeadCapture:       typedSignals.signalHasLeadCapture,
+        signalSlowResponse:         typedSignals.signalSlowResponse,
+        signalWeakFollowup:         typedSignals.signalWeakFollowup,
+        signalManualWork:           typedSignals.signalManualWork,
+        signalWeakOnlinePresence:   typedSignals.signalWeakOnlinePresence,
+        detectedProblems:           diagnosis.detectedProblems,
+        probablePainPoint:          diagnosis.probablePainPoint,
+        recommendedPackageSlug:     pkgRec.recommendedPackageSlug,
+        primaryService:             services.primaryService,
+      })
+
       await tx.company.update({
         where: { id },
         data: {
@@ -117,6 +156,7 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
           latestPackageSlug:      pkgRec.recommendedPackageSlug,
           latestPrimaryService:   services.primaryService,
           latestScoreConfidence:  scores.scoreConfidence,
+          ...compositePayload,
         },
       })
 

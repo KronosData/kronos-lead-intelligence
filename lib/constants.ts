@@ -66,7 +66,26 @@ export const COMPANY_STATUSES = [
   { value: 'archived', label: 'Archivado' },
 ]
 
-// ─── Contact statuses ─────────────────────────────────────────────────────────
+// ─── CRM Pipeline stages (14-stage funnel) ────────────────────────────────────
+
+export const PIPELINE_STAGES = [
+  { value: 'discovered',          label: 'Descubierta',           color: 'bg-slate-100 text-slate-600' },
+  { value: 'evaluated',           label: 'Evaluada',              color: 'bg-blue-100 text-blue-700' },
+  { value: 'manual_review',       label: 'Revisión manual',       color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'approved_for_contact',label: 'Aprobada para contacto',color: 'bg-purple-100 text-purple-700' },
+  { value: 'contacted',           label: 'Contactada',            color: 'bg-indigo-100 text-indigo-700' },
+  { value: 'responded',           label: 'Respondió',             color: 'bg-cyan-100 text-cyan-700' },
+  { value: 'audit_scheduled',     label: 'Auditoría agendada',    color: 'bg-teal-100 text-teal-700' },
+  { value: 'audit_completed',     label: 'Auditoría realizada',   color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'proposal_sent',       label: 'Propuesta enviada',     color: 'bg-orange-100 text-orange-700' },
+  { value: 'negotiating',         label: 'Negociando',            color: 'bg-amber-100 text-amber-700' },
+  { value: 'won',                 label: 'Ganada',                color: 'bg-green-100 text-green-700' },
+  { value: 'lost',                label: 'Perdida',               color: 'bg-red-100 text-red-700' },
+  { value: 'nurturing',           label: 'Nurturing',             color: 'bg-pink-100 text-pink-700' },
+  { value: 'discarded',           label: 'Descartada',            color: 'bg-slate-100 text-slate-400' },
+]
+
+// ─── Contact statuses (legacy, kept for outreach history) ─────────────────────
 
 export const CONTACT_STATUSES = [
   { value: 'not_contacted', label: 'Sin contactar' },

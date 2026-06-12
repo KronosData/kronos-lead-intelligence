@@ -68,6 +68,65 @@ export interface Company {
   whyContact: string[]
   whyNotContact: string[]
   qualificationQuestions: string[]
+  // Phase 4 — Composite scoring
+  icpFitScore: number | null
+  painScore: number | null
+  paymentCapacityScore: number | null
+  evidenceCoverageScore: number | null
+  commercialIntentScore: number | null
+  salesOpportunityScore: number | null
+  evidenceTier: string | null
+  salesPriority: string | null
+  qualificationReason: string | null
+  disqualificationReason: string | null
+  recommendedFirstAction: string | null
+  // Phase 4 — Direct contact + compliance
+  contactName: string | null
+  contactRole: string | null
+  contactPhone: string | null
+  contactEmail: string | null
+  preferredChannel: string | null
+  doNotContact: boolean
+  optOut: boolean
+  dataSource: string | null
+  legalRisk: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OutreachDraft {
+  id: string
+  companyId: string
+  channel: string
+  evidenceTier: string | null
+  subject: string | null
+  body: string
+  version: number
+  status: string
+  copiedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Audit {
+  id: string
+  companyId: string
+  createdBy: string | null
+  status: string
+  sector: string | null
+  checklist: Array<{id: string; item: string; status: string; notes?: string}> | null
+  findings: string | null
+  confirmedProblems: string[]
+  hypothesis: string | null
+  validatedDiagnosis: string | null
+  qualificationQuestions: string[]
+  recommendedPackageSlug: string | null
+  recommendedServiceSlug: string | null
+  packageReason: string | null
+  meetingSummary: string | null
+  meetingDate: string | null
+  convertedToProposal: boolean
+  convertedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -146,6 +205,7 @@ export interface SalesNote {
   contactRole: string | null
   contactPhone: string | null
   contactEmail: string | null
+  pipelineStage: string
   contactStatus: string
   meetingStatus: string
   meetingDate: string | null
@@ -160,7 +220,13 @@ export interface SalesNote {
   nextActionDate: string | null
   assignedTo: string | null
   closeProbability: number | null
+  potentialValue: number | null
+  proposedPackageSlug: string | null
+  proposedServiceSlug: string | null
+  preferredChannel: string | null
   lostReason: string | null
+  internalNotes: string | null
+  activityLog: Array<{date: string; action: string; note: string}> | null
   createdAt: string
   updatedAt: string
 }
@@ -343,4 +409,53 @@ export async function upsertSalesNote(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
+}
+
+// ─── Outreach Drafts ──────────────────────────────────────────────────────────
+
+export async function listOutreachDrafts(id: string): Promise<{ data: OutreachDraft[]; total: number }> {
+  return req(`/companies/${id}/outreach/drafts`)
+}
+
+export async function createOutreachDraft(id: string, data: Record<string, unknown>): Promise<OutreachDraft> {
+  return req(`/companies/${id}/outreach/drafts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function generateOutreach(id: string): Promise<{
+  companyId: string; companyName: string; evidenceTier: string; legalRisk: string | null;
+  messages: Array<{ channel: string; subject: string | null; body: string; evidenceTier: string; notes: string; compliance: Record<string, unknown> }>;
+}> {
+  return req(`/companies/${id}/outreach/generate`)
+}
+
+// ─── Audits ───────────────────────────────────────────────────────────────────
+
+export async function listAudits(id: string): Promise<{ data: Audit[]; total: number }> {
+  return req(`/companies/${id}/audit`)
+}
+
+export async function createAudit(id: string, data?: Record<string, unknown>): Promise<Audit> {
+  return req(`/companies/${id}/audit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data ?? {}),
+  })
+}
+
+export async function updateAudit(id: string, data: Record<string, unknown>): Promise<Audit> {
+  return req(`/companies/${id}/audit`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+export async function getDashboardMetrics(): Promise<Record<string, unknown>> {
+  return req('/dashboard')
 }

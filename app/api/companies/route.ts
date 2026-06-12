@@ -26,6 +26,7 @@ export async function GET(request: Request): Promise<Response> {
       prospectProfile, estimatedBusinessSize, chainDetected,
       minProspectFitScore, minSalesPriorityScore,
       sellabilityClass, entityType, minSalesQualScore, entityIsCommercial,
+      salesPriority, evidenceTier,
       sort, limit, offset,
     } = parsed.data
 
@@ -43,6 +44,8 @@ export async function GET(request: Request): Promise<Response> {
     if (sellabilityClass) where.sellabilityClass = sellabilityClass
     if (entityType)       where.entityType = entityType
     if (entityIsCommercial !== undefined) where.entityIsCommercial = entityIsCommercial
+    if (salesPriority) where.salesPriority = salesPriority
+    if (evidenceTier)  where.evidenceTier  = evidenceTier
 
     if (minScore !== undefined || maxScore !== undefined) {
       const scoreFilter: Record<string, number> = {}
@@ -81,6 +84,9 @@ export async function GET(request: Request): Promise<Response> {
         case 'sales_priority_desc': return { salesPriorityScore:        'desc' as const }
         case 'prospect_fit_desc':   return { prospectFitScore:          'desc' as const }
         case 'sqs_desc':            return { salesQualificationScore:   'desc' as const }
+        case 'sales_opp_desc':      return { salesOpportunityScore:     'desc' as const }
+        case 'pain_desc':           return { painScore:                 'desc' as const }
+        case 'icp_desc':            return { icpFitScore:               'desc' as const }
         default:                    return { latestOpportunityScore:    'desc' as const }
       }
     })()
@@ -139,8 +145,35 @@ export async function GET(request: Request): Promise<Response> {
           whyContact:              true,
           whyNotContact:           true,
           qualificationQuestions:  true,
-          createdAt:              true,
-          updatedAt:              true,
+          // Phase 4 — Composite scoring
+          icpFitScore:             true,
+          painScore:               true,
+          paymentCapacityScore:    true,
+          evidenceCoverageScore:   true,
+          commercialIntentScore:   true,
+          salesOpportunityScore:   true,
+          evidenceTier:            true,
+          salesPriority:           true,
+          qualificationReason:     true,
+          disqualificationReason:  true,
+          recommendedFirstAction:  true,
+          // Phase 4 — Contact + compliance
+          contactName:             true,
+          contactRole:             true,
+          contactPhone:            true,
+          contactEmail:            true,
+          preferredChannel:        true,
+          doNotContact:            true,
+          optOut:                  true,
+          dataSource:              true,
+          legalRisk:               true,
+          website:                 true,
+          whatsapp:                true,
+          instagram:               true,
+          linkedin:                true,
+          googleBusinessUrl:       true,
+          createdAt:               true,
+          updatedAt:               true,
         },
       }),
       prisma.company.count({ where }),
