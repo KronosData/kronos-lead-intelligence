@@ -19,17 +19,21 @@ import type { SearchMode } from '@/lib/discovery/types'
 // ── Request schema ─────────────────────────────────────────────────────────────
 
 const SearchSchema = z.object({
-  query:               z.string().min(2).max(120),
-  city:                z.string().min(2).max(100),
-  country:             z.string().min(2).max(60),
-  district:            z.string().max(100).optional(),
-  radiusKm:            z.number().min(1).max(50).optional(),
-  limit:               z.number().int().min(1).max(50).default(20),
-  mode:                z.enum(['sellable', 'quick_wins', 'automation', 'conversion', 'data', 'competitive', 'contactable', 'broad']).optional(),
-  excludeChains:       z.boolean().optional(),
-  excludeLarge:        z.boolean().optional(),
-  requireContact:      z.boolean().optional(),
-  minProspectFitScore: z.number().min(0).max(100).optional(),
+  query:                  z.string().min(2).max(120),
+  city:                   z.string().min(2).max(100),
+  country:                z.string().min(2).max(60),
+  district:               z.string().max(100).optional(),
+  radiusKm:               z.number().min(1).max(50).optional(),
+  limit:                  z.number().int().min(1).max(50).default(20),
+  mode:                   z.enum(['sellable', 'quick_wins', 'automation', 'conversion', 'data', 'competitive', 'contactable', 'broad']).optional(),
+  excludeChains:          z.boolean().optional(),
+  excludeLarge:           z.boolean().optional(),
+  requireContact:         z.boolean().optional(),
+  minProspectFitScore:    z.number().min(0).max(100).optional(),
+  // Phase 3.9
+  minSalesQualScore:      z.number().min(0).max(100).optional(),
+  privateBusiness:        z.boolean().optional(),
+  excludePublicProjects:  z.boolean().optional(),
 })
 
 // ── Route handler ──────────────────────────────────────────────────────────────
@@ -52,6 +56,9 @@ export async function POST(request: Request): Promise<Response> {
       excludeLarge,
       requireContact,
       minProspectFitScore,
+      minSalesQualScore,
+      privateBusiness,
+      excludePublicProjects,
     } = parsed.data
 
     // ── 1. Resolve country config ────────────────────────────────────────────────
@@ -119,6 +126,9 @@ export async function POST(request: Request): Promise<Response> {
       excludeLarge,
       requireContact,
       minProspectFitScore,
+      minSalesQualScore,
+      privateBusiness,
+      excludePublicProjects,
     })
 
     return ok({

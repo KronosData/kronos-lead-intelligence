@@ -143,7 +143,12 @@ export const CompanyListQuerySchema = z.object({
   chainDetected:          z.coerce.boolean().optional(),
   minProspectFitScore:    z.coerce.number().int().min(0).max(100).optional(),
   minSalesPriorityScore:  z.coerce.number().int().min(0).max(100).optional(),
-  sort:             z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc', 'sales_priority_desc', 'prospect_fit_desc']).default('score_desc'),
+  // Phase 3.9
+  sellabilityClass:       z.enum(['sell_now', 'contact_diagnosis', 'investigate', 'nurture', 'discard']).optional(),
+  entityType:             z.string().optional(),
+  minSalesQualScore:      z.coerce.number().int().min(0).max(100).optional(),
+  entityIsCommercial:     z.coerce.boolean().optional(),
+  sort:             z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc', 'sales_priority_desc', 'prospect_fit_desc', 'sqs_desc']).default('score_desc'),
   limit:            z.coerce.number().int().positive().max(200).default(100),
   offset:           z.coerce.number().int().nonnegative().default(0),
 })

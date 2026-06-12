@@ -48,6 +48,25 @@ model Company {
   discoveryRankBefore     Int?    @map("discovery_rank_before")
   discoveryRankAfter      Int?    @map("discovery_rank_after")
 
+  // Phase 3.9 — Commercial qualification
+  entityType              String? @map("entity_type")
+  entityIsCommercial      Boolean @default(true) @map("entity_is_commercial")
+  entityExclusionReason   String? @map("entity_exclusion_reason")
+  commercialQualification String? @map("commercial_qualification")
+  salesQualificationScore Int?    @map("sales_qualification_score")
+  sellabilityClass        String? @map("sellability_class")
+  roiFitScore             Int?    @map("roi_fit_score")
+  roiFitLabel             String? @map("roi_fit_label")
+  roiMultiple             Float?  @map("roi_multiple")
+  paybackMonths           Int?    @map("payback_months")
+  budgetCapacityScore     Int?    @map("budget_capacity_score")
+  budgetCapacityLabel     String? @map("budget_capacity_label")
+  economicModelType       String? @map("economic_model_type")
+  primaryProblem          String? @map("primary_problem")
+  whyContact              String[] @map("why_contact")
+  whyNotContact           String[] @map("why_not_contact")
+  qualificationQuestions  String[] @map("qualification_questions")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

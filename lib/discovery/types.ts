@@ -1,10 +1,10 @@
-import type { BusinessSize, ProspectProfile, SearchMode } from '@/lib/prospecting/config'
+import type { BusinessSize, ProspectProfile, SearchMode, SellabilityClass, CommercialQualification } from '@/lib/prospecting/config'
 
-export type { BusinessSize, ProspectProfile, SearchMode }
+export type { BusinessSize, ProspectProfile, SearchMode, SellabilityClass, CommercialQualification }
 
 export type DiscoverySource = 'here' | 'osm'
 
-// Enriched candidate returned by normalizeAndDedup (after PFS computation).
+// Enriched candidate returned by normalizeAndDedup (after full qualification pipeline).
 export interface DiscoveryCandidate {
   source: DiscoverySource
   externalId: string
@@ -35,10 +35,29 @@ export interface DiscoveryCandidate {
   prospectRisks: string[]
   potentialPackageSlug: string | null
   rankBeforeReranking: number    // position in merged+deduped list (pre-rerank)
-  rankAfterReranking: number     // position after sorting by PFS
+  rankAfterReranking: number     // position after sorting by SQS
+
+  // Phase 3.9 — Commercial qualification
+  entityType: string                          // EntityType value
+  entityIsCommercial: boolean
+  entityExclusionReason: string | null
+  commercialQualification: CommercialQualification
+  salesQualificationScore: number            // SQS 0-100 (primary sort key)
+  sellabilityClass: SellabilityClass
+  roiFitScore: number                        // 0-100
+  roiFitLabel: string                        // excellent | good | limited | not_defensible
+  roiMultiple: number                        // annual benefit / project cost
+  paybackMonths: number
+  budgetCapacityScore: number                // 0-100
+  budgetCapacityLabel: string                // low | medium | high | unknown
+  economicModelType: string                  // appointment_based | quote_based | etc.
+  primaryProblem: string | null
+  whyContact: string[]                       // positive signals (max 4)
+  whyNotContact: string[]                    // red flags (max 4)
+  qualificationQuestions: string[]           // for sales call prep (max 3)
 }
 
-// Raw candidate produced by adapters (before PFS enrichment).
+// Raw candidate produced by adapters (before any enrichment).
 export type RawCandidate = Omit<DiscoveryCandidate,
   | 'prospectFitScore'
   | 'estimatedBusinessSize'
@@ -52,6 +71,24 @@ export type RawCandidate = Omit<DiscoveryCandidate,
   | 'potentialPackageSlug'
   | 'rankBeforeReranking'
   | 'rankAfterReranking'
+  // Phase 3.9
+  | 'entityType'
+  | 'entityIsCommercial'
+  | 'entityExclusionReason'
+  | 'commercialQualification'
+  | 'salesQualificationScore'
+  | 'sellabilityClass'
+  | 'roiFitScore'
+  | 'roiFitLabel'
+  | 'roiMultiple'
+  | 'paybackMonths'
+  | 'budgetCapacityScore'
+  | 'budgetCapacityLabel'
+  | 'economicModelType'
+  | 'primaryProblem'
+  | 'whyContact'
+  | 'whyNotContact'
+  | 'qualificationQuestions'
 >
 
 // Search params from the frontend (API route schema).
@@ -67,6 +104,9 @@ export interface DiscoverySearchParams {
   excludeLarge?: boolean
   requireContact?: boolean
   minProspectFitScore?: number
+  minSalesQualScore?: number   // Phase 3.9
+  privateBusiness?: boolean    // Phase 3.9: only private_business entities
+  excludePublicProjects?: boolean // Phase 3.9: always filter infrastructure/gov
 }
 
 // Params passed to HERE adapter (pre-geocoded).

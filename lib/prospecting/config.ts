@@ -20,13 +20,30 @@ export type ProspectProfile =
   | 'low_priority'
   | 'discard'
 
+// Phase 3.9 — Sellability class (primary ranking)
+export type SellabilityClass =
+  | 'sell_now'
+  | 'contact_diagnosis'
+  | 'investigate'
+  | 'nurture'
+  | 'discard'
+
+// Phase 3.9 — Commercial qualification levels
+export type CommercialQualification =
+  | 'qualified'
+  | 'conditionally_qualified'
+  | 'research_required'
+  | 'disqualified'
+
 export interface SearchModeConfig {
   label: string
   description: string
   minPFS: number
+  minSQS: number        // Phase 3.9: SQS threshold (higher bar)
   excludeChains: boolean
   excludeLarge: boolean
   requireContact: boolean
+  requirePrivate: boolean  // Phase 3.9: exclude non-commercial entities
 }
 
 // ── Scoring weights ────────────────────────────────────────────────────────────
@@ -99,51 +116,56 @@ export const HIGH_KRONOS_FIT_INDUSTRIES = [
 export const SEARCH_MODE_CONFIGS: Record<SearchMode, SearchModeConfig> = {
   sellable: {
     label: 'Oportunidades vendibles',
-    description: 'Pymes con problemas visibles y contacto disponible',
-    minPFS: 35, excludeChains: true, excludeLarge: true, requireContact: true,
+    description: 'Pymes privadas con oportunidad clara, ROI defensible y contacto disponible',
+    minPFS: 35, minSQS: 55, excludeChains: true, excludeLarge: true, requireContact: true, requirePrivate: true,
   },
   quick_wins: {
     label: 'Quick wins',
-    description: 'Problema claro y fácil de resolver rápidamente',
-    minPFS: 40, excludeChains: true, excludeLarge: true, requireContact: true,
+    description: 'Problema claro, ROI bueno, fácil de resolver y contactar hoy',
+    minPFS: 40, minSQS: 60, excludeChains: true, excludeLarge: true, requireContact: true, requirePrivate: true,
   },
   automation: {
     label: 'Alta necesidad de automatización',
-    description: 'Procesos manuales y operaciones ineficientes',
-    minPFS: 25, excludeChains: false, excludeLarge: false, requireContact: false,
+    description: 'Procesos manuales visibles — citas, seguimiento, reporting',
+    minPFS: 25, minSQS: 40, excludeChains: false, excludeLarge: false, requireContact: false, requirePrivate: true,
   },
   conversion: {
     label: 'Conversión digital deficiente',
-    description: 'Sin CTA claro, formulario o captura de leads',
-    minPFS: 25, excludeChains: true, excludeLarge: false, requireContact: false,
+    description: 'Sin CTA claro, formulario ni captura de leads visible',
+    minPFS: 25, minSQS: 40, excludeChains: true, excludeLarge: false, requireContact: false, requirePrivate: true,
   },
   data: {
     label: 'Datos y dashboards',
     description: 'Empresas con datos desestructurados o sin reporting',
-    minPFS: 20, excludeChains: false, excludeLarge: false, requireContact: false,
+    minPFS: 20, minSQS: 35, excludeChains: false, excludeLarge: false, requireContact: false, requirePrivate: false,
   },
   competitive: {
     label: 'Inteligencia competitiva',
     description: 'Sectores con precios públicos o competidores monitoreables',
-    minPFS: 20, excludeChains: false, excludeLarge: false, requireContact: false,
+    minPFS: 20, minSQS: 30, excludeChains: false, excludeLarge: false, requireContact: false, requirePrivate: false,
   },
   contactable: {
     label: 'Contactables ahora',
     description: 'Solo empresas con al menos un contacto real confirmado',
-    minPFS: 0, excludeChains: false, excludeLarge: false, requireContact: true,
+    minPFS: 0, minSQS: 50, excludeChains: false, excludeLarge: false, requireContact: true, requirePrivate: false,
   },
   broad: {
     label: 'Investigación amplia',
-    description: 'Todos los candidatos, incluidos datos incompletos',
-    minPFS: 0, excludeChains: false, excludeLarge: false, requireContact: false,
+    description: 'Todos los candidatos, incluidos datos incompletos y entidades mixtas',
+    minPFS: 0, minSQS: 0, excludeChains: false, excludeLarge: false, requireContact: false, requirePrivate: false,
   },
 }
 
 export const DEFAULT_SEARCH_MODE: SearchMode = 'sellable'
 
-// ── Discovery tuning ──────────────────────────────────────────────────────────
+// ── SQS thresholds (Phase 3.9) ─────────────────────────────────────────────────
 
-export const OVERFETCH_MULTIPLIER = 5   // fetch N×5 before filtering to N
-export const MAX_OVERFETCH        = 150  // hard cap on total candidates fetched
+export const MIN_SQS_DEFAULT  = 55
+export const MIN_PFS_DEFAULT  = 35
+
+// ── Discovery tuning (Phase 3.9: increased over-fetch) ────────────────────────
+
+export const OVERFETCH_MULTIPLIER = 8    // fetch N×8 before filtering to N
+export const MAX_OVERFETCH        = 200  // hard cap on total candidates fetched
 export const DEFAULT_RADIUS_KM    = 5    // default search grid radius
 export const GRID_POINTS          = 5    // center + 4 cardinal directions

@@ -1,21 +1,39 @@
-// Discovery normalizer: merges HERE + OSM raw candidates, enriches with
-// Prospect Fit Score, reranks by PFS, and applies mode filters.
+// Discovery normalizer: merges HERE + OSM raw candidates, runs the full Phase 3.9
+// qualification pipeline, sorts by SQS (not PFS), and applies mode filters.
+//
+// Pipeline per candidate:
+//   1. estimateBusinessSize
+//   2. computeProspectFitScore (PFS + raw components)
+//   3. classifyEntity
+//   4. computeRoiFit
+//   5. computeBudgetCapacity
+//   6. evaluateCommercialGate
+//   7. computeSalesQualificationScore (SQS — primary sort key)
 
-import { prisma } from '@/lib/db'
+import { prisma }                          from '@/lib/db'
 import { estimateBusinessSizeFromDiscovery } from '@/lib/prospecting/business-size'
 import { computeProspectFitScore }           from '@/lib/prospecting/prospect-fit'
 import { SEARCH_MODE_CONFIGS }               from '@/lib/prospecting/config'
+import { classifyEntity }                    from '@/lib/qualification/entity-classifier'
+import { computeRoiFit }                     from '@/lib/qualification/roi-fit'
+import { computeBudgetCapacity }             from '@/lib/qualification/budget-capacity'
+import { evaluateCommercialGate }            from '@/lib/qualification/commercial-gate'
+import { computeSalesQualificationScore }    from '@/lib/qualification/sales-qualification'
+import { getIndustryProfile }                from '@/lib/economics/industry-models'
 import type { RawCandidate, DiscoveryCandidate, SearchMode } from './types'
 
 // ── Normalizer options ─────────────────────────────────────────────────────────
 
 export interface NormalizerOptions {
-  limit:               number
-  mode:                SearchMode
-  excludeChains?:      boolean
-  excludeLarge?:       boolean
-  requireContact?:     boolean
+  limit:                number
+  mode:                 SearchMode
+  excludeChains?:       boolean
+  excludeLarge?:        boolean
+  requireContact?:      boolean
   minProspectFitScore?: number
+  minSalesQualScore?:   number    // Phase 3.9
+  privateBusiness?:     boolean   // Phase 3.9: only private_business entities
+  excludePublicProjects?: boolean // Phase 3.9: filter infrastructure/gov
 }
 
 // ── Name similarity ────────────────────────────────────────────────────────────
@@ -62,9 +80,9 @@ function normalizeHost(url: string): string {
 function deduplicateRaw(candidates: RawCandidate[]): RawCandidate[] {
   const kept: RawCandidate[] = []
   for (const c of candidates) {
-    const slug   = slugify(c.name)
-    const host   = c.website ? normalizeHost(c.website) : null
-    const isDup  = kept.some(k => {
+    const slug  = slugify(c.name)
+    const host  = c.website ? normalizeHost(c.website) : null
+    const isDup = kept.some(k => {
       if (k.country !== c.country) return false
       if (host && k.website && normalizeHost(k.website) === host) return true
       return similarity(slugify(k.name), slug) >= NAME_THRESHOLD
@@ -88,7 +106,6 @@ function buildFrequencyMaps(candidates: RawCandidate[]): {
       const host = normalizeHost(c.website)
       domainFreq.set(host, (domainFreq.get(host) ?? 0) + 1)
     }
-    // First 3 significant words of the name as a "name signature"
     const sig = slugify(c.name).split(' ').filter(w => w.length >= 3).slice(0, 3).join(' ')
     if (sig.length >= 4) {
       nameFreq.set(sig, (nameFreq.get(sig) ?? 0) + 1)
@@ -131,7 +148,19 @@ async function markExisting(
   })
 }
 
-// ── Enrichment: raw → DiscoveryCandidate ──────────────────────────────────────
+// ── Full enrichment pipeline: raw → DiscoveryCandidate ────────────────────────
+
+const NON_COMMERCIAL_ENTITY_TYPES = [
+  'government_entity',
+  'public_project',
+  'infrastructure_project',
+  'nonprofit',
+  'educational_public',
+  'healthcare_public',
+  'association',
+  'place_landmark',
+  'branch_large_chain',
+]
 
 function enrich(
   raw: RawCandidate,
@@ -141,14 +170,13 @@ function enrich(
 ): Omit<DiscoveryCandidate, 'rankAfterReranking'> {
   const host    = raw.website ? normalizeHost(raw.website) : null
   const sameDom = host ? (domainFreq.get(host) ?? 1) - 1 : 0
-
-  const sig      = slugify(raw.name).split(' ').filter(w => w.length >= 3).slice(0, 3).join(' ')
+  const sig     = slugify(raw.name).split(' ').filter(w => w.length >= 3).slice(0, 3).join(' ')
   const sameName = sig.length >= 4 ? (nameFreq.get(sig) ?? 1) - 1 : 0
 
+  // Phase 3.8: business size + PFS
   const businessSize = estimateBusinessSizeFromDiscovery(
     raw.name, raw.website, raw.industry, sameDom, sameName,
   )
-
   const pfs = computeProspectFitScore({
     name:         raw.name,
     industry:     raw.industry,
@@ -158,8 +186,61 @@ function enrich(
     businessSize,
   })
 
+  // Phase 3.9: entity classification
+  const entityClass = classifyEntity(raw.name, raw.industry, raw.address, raw.website)
+
+  // Phase 3.9: ROI Fit
+  const roiFit = computeRoiFit({
+    industry:            raw.industry,
+    name:                raw.name,
+    businessSize:        businessSize.size,
+    hasWebsite:          !!raw.website,
+    isCommerciallyViable: entityClass.isCommerciallyViable,
+  })
+
+  // Phase 3.9: Budget Capacity
+  const budgetCapacity = computeBudgetCapacity({
+    industry:     raw.industry,
+    name:         raw.name,
+    businessSize: businessSize.size,
+    hasWebsite:   !!raw.website,
+    hasPhone:     !!raw.phone,
+  })
+
+  // Phase 3.9: Commercial Gate
+  const hasOpportunity = pfs.opportunityVisibleRaw >= 30
+  const commercialGate = evaluateCommercialGate({
+    entityType:           entityClass.entityType,
+    isCommerciallyViable: entityClass.isCommerciallyViable,
+    hasContact:           !!(raw.website || raw.phone),
+    hasOpportunity,
+    roiFitLabel:          roiFit.label,
+    budgetCapacityLabel:  budgetCapacity.label,
+  })
+
+  // Phase 3.9: Industry profile for problem + questions
+  const industryProfile = getIndustryProfile(raw.industry, raw.name)
+
+  // Phase 3.9: Sales Qualification Score (SQS)
+  const sqs = computeSalesQualificationScore({
+    pfsScore:            pfs.score,
+    opportunityRaw:      pfs.opportunityVisibleRaw,
+    contactabilityRaw:   pfs.contactabilityRaw,
+    evidenceQualityRaw:  pfs.evidenceQualityRaw,
+    roiFit,
+    budgetCapacity,
+    commercialGate,
+    entityClass,
+    industryProfile,
+    hasWebsite:          !!raw.website,
+    hasPhone:            !!raw.phone,
+    opportunityReasons:  pfs.opportunityReasons,
+    prospectRisks:       pfs.prospectRisks,
+  })
+
   return {
     ...raw,
+    // Phase 3.8
     prospectFitScore:       pfs.score,
     estimatedBusinessSize:  businessSize.size,
     businessSizeConfidence: businessSize.confidence,
@@ -171,6 +252,24 @@ function enrich(
     prospectRisks:          pfs.prospectRisks,
     potentialPackageSlug:   pfs.potentialPackageSlug,
     rankBeforeReranking:    rankBefore,
+    // Phase 3.9
+    entityType:             entityClass.entityType,
+    entityIsCommercial:     entityClass.isCommerciallyViable,
+    entityExclusionReason:  entityClass.exclusionReason,
+    commercialQualification: commercialGate.qualification,
+    salesQualificationScore: sqs.score,
+    sellabilityClass:       sqs.sellabilityClass,
+    roiFitScore:            roiFit.score,
+    roiFitLabel:            roiFit.label,
+    roiMultiple:            roiFit.roiMultiple,
+    paybackMonths:          roiFit.paybackMonths,
+    budgetCapacityScore:    budgetCapacity.score,
+    budgetCapacityLabel:    budgetCapacity.label,
+    economicModelType:      sqs.economicModelType,
+    primaryProblem:         sqs.primaryProblem,
+    whyContact:             sqs.whyContact,
+    whyNotContact:          sqs.whyNotContact,
+    qualificationQuestions: sqs.qualificationQuestions,
   }
 }
 
@@ -183,33 +282,50 @@ export async function normalizeAndDedup(
 ): Promise<DiscoveryCandidate[]> {
   const modeConfig = SEARCH_MODE_CONFIGS[options.mode]
 
-  const excludeChains = options.excludeChains ?? modeConfig.excludeChains
-  const excludeLarge  = options.excludeLarge  ?? modeConfig.excludeLarge
-  const requireContact = options.requireContact ?? modeConfig.requireContact
-  const minPFS         = options.minProspectFitScore ?? modeConfig.minPFS
+  const excludeChains       = options.excludeChains     ?? modeConfig.excludeChains
+  const excludeLarge        = options.excludeLarge       ?? modeConfig.excludeLarge
+  const requireContact      = options.requireContact     ?? modeConfig.requireContact
+  const minPFS              = options.minProspectFitScore ?? modeConfig.minPFS
+  const minSQS              = options.minSalesQualScore  ?? modeConfig.minSQS
+  const requirePrivate      = options.privateBusiness    ?? modeConfig.requirePrivate
+  const excludePublicProjects = options.excludePublicProjects ?? true
 
   // HERE first (higher confidence), OSM second
-  const merged  = deduplicateRaw([...here, ...osm])
+  const merged = deduplicateRaw([...here, ...osm])
 
-  // Build frequency maps from the full merged set (chain detection needs full context)
+  // Build frequency maps from full merged set (chain detection needs full context)
   const { domainFreq, nameFreq } = buildFrequencyMaps(merged)
 
-  // Enrich each candidate with PFS and business size (assign pre-rerank positions 1-indexed)
+  // Enrich each candidate with full qualification pipeline
   const enriched = merged.map((raw, i) =>
     enrich(raw, domainFreq, nameFreq, i + 1)
   )
 
   // Apply mode filters
   const filtered = enriched.filter(c => {
+    // Phase 3.9: commercial entity gate
+    if (requirePrivate && !c.entityIsCommercial)              return false
+    if (excludePublicProjects && NON_COMMERCIAL_ENTITY_TYPES.includes(c.entityType)) return false
+
+    // Phase 3.9: SQS threshold (primary)
+    if (c.salesQualificationScore < minSQS)                   return false
+
+    // Phase 3.8: PFS threshold (secondary guard)
     if (c.prospectFitScore < minPFS)                          return false
+
+    // Phase 3.8: size and chain filters
     if (excludeChains && c.chainDetected)                     return false
     if (excludeLarge && c.estimatedBusinessSize === 'large')  return false
     if (requireContact && !c.website && !c.phone)             return false
+
     return true
   })
 
-  // Rerank by PFS desc
-  filtered.sort((a, b) => b.prospectFitScore - a.prospectFitScore)
+  // Sort by SQS desc (Phase 3.9 primary), then PFS desc as tiebreaker
+  filtered.sort((a, b) =>
+    b.salesQualificationScore - a.salesQualificationScore ||
+    b.prospectFitScore - a.prospectFitScore
+  )
 
   // Assign post-rerank positions and trim to requested limit
   const ranked: DiscoveryCandidate[] = filtered

@@ -5,6 +5,7 @@ import {
   ArrowLeft, Search, Loader2, AlertCircle, CheckCircle2,
   Globe, Phone, MapPin, ExternalLink, Compass,
   ChevronDown, ChevronUp, TrendingUp, ShieldAlert, Users,
+  ShieldX, DollarSign, Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,22 +52,60 @@ interface CandidateImportState {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function pfsBadge(score: number) {
-  if (score >= 70) return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold">PFS {score}</Badge>
-  if (score >= 50) return <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-bold">PFS {score}</Badge>
-  if (score >= 30) return <Badge className="bg-amber-100 text-amber-700 border-amber-200">PFS {score}</Badge>
-  return <Badge className="bg-slate-100 text-slate-500 border-slate-200">PFS {score}</Badge>
+function sqsBadge(score: number) {
+  if (score >= 70) return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold text-xs">SQS {score}</Badge>
+  if (score >= 55) return <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-bold text-xs">SQS {score}</Badge>
+  if (score >= 35) return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">SQS {score}</Badge>
+  return <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-xs">SQS {score}</Badge>
 }
 
-function profileBadge(profile: string | undefined) {
-  switch (profile) {
-    case 'ideal':            return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">Ideal</Badge>
-    case 'good_opportunity': return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">Oportunidad</Badge>
-    case 'investigate':      return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">Investigar</Badge>
-    case 'low_priority':     return <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-[10px]">Baja prioridad</Badge>
-    case 'discard':          return <Badge className="bg-red-50 text-red-400 border-red-100 text-[10px]">Descartar</Badge>
-    default:                 return null
+function sellabilityBadge(cls: string | undefined) {
+  switch (cls) {
+    case 'sell_now':          return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">Contactar ahora</Badge>
+    case 'contact_diagnosis': return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">Diagnóstico</Badge>
+    case 'investigate':       return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">Investigar</Badge>
+    case 'nurture':           return <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-[10px]">Monitorear</Badge>
+    case 'discard':           return <Badge className="bg-red-50 text-red-400 border-red-100 text-[10px]">Descartar</Badge>
+    default:                  return null
   }
+}
+
+function roiBadge(label: string | undefined) {
+  switch (label) {
+    case 'excellent':       return <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">ROI Excelente</span>
+    case 'good':            return <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">ROI Bueno</span>
+    case 'limited':         return <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">ROI Limitado</span>
+    case 'not_defensible':  return <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">ROI No defendible</span>
+    default:                return null
+  }
+}
+
+function budgetBadge(label: string | undefined) {
+  switch (label) {
+    case 'high':    return <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded">💰 Alta capacidad</span>
+    case 'medium':  return <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">💰 Capacidad media</span>
+    case 'low':     return <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">💰 Baja capacidad</span>
+    default:        return null
+  }
+}
+
+function entityBadge(entityType: string | undefined, isCommercial: boolean) {
+  if (!entityType) return null
+  if (!isCommercial) {
+    const labels: Record<string, string> = {
+      infrastructure_project: '🚧 Infraestructura pública',
+      government_entity:      '🏛 Entidad gubernamental',
+      healthcare_public:      '🏥 Salud pública',
+      educational_public:     '🎓 Educación pública',
+      nonprofit:              '📋 Sin fines de lucro',
+      association:            '🤝 Asociación / Gremio',
+      place_landmark:         '📍 Lugar público',
+      branch_large_chain:     '🏢 Cadena multinacional',
+    }
+    const label = labels[entityType] ?? `⚠ ${entityType}`
+    return <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">{label}</span>
+  }
+  return null
 }
 
 function sizeBadge(size: string | undefined) {
@@ -108,12 +147,16 @@ export default function DiscoverPage() {
   const [mode,     setMode]     = useState<SearchMode>('sellable')
 
   // Advanced filters
-  const [showFilters,          setShowFilters]          = useState(false)
-  const [radiusKm,             setRadiusKm]             = useState('5')
-  const [excludeChains,        setExcludeChains]        = useState<boolean | undefined>(undefined)
-  const [excludeLarge,         setExcludeLarge]         = useState<boolean | undefined>(undefined)
-  const [requireContact,       setRequireContact]       = useState<boolean | undefined>(undefined)
-  const [minProspectFitScore,  setMinProspectFitScore]  = useState('')
+  const [showFilters,            setShowFilters]            = useState(false)
+  const [radiusKm,               setRadiusKm]               = useState('5')
+  const [excludeChains,          setExcludeChains]          = useState<boolean | undefined>(undefined)
+  const [excludeLarge,           setExcludeLarge]           = useState<boolean | undefined>(undefined)
+  const [requireContact,         setRequireContact]         = useState<boolean | undefined>(undefined)
+  const [minProspectFitScore,    setMinProspectFitScore]    = useState('')
+  // Phase 3.9 filters (active by default)
+  const [privateBusiness,        setPrivateBusiness]        = useState(true)
+  const [excludePublicProjects,  setExcludePublicProjects]  = useState(true)
+  const [minSalesQualScore,      setMinSalesQualScore]      = useState('')
 
   // Results
   const [searching,   setSearching]   = useState(false)
@@ -154,12 +197,15 @@ export default function DiscoverPage() {
       limit:   Number(limit),
       mode,
       radiusKm: Number(radiusKm),
+      privateBusiness,
+      excludePublicProjects,
     }
     if (district.trim())              payload.district             = district.trim()
     if (excludeChains !== undefined)  payload.excludeChains        = excludeChains
     if (excludeLarge  !== undefined)  payload.excludeLarge         = excludeLarge
     if (requireContact !== undefined) payload.requireContact       = requireContact
     if (minProspectFitScore !== '')   payload.minProspectFitScore  = Number(minProspectFitScore)
+    if (minSalesQualScore   !== '')   payload.minSalesQualScore    = Number(minSalesQualScore)
 
     try {
       const res = await fetch('/api/discovery', {
@@ -246,6 +292,24 @@ export default function DiscoverPage() {
             discoveryMode:          meta?.mode ?? mode,
             discoveryRankBefore:    c.rankBeforeReranking,
             discoveryRankAfter:     c.rankAfterReranking,
+            // Phase 3.9 — commercial qualification
+            entityType:             c.entityType,
+            entityIsCommercial:     c.entityIsCommercial,
+            entityExclusionReason:  c.entityExclusionReason,
+            commercialQualification: c.commercialQualification,
+            salesQualificationScore: c.salesQualificationScore,
+            sellabilityClass:       c.sellabilityClass,
+            roiFitScore:            c.roiFitScore,
+            roiFitLabel:            c.roiFitLabel,
+            roiMultiple:            c.roiMultiple,
+            paybackMonths:          c.paybackMonths,
+            budgetCapacityScore:    c.budgetCapacityScore,
+            budgetCapacityLabel:    c.budgetCapacityLabel,
+            economicModelType:      c.economicModelType,
+            primaryProblem:         c.primaryProblem,
+            whyContact:             c.whyContact,
+            whyNotContact:          c.whyNotContact,
+            qualificationQuestions: c.qualificationQuestions,
           }),
         })
         const result = await res.json() as ImportedCompanyResult
@@ -295,10 +359,10 @@ export default function DiscoverPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Compass className="h-6 w-6 text-orange-500" />
-            Descubrir Prospectos Vendibles
+            Descubrir Prospectos Rentables
           </h1>
           <p className="text-sm text-slate-500">
-            Encuentra pymes con alta probabilidad de comprar — ordenadas por Prospect Fit Score
+            Empresas privadas, contactables, con capacidad de pago y ROI defensible — ordenadas por SQS
           </p>
         </div>
       </div>
@@ -423,43 +487,72 @@ export default function DiscoverPage() {
 
           {/* Advanced filters (collapsible) */}
           {showFilters && (
-            <div className="border-t pt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              <div>
-                <Label htmlFor="district">Distrito / Zona</Label>
-                <Input
-                  id="district"
-                  value={district}
-                  onChange={e => setDistrict(e.target.value)}
-                  placeholder="Miraflores, Polanco..."
-                  className="mt-1"
-                  disabled={searching}
-                />
+            <div className="border-t pt-4 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div>
+                  <Label htmlFor="district">Distrito / Zona</Label>
+                  <Input
+                    id="district"
+                    value={district}
+                    onChange={e => setDistrict(e.target.value)}
+                    placeholder="Miraflores, Polanco..."
+                    className="mt-1"
+                    disabled={searching}
+                  />
+                </div>
+                <div>
+                  <Label>Radio (km)</Label>
+                  <Select value={radiusKm} onValueChange={setRadiusKm} disabled={searching}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['2', '5', '10', '15', '20'].map(v => (
+                        <SelectItem key={v} value={v}>{v} km</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>SQS mínimo</Label>
+                  <Input
+                    value={minSalesQualScore}
+                    onChange={e => setMinSalesQualScore(e.target.value)}
+                    placeholder="0–100"
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="mt-1"
+                    disabled={searching}
+                  />
+                </div>
+                <div>
+                  <Label>PFS mínimo</Label>
+                  <Input
+                    value={minProspectFitScore}
+                    onChange={e => setMinProspectFitScore(e.target.value)}
+                    placeholder="0–100"
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="mt-1"
+                    disabled={searching}
+                  />
+                </div>
               </div>
-              <div>
-                <Label>Radio (km)</Label>
-                <Select value={radiusKm} onValueChange={setRadiusKm} disabled={searching}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['2', '5', '10', '15', '20'].map(v => (
-                      <SelectItem key={v} value={v}>{v} km</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>PFS mínimo</Label>
-                <Input
-                  value={minProspectFitScore}
-                  onChange={e => setMinProspectFitScore(e.target.value)}
-                  placeholder="0–100"
-                  type="number"
-                  min="0"
-                  max="100"
-                  className="mt-1"
-                  disabled={searching}
-                />
-              </div>
-              <div className="flex flex-col gap-2 pt-5">
+              <div className="flex flex-wrap gap-5 pt-1">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={privateBusiness}
+                    onCheckedChange={v => setPrivateBusiness(v === true)}
+                  />
+                  Solo empresas privadas
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={excludePublicProjects}
+                    onCheckedChange={v => setExcludePublicProjects(v === true)}
+                  />
+                  Excluir entidades públicas
+                </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <Checkbox
                     checked={excludeChains === true}
@@ -474,8 +567,6 @@ export default function DiscoverPage() {
                   />
                   Excluir grandes
                 </label>
-              </div>
-              <div className="flex flex-col gap-2 pt-5">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <Checkbox
                     checked={requireContact === true}
@@ -503,8 +594,8 @@ export default function DiscoverPage() {
             {meta.state ? `, ${meta.state}` : ''}
             {' · '}{meta.country}
           </span>
-          <span>· {meta.gridPoints} puntos de búsqueda · radio {meta.radiusKm} km</span>
-          <span>· {meta.overFetched} candidatos analizados → {meta.afterFilters} tras filtros</span>
+          <span>· {meta.gridPoints} puntos · radio {meta.radiusKm} km</span>
+          <span>· {meta.overFetched} candidatos analizados → {meta.afterFilters} calificados</span>
           <span>·
             <span className="font-semibold text-purple-600"> HERE</span>
             {meta.sources.here ? ` ${meta.sources.hereRaw}` : ' no disponible'}
@@ -516,7 +607,7 @@ export default function DiscoverPage() {
 
       {/* Results */}
       {candidates.length > 0 && (
-        <div className="max-w-6xl">
+        <div className="max-w-7xl">
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -577,9 +668,9 @@ export default function DiscoverPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
                   <th className="w-8 px-2 py-2" />
-                  <th className="px-3 py-2 text-center w-16">Rank</th>
+                  <th className="px-3 py-2 text-center w-20">SQS</th>
                   <th className="px-3 py-2 text-left">Empresa</th>
-                  <th className="px-3 py-2 text-left hidden lg:table-cell">Perfil vendible</th>
+                  <th className="px-3 py-2 text-left hidden lg:table-cell">Calificación comercial</th>
                   <th className="px-3 py-2 text-left hidden md:table-cell">Contacto</th>
                   <th className="px-3 py-2 text-left hidden xl:table-cell">Dirección</th>
                   <th className="px-3 py-2 text-center">Estado</th>
@@ -592,14 +683,14 @@ export default function DiscoverPage() {
                   const isSelected  = selected.has(c.externalId)
                   const canSelect   = !c.alreadyExists && isImportable(c) && importStatus !== 'importing'
                   const result      = impState?.result
-                  const isDiscard   = c.prospectProfile === 'discard'
+                  const isDiscard   = c.sellabilityClass === 'discard' || !c.entityIsCommercial
 
                   return (
                     <tr
                       key={c.externalId}
                       className={`transition-colors ${
                         isSelected ? 'bg-orange-50' :
-                        isDiscard  ? 'bg-slate-50 opacity-50' :
+                        isDiscard  ? 'bg-slate-50 opacity-40' :
                         c.alreadyExists || impState?.status === 'imported' || impState?.status === 'duplicate'
                           ? 'bg-slate-50 opacity-60'
                           : 'hover:bg-slate-50'
@@ -617,21 +708,24 @@ export default function DiscoverPage() {
                         )}
                       </td>
 
-                      {/* Rank */}
+                      {/* SQS score + rank */}
                       <td className="px-2 py-3 text-center">
                         <div className="flex flex-col items-center gap-0.5">
-                          {pfsBadge(c.prospectFitScore)}
+                          {sqsBadge(c.salesQualificationScore)}
                           <span className="text-[10px] text-slate-400">#{c.rankAfterReranking}</span>
+                          {sellabilityBadge(c.sellabilityClass)}
                         </div>
                       </td>
 
-                      {/* Name + size + profile */}
+                      {/* Name + entity + size */}
                       <td className="px-3 py-3">
                         <p className="font-medium text-slate-900 leading-tight">{c.name}</p>
                         <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[180px]">{c.industry}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {profileBadge(c.prospectProfile)}
-                          {sizeBadge(c.estimatedBusinessSize)}
+                          {!c.entityIsCommercial
+                            ? entityBadge(c.entityType, c.entityIsCommercial)
+                            : sizeBadge(c.estimatedBusinessSize)
+                          }
                           {c.chainDetected && (
                             <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">Cadena</span>
                           )}
@@ -662,32 +756,59 @@ export default function DiscoverPage() {
                         )}
                       </td>
 
-                      {/* Prospect profile: reasons + risks */}
-                      <td className="px-3 py-3 hidden lg:table-cell max-w-[220px]">
-                        {c.opportunityReasons.length > 0 && (
-                          <div className="mb-1">
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
-                              <span className="text-[10px] font-semibold text-green-700 uppercase">Por qué podría comprar</span>
-                            </div>
-                            {c.opportunityReasons.map((r, i) => (
-                              <p key={i} className="text-[11px] text-slate-600 truncate">{r}</p>
-                            ))}
+                      {/* Commercial qualification */}
+                      <td className="px-3 py-3 hidden lg:table-cell max-w-[230px]">
+                        {/* Entity exclusion reason */}
+                        {!c.entityIsCommercial && c.entityExclusionReason ? (
+                          <div className="flex items-start gap-1">
+                            <ShieldX className="h-3 w-3 text-red-400 mt-0.5 shrink-0" />
+                            <p className="text-[11px] text-red-500">{c.entityExclusionReason}</p>
                           </div>
-                        )}
-                        {c.prospectRisks.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <ShieldAlert className="h-3 w-3 text-amber-500 shrink-0" />
-                              <span className="text-[10px] font-semibold text-amber-700 uppercase">Riesgos</span>
+                        ) : (
+                          <>
+                            {/* ROI + Budget */}
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                              {roiBadge(c.roiFitLabel)}
+                              {budgetBadge(c.budgetCapacityLabel)}
+                              {c.roiMultiple > 0 && (
+                                <span className="text-[10px] text-slate-400">×{c.roiMultiple} ROI</span>
+                              )}
                             </div>
-                            {c.prospectRisks.map((r, i) => (
-                              <p key={i} className="text-[11px] text-slate-500 truncate">{r}</p>
-                            ))}
-                          </div>
-                        )}
-                        {c.opportunityReasons.length === 0 && c.prospectRisks.length === 0 && (
-                          <span className="text-xs text-slate-300">—</span>
+
+                            {/* Why contact */}
+                            {c.whyContact.length > 0 && (
+                              <div className="mb-1">
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
+                                  <span className="text-[10px] font-semibold text-green-700 uppercase">Por qué contactar</span>
+                                </div>
+                                {c.whyContact.slice(0, 2).map((r, i) => (
+                                  <p key={i} className="text-[11px] text-slate-600 truncate">{r}</p>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Why NOT contact */}
+                            {c.whyNotContact.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <ShieldAlert className="h-3 w-3 text-amber-500 shrink-0" />
+                                  <span className="text-[10px] font-semibold text-amber-700 uppercase">Precauciones</span>
+                                </div>
+                                {c.whyNotContact.slice(0, 2).map((r, i) => (
+                                  <p key={i} className="text-[11px] text-slate-500 truncate">{r}</p>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Primary problem */}
+                            {c.primaryProblem && c.whyContact.length === 0 && c.whyNotContact.length === 0 && (
+                              <div className="flex items-start gap-1">
+                                <Zap className="h-3 w-3 text-amber-400 mt-0.5 shrink-0" />
+                                <p className="text-[11px] text-slate-500 truncate">{c.primaryProblem}</p>
+                              </div>
+                            )}
+                          </>
                         )}
                       </td>
 
@@ -715,6 +836,21 @@ export default function DiscoverPage() {
                             <span className="text-xs text-slate-300 flex items-center gap-1">
                               <Users className="h-3 w-3" /> Sin contacto
                             </span>
+                          )}
+                          {/* Qualification questions hint */}
+                          {c.qualificationQuestions.length > 0 && (
+                            <details className="mt-1">
+                              <summary className="text-[10px] text-slate-400 cursor-pointer hover:text-slate-600 flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" /> {c.qualificationQuestions.length} pregunta(s)
+                              </summary>
+                              <div className="mt-1 space-y-0.5">
+                                {c.qualificationQuestions.map((q, i) => (
+                                  <p key={i} className="text-[10px] text-slate-500 pl-1 border-l border-slate-200">
+                                    {q}
+                                  </p>
+                                ))}
+                              </div>
+                            </details>
                           )}
                         </div>
                       </td>
@@ -744,8 +880,8 @@ export default function DiscoverPage() {
           </div>
 
           <p className="mt-3 text-xs text-slate-400">
-            Resultados ordenados por Prospect Fit Score (PFS). Las empresas importadas reciben evaluación
-            automática basada en análisis web y señales de mercado.
+            Ordenadas por Sales Qualification Score (SQS) — combina fit, ROI, capacidad de pago y contactabilidad.
+            Solo empresas privadas con decisor comercial identificable.
           </p>
         </div>
       )}
@@ -754,11 +890,10 @@ export default function DiscoverPage() {
       {!searching && meta && candidates.length === 0 && (
         <div className="max-w-md text-center py-16">
           <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600 font-medium">Sin resultados con los filtros actuales</p>
+          <p className="text-slate-600 font-medium">Sin prospectos calificados con los filtros actuales</p>
           <p className="text-sm text-slate-400 mt-1">
-            Prueba con un modo de búsqueda más amplio (ej. &quot;broad&quot;), reduce el PFS mínimo,
-            o amplía el radio.
-            {!meta.sources.here && ' Añadir HERE_API_KEY mejorará la cobertura significativamente.'}
+            Prueba con modo &quot;broad&quot;, reduce SQS mínimo, o amplía el radio.
+            {!meta.sources.here && ' Añadir HERE_API_KEY mejorará la cobertura.'}
           </p>
         </div>
       )}

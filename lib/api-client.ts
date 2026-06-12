@@ -50,6 +50,24 @@ export interface Company {
   discoveryMode: string | null
   discoveryRankBefore: number | null
   discoveryRankAfter: number | null
+  // Phase 3.9 — Commercial qualification
+  entityType: string | null
+  entityIsCommercial: boolean
+  entityExclusionReason: string | null
+  commercialQualification: string | null
+  salesQualificationScore: number | null
+  sellabilityClass: string | null
+  roiFitScore: number | null
+  roiFitLabel: string | null
+  roiMultiple: number | null
+  paybackMonths: number | null
+  budgetCapacityScore: number | null
+  budgetCapacityLabel: string | null
+  economicModelType: string | null
+  primaryProblem: string | null
+  whyContact: string[]
+  whyNotContact: string[]
+  qualificationQuestions: string[]
   createdAt: string
   updatedAt: string
 }
@@ -188,6 +206,11 @@ export interface CompanyListParams {
   chainDetected?: boolean
   minProspectFitScore?: number
   minSalesPriorityScore?: number
+  // Phase 3.9
+  sellabilityClass?: string
+  entityType?: string
+  minSalesQualScore?: number
+  entityIsCommercial?: boolean
   sort?: string
   limit?: number
   offset?: number

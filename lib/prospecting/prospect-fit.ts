@@ -28,6 +28,10 @@ export interface ProspectFitResult {
   kronosFitScore: number         // 0–20 component
   pymeProbabilityScore: number   // 0–15 component
   evidenceQualityScore: number   // 0–10 component
+  // Raw 0-100 values (before weighting) — used by SQS computation
+  contactabilityRaw: number
+  opportunityVisibleRaw: number
+  evidenceQualityRaw: number
   profile: ProspectProfile
   opportunityReasons: string[]   // max 3 human-readable reasons
   prospectRisks: string[]        // max 3 risk notes
@@ -182,6 +186,9 @@ export function computeProspectFitScore(input: ProspectFitInput): ProspectFitRes
     kronosFitScore,
     pymeProbabilityScore,
     evidenceQualityScore,
+    contactabilityRaw:     contactRaw,
+    opportunityVisibleRaw: oppRaw,
+    evidenceQualityRaw:    evidenceRaw,
     profile,
     opportunityReasons: opportunityReasons.slice(0, 3),
     prospectRisks:      prospectRisks.slice(0, 3),

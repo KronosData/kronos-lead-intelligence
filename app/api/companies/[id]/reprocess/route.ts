@@ -16,7 +16,15 @@ import {
   computeCoverage,
   applyEvidence,
 } from '@/lib/evidence'
-import { recommendPackage } from '@/lib/recommendations/package-mapper'
+import { recommendPackage }     from '@/lib/recommendations/package-mapper'
+import { classifyEntity }       from '@/lib/qualification/entity-classifier'
+import { computeRoiFit }        from '@/lib/qualification/roi-fit'
+import { computeBudgetCapacity } from '@/lib/qualification/budget-capacity'
+import { evaluateCommercialGate } from '@/lib/qualification/commercial-gate'
+import { computeSalesQualificationScore } from '@/lib/qualification/sales-qualification'
+import { getIndustryProfile }   from '@/lib/economics/industry-models'
+import { computeProspectFitScore } from '@/lib/prospecting/prospect-fit'
+import { estimateBusinessSizeFromDiscovery } from '@/lib/prospecting/business-size'
 import { ok, notFound, serverError } from '@/lib/api-helpers'
 import type { SignalFlags } from '@/lib/types'
 import type { SignalEvidenceMap } from '@/lib/evidence'
@@ -29,7 +37,11 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
 
     const company = await prisma.company.findUnique({
       where: { id },
-      select: { id: true, name: true, industry: true, website: true, leadSource: true },
+      select: {
+        id: true, name: true, industry: true, website: true, leadSource: true,
+        city: true, country: true, whatsapp: true,
+        estimatedBusinessSize: true,
+      },
     })
     if (!company) return notFound('Company')
 
@@ -126,6 +138,41 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
     const pkgRec    = recommendPackage(signals, coverage, evidence)
     const revenue   = estimateRevenueOpportunity(signals, company.industry, services.estimatedProjectPriceMin, coverage)
 
+    // Phase 3.9 — Re-run commercial qualification
+    const hasPhone = !!company.whatsapp
+    const bsResult = estimateBusinessSizeFromDiscovery(
+      company.name, company.website, company.industry, 0, 0,
+    )
+    const pfsResult = computeProspectFitScore({
+      name: company.name, industry: company.industry,
+      website: company.website, phone: hasPhone ? company.whatsapp : null,
+      address: company.city ?? '', businessSize: bsResult,
+    })
+    const entityClass   = classifyEntity(company.name, company.industry, company.city ?? undefined, company.website)
+    const roiFit        = computeRoiFit({
+      industry: company.industry, name: company.name,
+      businessSize: bsResult.size, hasWebsite: !!company.website,
+      isCommerciallyViable: entityClass.isCommerciallyViable,
+    })
+    const budgetCap     = computeBudgetCapacity({
+      industry: company.industry, name: company.name,
+      businessSize: bsResult.size, hasWebsite: !!company.website, hasPhone,
+    })
+    const gate          = evaluateCommercialGate({
+      entityType: entityClass.entityType, isCommerciallyViable: entityClass.isCommerciallyViable,
+      hasContact: !!(company.website || hasPhone),
+      hasOpportunity: pfsResult.opportunityVisibleRaw >= 30,
+      roiFitLabel: roiFit.label, budgetCapacityLabel: budgetCap.label,
+    })
+    const industryProfile = getIndustryProfile(company.industry, company.name)
+    const sqsResult     = computeSalesQualificationScore({
+      pfsScore: pfsResult.score, opportunityRaw: pfsResult.opportunityVisibleRaw,
+      contactabilityRaw: pfsResult.contactabilityRaw, evidenceQualityRaw: pfsResult.evidenceQualityRaw,
+      roiFit, budgetCapacity: budgetCap, commercialGate: gate,
+      entityClass, industryProfile, hasWebsite: !!company.website, hasPhone,
+      opportunityReasons: pfsResult.opportunityReasons, prospectRisks: pfsResult.prospectRisks,
+    })
+
     const newEv = await prisma.$transaction(async (tx) => {
       const ev = await tx.evaluation.create({
         data: {
@@ -188,6 +235,33 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
           latestPackageSlug:      pkgRec.recommendedPackageSlug,
           latestPrimaryService:   services.primaryService,
           latestScoreConfidence:  scores.scoreConfidence,
+          // Phase 3.9 — Update qualification fields
+          entityType:              entityClass.entityType,
+          entityIsCommercial:      entityClass.isCommerciallyViable,
+          entityExclusionReason:   entityClass.exclusionReason,
+          commercialQualification: gate.qualification,
+          salesQualificationScore: sqsResult.score,
+          sellabilityClass:        sqsResult.sellabilityClass,
+          roiFitScore:             roiFit.score,
+          roiFitLabel:             roiFit.label,
+          roiMultiple:             roiFit.roiMultiple,
+          paybackMonths:           roiFit.paybackMonths,
+          budgetCapacityScore:     budgetCap.score,
+          budgetCapacityLabel:     budgetCap.label,
+          economicModelType:       sqsResult.economicModelType,
+          primaryProblem:          sqsResult.primaryProblem,
+          whyContact:              sqsResult.whyContact,
+          whyNotContact:           sqsResult.whyNotContact,
+          qualificationQuestions:  sqsResult.qualificationQuestions,
+          // Phase 3.8 — Also refresh PFS
+          prospectFitScore:        pfsResult.score,
+          prospectProfile:         pfsResult.profile,
+          contactabilityScore:     pfsResult.contactabilityScore,
+          opportunityReasons:      pfsResult.opportunityReasons,
+          prospectRisks:           pfsResult.prospectRisks,
+          estimatedBusinessSize:   bsResult.size,
+          businessSizeConfidence:  bsResult.confidence,
+          chainDetected:           bsResult.chainDetected,
         },
       })
 

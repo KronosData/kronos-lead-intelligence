@@ -25,6 +25,7 @@ export async function GET(request: Request): Promise<Response> {
       package: pkg, confidence, minCoverage, evaluationStatus,
       prospectProfile, estimatedBusinessSize, chainDetected,
       minProspectFitScore, minSalesPriorityScore,
+      sellabilityClass, entityType, minSalesQualScore, entityIsCommercial,
       sort, limit, offset,
     } = parsed.data
 
@@ -39,6 +40,9 @@ export async function GET(request: Request): Promise<Response> {
     if (prospectProfile)  where.prospectProfile = prospectProfile
     if (estimatedBusinessSize) where.estimatedBusinessSize = estimatedBusinessSize
     if (chainDetected !== undefined) where.chainDetected = chainDetected
+    if (sellabilityClass) where.sellabilityClass = sellabilityClass
+    if (entityType)       where.entityType = entityType
+    if (entityIsCommercial !== undefined) where.entityIsCommercial = entityIsCommercial
 
     if (minScore !== undefined || maxScore !== undefined) {
       const scoreFilter: Record<string, number> = {}
@@ -53,6 +57,10 @@ export async function GET(request: Request): Promise<Response> {
 
     if (minSalesPriorityScore !== undefined) {
       where.salesPriorityScore = { gte: minSalesPriorityScore }
+    }
+
+    if (minSalesQualScore !== undefined) {
+      where.salesQualificationScore = { gte: minSalesQualScore }
     }
 
     if (minCoverage !== undefined || evaluationStatus !== undefined) {
@@ -70,9 +78,10 @@ export async function GET(request: Request): Promise<Response> {
         case 'score_asc':           return { latestOpportunityScore: 'asc'  as const }
         case 'created_asc':         return { createdAt:              'asc'  as const }
         case 'updated_desc':        return { updatedAt:              'desc' as const }
-        case 'sales_priority_desc': return { salesPriorityScore:     'desc' as const }
-        case 'prospect_fit_desc':   return { prospectFitScore:       'desc' as const }
-        default:                    return { latestOpportunityScore: 'desc' as const }
+        case 'sales_priority_desc': return { salesPriorityScore:        'desc' as const }
+        case 'prospect_fit_desc':   return { prospectFitScore:          'desc' as const }
+        case 'sqs_desc':            return { salesQualificationScore:   'desc' as const }
+        default:                    return { latestOpportunityScore:    'desc' as const }
       }
     })()
 
@@ -112,6 +121,24 @@ export async function GET(request: Request): Promise<Response> {
           discoveryMode:          true,
           discoveryRankBefore:    true,
           discoveryRankAfter:     true,
+          // Phase 3.9
+          entityType:              true,
+          entityIsCommercial:      true,
+          entityExclusionReason:   true,
+          commercialQualification: true,
+          salesQualificationScore: true,
+          sellabilityClass:        true,
+          roiFitScore:             true,
+          roiFitLabel:             true,
+          roiMultiple:             true,
+          paybackMonths:           true,
+          budgetCapacityScore:     true,
+          budgetCapacityLabel:     true,
+          economicModelType:       true,
+          primaryProblem:          true,
+          whyContact:              true,
+          whyNotContact:           true,
+          qualificationQuestions:  true,
           createdAt:              true,
           updatedAt:              true,
         },
