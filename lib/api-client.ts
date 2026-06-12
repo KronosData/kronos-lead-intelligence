@@ -31,6 +31,9 @@ export interface Company {
   latestOpportunityScore: number
   latestPriorityLevel: string
   latestEvaluatedAt: string | null
+  latestPackageSlug: string | null
+  latestPrimaryService: string | null
+  latestScoreConfidence: string | null
   createdAt: string
   updatedAt: string
 }
@@ -83,6 +86,21 @@ export interface Evaluation {
   researchCoverage: number | null
   scoreConfidence: string | null
   evaluationStatus: string | null
+  // Package recommendation fields
+  recommendedPackageSlug: string | null
+  recommendedPackageName: string | null
+  alternativePackageSlug: string | null
+  alternativePackageName: string | null
+  packageReason: string | null
+  packageEvidence: string[]
+  packageConfidence: string | null
+  packageCoverage: number | null
+  packagePriceMin: number | null
+  packagePriceMax: number | null
+  packageTimelineMin: number | null
+  packageTimelineMax: number | null
+  officialSourceUrl: string | null
+  catalogVersion: string | null
   evaluatedAt: string
   updatedAt: string
 }
@@ -145,6 +163,10 @@ export interface CompanyListParams {
   status?: string
   minScore?: number
   maxScore?: number
+  package?: string
+  confidence?: string
+  minCoverage?: number
+  evaluationStatus?: string
   sort?: string
   limit?: number
   offset?: number

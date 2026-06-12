@@ -253,7 +253,7 @@ export const KRONOS_SERVICES: Record<string, KronosService> = {
     priceMax: 500,
   },
   social_media_presence: {
-    name: 'Paquete de Presencia en Redes Sociales',
+    name: 'Optimización de Presencia en Redes Sociales',
     difficulty: 'medium',
     timeEstimate: '3–4 semanas',
     priceMin: 400,

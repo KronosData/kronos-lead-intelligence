@@ -63,6 +63,8 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
   const [priority, setPriority] = useState('')
   const [industry, setIndustry] = useState('')
+  const [pkgFilter, setPkgFilter] = useState('')
+  const [confidenceFilter, setConfidenceFilter] = useState('')
   const [sort, setSort] = useState<SortKey>('score_desc')
 
   const [importOpen, setImportOpen] = useState(false)
@@ -76,7 +78,9 @@ export default function DashboardPage() {
     setError('')
     try {
       const res = await listCompanies({
-        priority: priority.trim() || undefined,
+        priority:   priority.trim() || undefined,
+        package:    pkgFilter.trim() || undefined,
+        confidence: confidenceFilter.trim() || undefined,
         sort,
         limit: 200,
       })
@@ -95,7 +99,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [priority, sort, search, industry])
+  }, [priority, pkgFilter, confidenceFilter, sort, search, industry])
 
   useEffect(() => { fetchCompanies() }, [fetchCompanies])
 
@@ -115,6 +119,22 @@ export default function DashboardPage() {
 
   const hotCount = companies.filter((c) => c.latestPriorityLevel === 'hot').length
   const unevaluated = companies.filter((c) => !c.latestEvaluatedAt).length
+
+  const PKG_LABELS: Record<string, string> = {
+    auditoria_gratuita:                    'Auditoría Gratuita',
+    sistemas_operaciones_autonomas:        'Operaciones',
+    arquitectura_datos_dashboards:         'Datos & Dash',
+    inteligencia_competitiva_scraping:     'Intel. Competitiva',
+    auditoria_conversion_digital:          'Conversión Digital',
+  }
+
+  function confidenceBadgeClass(c: string | null) {
+    if (c === 'high')   return 'bg-green-50 text-green-700 border-green-200'
+    if (c === 'medium') return 'bg-yellow-50 text-yellow-700 border-yellow-200'
+    return 'bg-slate-50 text-slate-500 border-slate-200'
+  }
+
+  const hasFilters = !!(search || priority || industry || pkgFilter || confidenceFilter)
 
   return (
     <div className="p-8">
@@ -180,6 +200,32 @@ export default function DashboardPage() {
           </SelectContent>
         </Select>
 
+        <Select value={pkgFilter} onValueChange={setPkgFilter}>
+          <SelectTrigger className="w-52 bg-white">
+            <SelectValue placeholder="Paquete Kronos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value=" ">Todos los paquetes</SelectItem>
+            <SelectItem value="auditoria_gratuita">Auditoría Gratuita</SelectItem>
+            <SelectItem value="sistemas_operaciones_autonomas">Operaciones Autónomas</SelectItem>
+            <SelectItem value="arquitectura_datos_dashboards">Datos & Dashboards</SelectItem>
+            <SelectItem value="inteligencia_competitiva_scraping">Inteligencia Competitiva</SelectItem>
+            <SelectItem value="auditoria_conversion_digital">Conversión Digital</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={confidenceFilter} onValueChange={setConfidenceFilter}>
+          <SelectTrigger className="w-36 bg-white">
+            <SelectValue placeholder="Confianza" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value=" ">Toda confianza</SelectItem>
+            <SelectItem value="high">Alta</SelectItem>
+            <SelectItem value="medium">Media</SelectItem>
+            <SelectItem value="low">Baja</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
           <SelectTrigger className="w-48 bg-white">
             <SelectValue />
@@ -213,12 +259,12 @@ export default function DashboardPage() {
             <div>
               <p className="font-medium text-slate-700">No hay empresas</p>
               <p className="text-sm text-slate-400 mt-1">
-                {search || priority || industry
+                {hasFilters
                   ? 'Ajusta los filtros para ver más resultados.'
                   : 'Agrega tu primera empresa para empezar.'}
               </p>
             </div>
-            {!search && !priority && !industry && (
+            {!hasFilters && (
               <Button size="sm" asChild>
                 <Link href="/companies/new"><Plus className="h-4 w-4" /> Nueva Empresa</Link>
               </Button>
@@ -233,6 +279,8 @@ export default function DashboardPage() {
                 <TableHead>País</TableHead>
                 <TableHead className="text-center w-20">Score</TableHead>
                 <TableHead className="w-28">Prioridad</TableHead>
+                <TableHead className="w-40">Paquete Kronos</TableHead>
+                <TableHead className="w-24">Confianza</TableHead>
                 <TableHead className="w-32">Estado</TableHead>
                 <TableHead className="w-32">Evaluado</TableHead>
                 <TableHead className="w-16"></TableHead>
@@ -265,6 +313,18 @@ export default function DashboardPage() {
                     ) : (
                       <span className="text-xs text-slate-400 italic">Sin evaluar</span>
                     )}
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-600">
+                    {c.latestPackageSlug
+                      ? PKG_LABELS[c.latestPackageSlug] ?? c.latestPackageSlug
+                      : <span className="text-slate-300">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    {c.latestScoreConfidence ? (
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${confidenceBadgeClass(c.latestScoreConfidence)}`}>
+                        {c.latestScoreConfidence === 'high' ? 'Alta' : c.latestScoreConfidence === 'medium' ? 'Media' : 'Baja'}
+                      </span>
+                    ) : <span className="text-slate-300 text-xs">—</span>}
                   </TableCell>
                   <TableCell>{statusBadge(c.status)}</TableCell>
                   <TableCell className="text-xs text-slate-400">

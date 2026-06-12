@@ -115,20 +115,31 @@ export const OutreachHistorySchema = z.object({
   templateUsed:     z.string().max(255).optional(),
   channelAccount:   z.string().max(255).optional(),
   isAutomated:      z.boolean().default(false),
+  // Commercial alignment tracking
+  packageSlug:         z.string().optional(),
+  individualService:   z.string().optional(),
+  evidenceLevel:       z.enum(['A', 'B', 'C']).optional(),
+  templateType:        z.enum(['package', 'individual_service', 'free_audit', 'exploratory']).optional(),
+  officialUrlIncluded: z.boolean().default(true),
+  catalogVersion:      z.string().optional(),
 })
 
 // ─── Query param schemas ───────────────────────────────────────────────────────
 
 export const CompanyListQuerySchema = z.object({
-  country:   Country.optional(),
-  industry:  z.string().optional(),
-  priority:  z.enum(['hot', 'high', 'medium', 'low']).optional(),
-  status:    CompanyStatus.optional(),
-  minScore:  z.coerce.number().int().min(0).max(100).optional(),
-  maxScore:  z.coerce.number().int().min(0).max(100).optional(),
-  sort:      z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc']).default('score_desc'),
-  limit:     z.coerce.number().int().positive().max(200).default(100),
-  offset:    z.coerce.number().int().nonnegative().default(0),
+  country:          Country.optional(),
+  industry:         z.string().optional(),
+  priority:         z.enum(['hot', 'high', 'medium', 'low']).optional(),
+  status:           CompanyStatus.optional(),
+  minScore:         z.coerce.number().int().min(0).max(100).optional(),
+  maxScore:         z.coerce.number().int().min(0).max(100).optional(),
+  package:          z.string().optional(),
+  confidence:       z.enum(['high', 'medium', 'low']).optional(),
+  minCoverage:      z.coerce.number().int().min(0).max(100).optional(),
+  evaluationStatus: z.string().optional(),
+  sort:             z.enum(['score_desc', 'score_asc', 'created_asc', 'updated_desc']).default('score_desc'),
+  limit:            z.coerce.number().int().positive().max(200).default(100),
+  offset:           z.coerce.number().int().nonnegative().default(0),
 })
 
 // ─── Inferred types ────────────────────────────────────────────────────────────

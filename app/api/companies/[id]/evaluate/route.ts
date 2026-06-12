@@ -5,6 +5,7 @@ import { generateDiagnosis } from '@/lib/diagnosis'
 import { matchServices } from '@/lib/service-match'
 import { estimateRevenueOpportunity } from '@/lib/value-estimator'
 import { evidenceAllManual } from '@/lib/evidence'
+import { recommendPackage } from '@/lib/recommendations/package-mapper'
 import {
   created,
   notFound,
@@ -41,6 +42,7 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
     const coverage  = scores.researchCoverage ?? 100
     const diagnosis = generateDiagnosis(typedSignals, company.industry, scores.opportunityScore, coverage, evidence)
     const services  = matchServices(typedSignals, coverage)
+    const pkgRec    = recommendPackage(typedSignals, coverage, evidence)
     const revenue   = estimateRevenueOpportunity(
       typedSignals,
       company.industry,
@@ -88,6 +90,21 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
           researchCoverage: coverage,
           scoreConfidence:  scores.scoreConfidence,
           evaluationStatus: scores.evaluationStatus,
+          // Package recommendation
+          recommendedPackageSlug: pkgRec.recommendedPackageSlug,
+          recommendedPackageName: pkgRec.recommendedPackageName,
+          alternativePackageSlug: pkgRec.alternativePackageSlug,
+          alternativePackageName: pkgRec.alternativePackageName,
+          packageReason:          pkgRec.packageReason,
+          packageEvidence:        pkgRec.packageEvidence,
+          packageConfidence:      pkgRec.packageConfidence,
+          packageCoverage:        pkgRec.packageCoverage,
+          packagePriceMin:        pkgRec.packagePriceMin,
+          packagePriceMax:        pkgRec.packagePriceMax,
+          packageTimelineMin:     pkgRec.packageTimelineMin,
+          packageTimelineMax:     pkgRec.packageTimelineMax,
+          officialSourceUrl:      pkgRec.officialSourceUrl,
+          catalogVersion:         pkgRec.catalogVersion,
         },
       })
 
@@ -97,6 +114,9 @@ export async function POST(request: Request, ctx: Ctx): Promise<Response> {
           latestOpportunityScore: scores.opportunityScore,
           latestPriorityLevel:    scores.priorityLevel,
           latestEvaluatedAt:      ev.evaluatedAt,
+          latestPackageSlug:      pkgRec.recommendedPackageSlug,
+          latestPrimaryService:   services.primaryService,
+          latestScoreConfidence:  scores.scoreConfidence,
         },
       })
 

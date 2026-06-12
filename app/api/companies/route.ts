@@ -19,20 +19,31 @@ export async function GET(request: Request): Promise<Response> {
     const parsed = CompanyListQuerySchema.safeParse(raw)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { country, industry, priority, status, minScore, maxScore, sort, limit, offset } = parsed.data
+    const { country, industry, priority, status, minScore, maxScore, package: pkg, confidence, minCoverage, evaluationStatus, sort, limit, offset } = parsed.data
 
     // Build filter
     const where: Record<string, unknown> = {}
-    if (country)   where.country = country
-    if (status)    where.status  = status
-    if (industry)  where.industry = { contains: industry, mode: 'insensitive' }
-    if (priority)  where.latestPriorityLevel = priority
+    if (country)          where.country = country
+    if (status)           where.status  = status
+    if (industry)         where.industry = { contains: industry, mode: 'insensitive' }
+    if (priority)         where.latestPriorityLevel = priority
+    if (pkg)              where.latestPackageSlug = pkg
+    if (confidence)       where.latestScoreConfidence = confidence
 
     if (minScore !== undefined || maxScore !== undefined) {
       const scoreFilter: Record<string, number> = {}
       if (minScore !== undefined) scoreFilter.gte = minScore
       if (maxScore !== undefined) scoreFilter.lte = maxScore
       where.latestOpportunityScore = scoreFilter
+    }
+
+    if (minCoverage !== undefined || evaluationStatus !== undefined) {
+      where.evaluations = {
+        some: {
+          ...(minCoverage !== undefined ? { researchCoverage: { gte: minCoverage } } : {}),
+          ...(evaluationStatus !== undefined ? { evaluationStatus } : {}),
+        },
+      }
     }
 
     // Build sort
@@ -62,6 +73,9 @@ export async function GET(request: Request): Promise<Response> {
           latestOpportunityScore: true,
           latestPriorityLevel:    true,
           latestEvaluatedAt:      true,
+          latestPackageSlug:      true,
+          latestPrimaryService:   true,
+          latestScoreConfidence:  true,
           createdAt:              true,
           updatedAt:              true,
         },

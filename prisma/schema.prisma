@@ -25,6 +25,9 @@ model Company {
   latestOpportunityScore Int       @default(0) @map("latest_opportunity_score")
   latestPriorityLevel    String    @default("low") @map("latest_priority_level")
   latestEvaluatedAt      DateTime? @map("latest_evaluated_at")
+  latestPackageSlug      String?   @map("latest_package_slug")
+  latestPrimaryService   String?   @map("latest_primary_service")
+  latestScoreConfidence  String?   @map("latest_score_confidence")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -101,6 +104,22 @@ model Evaluation {
   scoreConfidence   String? @map("score_confidence")
   evaluationStatus  String? @map("evaluation_status")
 
+  // Package recommendation (Kronos official packages)
+  recommendedPackageSlug  String?  @map("recommended_package_slug")
+  recommendedPackageName  String?  @map("recommended_package_name")
+  alternativePackageSlug  String?  @map("alternative_package_slug")
+  alternativePackageName  String?  @map("alternative_package_name")
+  packageReason           String?  @map("package_reason")
+  packageEvidence         String[] @map("package_evidence")
+  packageConfidence       String?  @map("package_confidence")
+  packageCoverage         Int?     @map("package_coverage")
+  packagePriceMin         Int?     @map("package_price_min")
+  packagePriceMax         Int?     @map("package_price_max")
+  packageTimelineMin      Int?     @map("package_timeline_min")
+  packageTimelineMax      Int?     @map("package_timeline_max")
+  officialSourceUrl       String?  @map("official_source_url")
+  catalogVersion          String?  @map("catalog_version")
+
   evaluatedAt DateTime @default(now()) @map("evaluated_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -175,6 +194,14 @@ model OutreachHistory {
   templateUsed   String? @map("template_used")
   channelAccount String? @map("channel_account")
   isAutomated    Boolean @default(false) @map("is_automated")
+
+  // Commercial alignment tracking
+  packageSlug        String?  @map("package_slug")
+  individualService  String?  @map("individual_service")
+  evidenceLevel      String?  @map("evidence_level")
+  templateType       String?  @map("template_type")
+  officialUrlIncluded Boolean @default(false) @map("official_url_included")
+  catalogVersion     String?  @map("catalog_version")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -181,3 +181,26 @@ export interface KronosService {
   priceMin: number
   priceMax: number
 }
+
+// ─── Package recommendation output ───────────────────────────────────────────
+
+export interface PackageRecommendation {
+  recommendedPackageSlug: string
+  recommendedPackageName: string
+  alternativePackageSlug: string | null
+  alternativePackageName: string | null
+  packageReason: string
+  packageEvidence: string[]
+  packageConfidence: 'high' | 'medium' | 'low'
+  packageCoverage: number
+  packagePriceMin: number
+  packagePriceMax: number
+  packageTimelineMin: number
+  packageTimelineMax: number
+  officialSourceUrl: string
+  catalogVersion: string
+}
+
+// ─── Outreach template type ───────────────────────────────────────────────────
+
+export type OutreachTemplateType = 'package' | 'individual_service' | 'free_audit' | 'exploratory'

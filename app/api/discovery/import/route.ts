@@ -15,6 +15,7 @@ import {
   computeCoverage,
   applyEvidence,
 } from '@/lib/evidence'
+import { recommendPackage } from '@/lib/recommendations/package-mapper'
 import { ok, badRequest } from '@/lib/api-helpers'
 import type { SignalFlags } from '@/lib/types'
 import type { ResearchResult } from '@/lib/web-analyzer'
@@ -138,13 +139,14 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Coverage-aware scoring (unknown signals neutralized)
-    const coverage = computeCoverage(evidence)
-    const scores   = computeScoresWithEvidence(signals, evidence)
+    const coverage  = computeCoverage(evidence)
+    const scores    = computeScoresWithEvidence(signals, evidence)
     // Re-apply evidence for diagnosis (pass raw booleans for confirmed problems)
     const neutralized = applyEvidence(signals, evidence)
-    const diagnosis = generateDiagnosis(neutralized, candidate.industry, scores.opportunityScore, coverage, evidence)
-    const services  = matchServices(neutralized, coverage)
-    const revenue   = estimateRevenueOpportunity(neutralized, candidate.industry, services.estimatedProjectPriceMin, coverage)
+    const diagnosis  = generateDiagnosis(neutralized, candidate.industry, scores.opportunityScore, coverage, evidence)
+    const services   = matchServices(neutralized, coverage)
+    const revenue    = estimateRevenueOpportunity(neutralized, candidate.industry, services.estimatedProjectPriceMin, coverage)
+    const pkgRec     = recommendPackage(neutralized, coverage, evidence)
 
     const leadSource = candidate.source === 'here' ? 'here_discovery' : 'osm_discovery'
 
@@ -225,6 +227,21 @@ export async function POST(request: Request): Promise<Response> {
           researchCoverage: coverage,
           scoreConfidence:  scores.scoreConfidence,
           evaluationStatus: scores.evaluationStatus,
+          // Package recommendation
+          recommendedPackageSlug: pkgRec.recommendedPackageSlug,
+          recommendedPackageName: pkgRec.recommendedPackageName,
+          alternativePackageSlug: pkgRec.alternativePackageSlug,
+          alternativePackageName: pkgRec.alternativePackageName,
+          packageReason:          pkgRec.packageReason,
+          packageEvidence:        pkgRec.packageEvidence,
+          packageConfidence:      pkgRec.packageConfidence,
+          packageCoverage:        pkgRec.packageCoverage,
+          packagePriceMin:        pkgRec.packagePriceMin,
+          packagePriceMax:        pkgRec.packagePriceMax,
+          packageTimelineMin:     pkgRec.packageTimelineMin,
+          packageTimelineMax:     pkgRec.packageTimelineMax,
+          officialSourceUrl:      pkgRec.officialSourceUrl,
+          catalogVersion:         pkgRec.catalogVersion,
         },
       })
 
@@ -234,6 +251,9 @@ export async function POST(request: Request): Promise<Response> {
           latestOpportunityScore: scores.opportunityScore,
           latestPriorityLevel:    scores.priorityLevel,
           latestEvaluatedAt:      new Date(),
+          latestPackageSlug:      pkgRec.recommendedPackageSlug,
+          latestPrimaryService:   services.primaryService,
+          latestScoreConfidence:  scores.scoreConfidence,
         },
       })
 

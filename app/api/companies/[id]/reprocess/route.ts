@@ -16,6 +16,7 @@ import {
   computeCoverage,
   applyEvidence,
 } from '@/lib/evidence'
+import { recommendPackage } from '@/lib/recommendations/package-mapper'
 import { ok, notFound, serverError } from '@/lib/api-helpers'
 import type { SignalFlags } from '@/lib/types'
 import type { SignalEvidenceMap } from '@/lib/evidence'
@@ -118,10 +119,11 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
       return ok({ message: 'No existing evaluation to reprocess' })
     }
 
-    const coverage = computeCoverage(evidence)
-    const scores   = computeScoresWithEvidence(signals, evidence)
+    const coverage  = computeCoverage(evidence)
+    const scores    = computeScoresWithEvidence(signals, evidence)
     const diagnosis = generateDiagnosis(signals, company.industry, scores.opportunityScore, coverage, evidence)
     const services  = matchServices(signals, coverage)
+    const pkgRec    = recommendPackage(signals, coverage, evidence)
     const revenue   = estimateRevenueOpportunity(signals, company.industry, services.estimatedProjectPriceMin, coverage)
 
     const newEv = await prisma.$transaction(async (tx) => {
@@ -159,6 +161,21 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
           researchCoverage:           coverage,
           scoreConfidence:            scores.scoreConfidence,
           evaluationStatus:           scores.evaluationStatus,
+          // Package recommendation
+          recommendedPackageSlug: pkgRec.recommendedPackageSlug,
+          recommendedPackageName: pkgRec.recommendedPackageName,
+          alternativePackageSlug: pkgRec.alternativePackageSlug,
+          alternativePackageName: pkgRec.alternativePackageName,
+          packageReason:          pkgRec.packageReason,
+          packageEvidence:        pkgRec.packageEvidence,
+          packageConfidence:      pkgRec.packageConfidence,
+          packageCoverage:        pkgRec.packageCoverage,
+          packagePriceMin:        pkgRec.packagePriceMin,
+          packagePriceMax:        pkgRec.packagePriceMax,
+          packageTimelineMin:     pkgRec.packageTimelineMin,
+          packageTimelineMax:     pkgRec.packageTimelineMax,
+          officialSourceUrl:      pkgRec.officialSourceUrl,
+          catalogVersion:         pkgRec.catalogVersion,
         },
       })
 
@@ -168,6 +185,9 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
           latestOpportunityScore: scores.opportunityScore,
           latestPriorityLevel:    scores.priorityLevel,
           latestEvaluatedAt:      ev.evaluatedAt,
+          latestPackageSlug:      pkgRec.recommendedPackageSlug,
+          latestPrimaryService:   services.primaryService,
+          latestScoreConfidence:  scores.scoreConfidence,
         },
       })
 

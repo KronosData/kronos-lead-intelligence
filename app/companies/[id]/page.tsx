@@ -180,51 +180,137 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         </Card>
       </div>
 
-      {/* Tiered services */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-700">Propuesta de Servicios</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {/* Primary service */}
-          {ev.primaryService ? (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Servicio principal</p>
-              <span className="inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-800">
-                {ev.primaryService}
-              </span>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {ev.recommendedServices.map((s) => (
-                <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">{s}</span>
-              ))}
+      {/* SECCIÓN A — Paquetes Kronos Recomendados */}
+      {ev.recommendedPackageSlug && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-slate-200 rounded px-1.5 py-0.5">A</span>
+            <span className="text-sm font-semibold text-slate-800">Paquetes Kronos Recomendados</span>
+          </div>
+          <Card className={`border-2 ${ev.packageConfidence === 'high' ? 'border-orange-200' : ev.packageConfidence === 'medium' ? 'border-yellow-200' : 'border-slate-200'}`}>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="text-base text-slate-900">{ev.recommendedPackageName}</CardTitle>
+                  {ev.packageConfidence && (
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border mt-1 inline-block ${
+                      ev.packageConfidence === 'high' ? 'bg-green-50 text-green-700 border-green-200' :
+                      ev.packageConfidence === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                      'bg-slate-50 text-slate-500 border-slate-200'
+                    }`}>
+                      Confianza {ev.packageConfidence === 'high' ? 'alta' : ev.packageConfidence === 'medium' ? 'media' : 'baja'}
+                    </span>
+                  )}
+                </div>
+                {ev.packagePriceMin !== null && ev.packagePriceMax !== null && (
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-slate-900">
+                      {ev.packagePriceMin === 0 ? 'Gratuito' : `$${ev.packagePriceMin.toLocaleString()} – $${ev.packagePriceMax.toLocaleString()}`}
+                    </p>
+                    <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Rango preliminar sujeto a<br/>validación de alcance</p>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 pt-0">
+              {ev.packageReason && (
+                <p className="text-sm text-slate-600 leading-relaxed">{ev.packageReason}</p>
+              )}
+              {(ev.packageEvidence?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {ev.packageEvidence!.map((e) => (
+                    <span key={e} className="text-xs bg-slate-100 text-slate-600 rounded px-2 py-0.5">{e}</span>
+                  ))}
+                </div>
+              )}
+              {ev.packageTimelineMin !== null && ev.packageTimelineMax !== null && (
+                <p className="text-xs text-slate-500">
+                  Plazo preliminar: {ev.packageTimelineMin}–{ev.packageTimelineMax} semanas · Sujeto a validación técnica
+                </p>
+              )}
+              <div className="flex items-center gap-3 flex-wrap pt-1">
+                <a
+                  href="https://www.kronosdata.tech/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white px-3 py-1.5 text-xs font-medium hover:bg-slate-700 transition-colors"
+                >
+                  Ver oferta de Kronos Data →
+                </a>
+                <span className="text-xs text-slate-400">Garantía de Optimización Operativa 30 días</span>
+              </div>
+            </CardContent>
+          </Card>
+          {ev.alternativePackageSlug && ev.alternativePackageName && (
+            <div className="rounded-lg border bg-slate-50 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Paquete alternativo</p>
+                <p className="text-sm font-medium text-slate-700">{ev.alternativePackageName}</p>
+              </div>
+              <a
+                href="https://www.kronosdata.tech/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-slate-600 hover:text-slate-900 hover:underline"
+              >
+                Ver detalles en kronosdata.tech →
+              </a>
             </div>
           )}
-          {/* Complementary */}
-          {(ev.complementaryServices?.length ?? 0) > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Complementarios</p>
+        </div>
+      )}
+
+      {/* SECCIÓN B — Servicios Individuales Recomendados */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-slate-200 rounded px-1.5 py-0.5">B</span>
+          <span className="text-sm font-semibold text-slate-800">Servicios Individuales Recomendados</span>
+          {ev.recommendedPackageSlug && (
+            <span className="text-xs text-slate-400">(componente prioritario del paquete)</span>
+          )}
+        </div>
+        <Card>
+          <CardContent className="flex flex-col gap-3 pt-4">
+            {ev.primaryService ? (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Servicio prioritario</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-800">
+                    {ev.primaryService}
+                  </span>
+                  <span className="text-xs text-slate-400">{ev.implementationTimeEstimate} · {ev.priceLabel ?? ''}</span>
+                </div>
+              </div>
+            ) : (
               <div className="flex flex-wrap gap-2">
-                {ev.complementaryServices!.map((s) => (
-                  <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm text-slate-700">{s}</span>
+                {ev.recommendedServices.map((s) => (
+                  <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">{s}</span>
                 ))}
               </div>
-            </div>
-          )}
-          {/* Future */}
-          {(ev.futureServices?.length ?? 0) > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Fases siguientes (tras implementación inicial)</p>
-              <div className="flex flex-wrap gap-2">
-                {ev.futureServices!.map((s) => (
-                  <span key={s} className="inline-flex items-center rounded-md border border-dashed bg-slate-50 px-3 py-1 text-xs text-slate-500">{s}</span>
-                ))}
+            )}
+            {(ev.complementaryServices?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Complementarios</p>
+                <div className="flex flex-wrap gap-2">
+                  {ev.complementaryServices!.map((s) => (
+                    <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm text-slate-700">{s}</span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+            {(ev.futureServices?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Oportunidades futuras</p>
+                <div className="flex flex-wrap gap-2">
+                  {ev.futureServices!.map((s) => (
+                    <span key={s} className="inline-flex items-center rounded-md border border-dashed bg-slate-50 px-3 py-1 text-xs text-slate-500">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Category scores */}
       <Card>
@@ -382,13 +468,16 @@ function outreachEvidenceLevel(ev: Evaluation): 'A' | 'B' | 'C' {
   return 'C'
 }
 
+const OFFICIAL_URL = 'https://www.kronosdata.tech/'
+
 function generateOutreachTemplate(
   channel: 'whatsapp' | 'email' | 'linkedin',
   version: number,
   companyName: string,
   industry: string,
   ev: Evaluation,
-  contactName?: string | null
+  contactName?: string | null,
+  templateType: 'package' | 'individual_service' | 'free_audit' | 'exploratory' = 'individual_service',
 ): string {
   const nombre = contactName?.trim() || companyName || 'equipo'
   const revenue = `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}`
@@ -396,57 +485,79 @@ function generateOutreachTemplate(
   const primary = (ev.primaryService ?? ev.recommendedServices[0] ?? '').toLowerCase()
   const level = outreachEvidenceLevel(ev)
   const v = version % 2
+  const pkgName = ev.recommendedPackageName ?? 'Sistemas de Operaciones Autónomas'
 
-  // Level C: low evidence → neutral exploratory message, no loss claims
-  if (level === 'C') {
+  // Free audit template — always exploratory, no claims
+  if (templateType === 'free_audit' || level === 'C') {
     if (channel === 'whatsapp') {
       return v === 0
-        ? `Hola ${nombre} 👋\n\nSoy Alejandro de Kronos. Trabajamos con negocios de ${industry} en LATAM ayudándoles a captar y retener más clientes desde sus canales digitales.\n\nMe gustaría saber cómo está funcionando ${companyName} en ese aspecto — ¿tienes 10 minutos esta semana para una conversación inicial?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`
-        : `Hola ${nombre},\n\nEncontré ${companyName} en mi investigación de negocios de ${industry} en la región y me pareció interesante.\n\nEn Kronos ayudamos a empresas como la tuya a mejorar su captación de clientes online. ¿Podríamos hablar 15 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`
+        ? `Hola ${nombre} 👋\n\nHice una revisión externa de ${companyName}, pero prefiero no asumir procesos internos únicamente con información pública.\n\nEl siguiente paso más útil sería una Auditoría Gratuita para validar oportunidades reales antes de recomendar una solución.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\nSi te parece, coordinamos una conversación breve. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+        : `Hola ${nombre},\n\nEncontré ${companyName} en mi investigación de negocios de ${industry} en la región.\n\nEn Kronos Data trabajamos con empresas de ${industry} para identificar oportunidades concretas de eficiencia y captación. El primer paso es siempre una conversación sin compromiso.\n\nTe comparto la web de Kronos Data para que veas cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Podríamos hablar 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
     }
     if (channel === 'email') {
-      return `Asunto: ${companyName} — conversación sobre captación digital\n\nHola ${nombre},\n\nSoy Alejandro de Kronos. Nos especializamos en ayudar a negocios de ${industry} a captar y retener más clientes desde sus canales digitales.\n\nMe gustaría explorar si hay oportunidades relevantes para ${companyName}. ¿Tienes 20 minutos esta semana?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+      return `Asunto: ${companyName} — Auditoría Gratuita de oportunidades\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Nos especializamos en ayudar a negocios de ${industry} a identificar y resolver sus principales fricciones operativas y digitales.\n\nMe gustaría explorar si hay oportunidades relevantes para ${companyName}. El primer paso es siempre una Auditoría Gratuita — sin compromiso.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 minutos esta semana?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
     }
-    return `${nombre}, soy Alejandro de Kronos — ayudamos a negocios de ${industry} a captar más clientes desde sus canales digitales.\n\nMe gustaría explorar si hay algo relevante para ${companyName}. ¿Tienes 15 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+    return `${nombre}, soy Alejandro de Kronos Data — ayudamos a negocios de ${industry} a resolver sus principales fricciones operativas y digitales.\n\nMe gustaría explorar si hay algo relevante para ${companyName}. El primer paso es una Auditoría Gratuita sin compromiso.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
   }
 
+  // Package-focused template
+  if (templateType === 'package' && ev.recommendedPackageName) {
+    const maybeRevenue = level === 'B' ? `posiblemente ${revenue}/mes` : `${revenue}/mes`
+    const implText = level === 'B' ? `En aproximadamente ${implTime}` : `Lo resolvemos en ${implTime}`
+    const detected = level === 'B' ? 'encontré indicios de que' : 'detecté'
+    if (channel === 'whatsapp') {
+      return v === 0
+        ? `Hola ${nombre} 👋\n\nRevisé ${companyName} y ${detected} oportunidades claras para el paquete "${pkgName}" de Kronos Data.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en impacto potencial.\n\n${implText} lo resolvemos.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\nPreparé un diagnóstico inicial. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+        : `Hola ${nombre},\n\nAnalizando ${companyName} identifiqué que "${pkgName}" sería el mejor encaje para las necesidades actuales.\n\n${ev.probablePainPoint}\n\nImpacto estimado: ${maybeRevenue}.\n\nTe comparto cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Podemos revisarlo en una llamada breve?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+    }
+    if (channel === 'email') {
+      const serviceList = [ev.primaryService, ...(ev.complementaryServices ?? [])].filter(Boolean)
+      return `Asunto: ${companyName} — ${pkgName}\n\nHola ${nombre},\n\nAnalizamos ${companyName} y encontramos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso puede representar ${maybeRevenue} al mes.\n\nEl mejor encaje sería nuestro paquete "${pkgName}", comenzando por:\n${serviceList.map((s) => `→ ${s}`).join('\n')}\n\nTiempo estimado de implementación: ${implTime}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+    }
+    // LinkedIn
+    return v === 0
+      ? `${nombre}, revisé ${companyName} (${industry}) y encontré oportunidades concretas.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en impacto potencial.\n\nLa ruta que más probablemente encaja es "${pkgName}", ${implText}.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+      : `${nombre}, una pregunta directa sobre ${companyName}:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry} eso es ${maybeRevenue} de impacto estimado. El paquete "${pkgName}" lo resuelve directamente.\n\nTe comparto cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+  }
+
+  // Individual service template (default for A/B levels)
   let scenario = 'followup'
   if (primary.includes('reserva') || primary.includes('cita')) scenario = 'booking'
   else if (primary.includes('google')) scenario = 'google'
   else if (primary.includes('reseña')) scenario = 'reviews'
   else if (primary.includes('funnel') || primary.includes('captura')) scenario = 'leads'
-  else if (primary.includes('sitio web') || primary.includes('presencia') || primary.includes('redes') || primary.includes('auditor')) scenario = 'presence'
+  else if (primary.includes('sitio web') || primary.includes('presencia') || primary.includes('redes') || primary.includes('diagnóstico') || primary.includes('auditor')) scenario = 'presence'
 
-  // Level B: conditional language ("podría", "es posible que")
   const maybeRevenue = level === 'B' ? `posiblemente ${revenue}/mes` : `${revenue}/mes`
   const maybeDetected = level === 'B' ? 'es posible que haya' : 'detecté'
   const implText = level === 'B' ? `En aproximadamente ${implTime}` : `Lo resolvemos en ${implTime}`
+  const webLine = `\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n`
 
   if (channel === 'whatsapp') {
     const tpl: Record<string, [string, string]> = {
       booking: [
-        `Hola ${nombre} 👋\n\nVi que ${companyName} no tiene sistema de reservas online. En ${industry}, el 40% de las citas se intenta agendar fuera de horario — sin sistema, esos clientes eligen a quien responde primero.\n\nEso puede representar ${maybeRevenue} en citas no concretadas.\n\n${implText} lo resolvemos. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\n¿Cuántas reservas pierde ${companyName} fuera de horario?\n\nSin sistema automático hay prospectos que no se concretan — ${maybeRevenue} en ingresos que se evaporan.\n\n${implText} tenemos el sistema listo. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nVi que ${companyName} no tiene sistema de reservas online. En ${industry}, el 40% de las citas se intenta agendar fuera de horario — sin sistema, esos clientes eligen a quien responde primero.\n\nEso puede representar ${maybeRevenue} en citas no concretadas.\n${webLine}\n${implText} lo resolvemos. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\n¿Cuántas reservas pierde ${companyName} fuera de horario?\n\nSin sistema automático hay prospectos que no se concretan — ${maybeRevenue} en ingresos que se evaporan.\n${webLine}\n${implText} tenemos el sistema listo. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
       ],
       google: [
-        `Hola ${nombre} 👋\n\nBusqué "${companyName}" en Google y el perfil digital tiene margen de mejora importante.\n\nEl 76% de los clientes busca en Google antes de contactar. En ${industry}, la visibilidad local marca la diferencia — ${maybeRevenue} en consultas van a quien aparece primero.\n\n${implText} lo optimizamos. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nSi alguien busca "${industry}" en Google, ¿${companyName} aparece entre los primeros resultados?\n\n${maybeRevenue} en visibilidad perdida. 15 minutos y te muestro cómo cambiarlo.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nBusqué "${companyName}" en Google y el perfil digital tiene margen de mejora importante.\n\nEl 76% de los clientes busca en Google antes de contactar. En ${industry}, la visibilidad local marca la diferencia — ${maybeRevenue} en consultas van a quien aparece primero.\n${webLine}\n${implText} lo optimizamos. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nSi alguien busca "${industry}" en Google, ¿${companyName} aparece entre los primeros resultados?\n\n${maybeRevenue} en visibilidad perdida.\n${webLine}\n15 minutos y te muestro cómo cambiarlo.\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
       ],
       reviews: [
-        `Hola ${nombre} 👋\n\nVi reseñas de ${companyName} en Google sin responder.\n\nEl 68% de los clientes lee las respuestas antes de decidir. Sin respuesta = señal negativa para los prospectos.\n\n${maybeRevenue} en conversiones en juego. Tenemos sistema automático de gestión. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nLas reseñas sin responder de ${companyName} en Google pueden estar frenando a nuevos clientes.\n\n${implText} lo resolvemos con gestión automática.\n\n¿15 min esta semana?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nVi reseñas de ${companyName} en Google sin responder.\n\nEl 68% de los clientes lee las respuestas antes de decidir. Sin respuesta = señal negativa para los prospectos.\n\n${maybeRevenue} en conversiones en juego.\n${webLine}\nTenemos sistema automático de gestión. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nLas reseñas sin responder de ${companyName} en Google pueden estar frenando a nuevos clientes.\n${webLine}\n${implText} lo resolvemos con gestión automática. ¿15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
       ],
       presence: [
-        `Hola ${nombre} 👋\n\nRevisé la presencia digital de ${companyName} y ${maybeDetected} margen significativo de mejora para un negocio de ${industry}.\n\nCada cliente que no te encuentra online elige a la competencia. Impacto estimado: ${maybeRevenue}.\n\n${implText} mejoramos el panorama. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nAnalizamos ${companyName} y hay una brecha entre tu presencia digital actual y lo que los clientes de ${industry} esperan encontrar.\n\nImpacto estimado: ${maybeRevenue}. ¿Te muestro el análisis? 15 min.\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nRevisé la presencia digital de ${companyName} y ${maybeDetected} margen significativo de mejora para un negocio de ${industry}.\n\nCada cliente que no te encuentra online elige a la competencia. Impacto estimado: ${maybeRevenue}.\n${webLine}\n${implText} mejoramos el panorama. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nAnalizamos ${companyName} y hay una brecha entre tu presencia digital actual y lo que los clientes de ${industry} esperan encontrar.\n\nImpacto estimado: ${maybeRevenue}.\n${webLine}\n¿Te muestro el análisis? 15 min.\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
       ],
       leads: [
-        `Hola ${nombre} 👋\n\nRevisé ${companyName} y ${maybeDetected} oportunidad de capturar mejor los leads que ya llegan.\n\nEl tráfico que ya tienes no siempre se convierte — ${maybeRevenue} en oportunidades que se podrían retener.\n\nFunnel optimizado en ${implTime}. ¿Hablamos?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nEn ${companyName} puede no haber un "paso siguiente" claro para los visitantes.\n\nSin CTA ni captura de contacto, el interés se pierde — ${maybeRevenue} en leads. ¿15 min para mostrarte la solución?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nRevisé ${companyName} y ${maybeDetected} oportunidad de capturar mejor los leads que ya llegan.\n\nEl tráfico que ya tienes no siempre se convierte — ${maybeRevenue} en oportunidades que se podrían retener.\n${webLine}\nFunnel optimizado en ${implTime}. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\nEn ${companyName} puede no haber un "paso siguiente" claro para los visitantes.\n\nSin CTA ni captura de contacto, el interés se pierde — ${maybeRevenue} en leads.\n${webLine}\n¿15 min para mostrarte la solución?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
       ],
       followup: [
-        `Hola ${nombre} 👋\n\nVi ${companyName} en ${industry} y ${maybeDetected} señales de que hay margen de mejora en seguimiento de leads.\n\nEso puede representar ${maybeRevenue} en clientes que eligen a la competencia por responder más rápido.\n\n${implText} lo mejoramos. ¿Tienes 15 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\n¿Los leads que llegan a ${companyName} reciben respuesta el mismo día?\n\nEn negocios de ${industry} esa velocidad marca la diferencia — ${maybeRevenue} de impacto estimado.\n\n¿Hablamos 10 min?\n\nAlejandro | Kronos — alejandro@kronosdata.tech`,
+        `Hola ${nombre} 👋\n\nVi ${companyName} en ${industry} y ${maybeDetected} señales de que hay margen de mejora en seguimiento de leads.\n\nEso puede representar ${maybeRevenue} en clientes que eligen a la competencia por responder más rápido.\n${webLine}\n${implText} lo mejoramos. ¿Tienes 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
+        `Hola ${nombre},\n\n¿Los leads que llegan a ${companyName} reciben respuesta el mismo día?\n\nEn negocios de ${industry} esa velocidad marca la diferencia — ${maybeRevenue} de impacto estimado.\n${webLine}\n¿Hablamos 10 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
       ],
     }
     const [t0, t1] = tpl[scenario] ?? tpl.followup
@@ -465,13 +576,13 @@ function generateOutreachTemplate(
     const [s0, s1] = subjects[scenario] ?? subjects.followup
     const subject = v === 0 ? s0 : s1
     const serviceList = [ev.primaryService, ...(ev.complementaryServices ?? [])].filter(Boolean)
-    return `Asunto: ${subject}\n\nHola ${nombre},\n\nAnalizamos el perfil digital de ${companyName} y encontramos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso puede representar ${maybeRevenue} al mes.\n\nServicios que resuelven esto directamente:\n${serviceList.map((s) => `→ ${s}`).join('\n')}\n\nTiempo estimado de implementación: ${implTime}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+    return `Asunto: ${subject}\n\nHola ${nombre},\n\nAnalizamos el perfil digital de ${companyName} y encontramos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso puede representar ${maybeRevenue} al mes.\n\nServicios que resuelven esto directamente:\n${serviceList.map((s) => `→ ${s}`).join('\n')}\n\nTiempo estimado de implementación: ${implTime}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
   }
 
   // LinkedIn
   return v === 0
-    ? `${nombre}, revisé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en clientes que no se convierten.\n\n${implText}. ¿Tienes 20 min esta semana?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
-    : `${nombre}, una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn negocios de ${industry} esa velocidad es clave — ${maybeRevenue} de impacto estimado.\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos · alejandro@kronosdata.tech`
+    ? `${nombre}, revisé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en clientes que no se convierten.\n\n${implText}.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+    : `${nombre}, una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn negocios de ${industry} esa velocidad es clave — ${maybeRevenue} de impacto estimado.\n\nTe comparto cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
 }
 
 function OutreachPanel({
@@ -506,8 +617,19 @@ function OutreachPanel({
   const [editedTemplate, setEditedTemplate] = useState('')
   const [copied, setCopied] = useState(false)
 
+  // Default template type based on package confidence and coverage
+  const defaultTemplateType = (): 'package' | 'individual_service' | 'free_audit' | 'exploratory' => {
+    if (!evaluation) return 'exploratory'
+    const level = outreachEvidenceLevel(evaluation)
+    if (level === 'C') return 'free_audit'
+    if (evaluation.recommendedPackageSlug && evaluation.recommendedPackageSlug !== 'auditoria_gratuita' &&
+        (evaluation.packageConfidence === 'high' || evaluation.packageConfidence === 'medium')) return 'package'
+    return 'individual_service'
+  }
+  const [templateType, setTemplateType] = useState<'package' | 'individual_service' | 'free_audit' | 'exploratory'>(defaultTemplateType())
+
   const liveTemplate = evaluation
-    ? generateOutreachTemplate(templateChannel, templateVersion, companyName, industry, evaluation, contactName)
+    ? generateOutreachTemplate(templateChannel, templateVersion, companyName, industry, evaluation, contactName, templateType)
     : ''
   const templateText = editingTemplate ? editedTemplate : liveTemplate
 
@@ -562,6 +684,13 @@ function OutreachPanel({
         responseType: responseType || undefined,
         responseNotes: responseNotes.trim() || undefined,
         sequenceNumber: records.length + 1,
+        // Commercial alignment tracking
+        packageSlug: evaluation?.recommendedPackageSlug ?? undefined,
+        individualService: evaluation?.primaryService ?? undefined,
+        evidenceLevel: evaluation ? outreachEvidenceLevel(evaluation) : undefined,
+        templateType,
+        officialUrlIncluded: true,
+        catalogVersion: evaluation?.catalogVersion ?? undefined,
       })
       setRecords([rec, ...records])
       setModalOpen(false)
@@ -620,7 +749,27 @@ function OutreachPanel({
             }
           </div>
 
-          <div className="flex gap-1 px-4 pt-3">
+          {/* Template type selector */}
+          <div className="flex flex-wrap gap-1 px-4 pt-3 pb-1 border-b border-amber-100">
+            {([
+              { value: 'package', label: '📦 Paquete', show: !!(evaluation.recommendedPackageSlug && evaluation.recommendedPackageSlug !== 'auditoria_gratuita') },
+              { value: 'individual_service', label: '⚡ Servicio', show: true },
+              { value: 'free_audit', label: '🆓 Auditoría Gratuita', show: true },
+              { value: 'exploratory', label: '🔍 Exploratorio', show: true },
+            ] as const).filter(t => t.show).map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => { setTemplateType(value as typeof templateType); setEditingTemplate(false) }}
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  templateType === value ? 'bg-amber-800 text-white' : 'text-amber-700 hover:bg-amber-100'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-1 px-4 pt-2">
             {(['whatsapp', 'email', 'linkedin'] as const).map((ch) => (
               <button
                 key={ch}
