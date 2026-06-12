@@ -94,9 +94,13 @@ function selectTieredKeys(
   let remaining: string[]
 
   if (coverage < 40) {
-    // Low evidence → lead with the diagnostic; safer and more honest
+    // Low evidence → lead with the diagnostic; only add low-difficulty quick wins as complementary
     primaryKey = 'digital_presence_audit'
-    remaining = matchedKeys.filter((k) => k !== 'digital_presence_audit')
+    remaining = matchedKeys.filter((k) => {
+      if (k === 'digital_presence_audit') return false
+      const svc = KRONOS_SERVICES[k]
+      return svc && svc.difficulty === 'low'  // only quick wins in preliminary proposals
+    })
   } else {
     // Pick highest-impact confirmed service
     const byPriority = PRIMARY_PRIORITY_ORDER.find((k) => matchedKeys.includes(k))
