@@ -22,6 +22,20 @@ import { computeSalesQualificationScore }    from '@/lib/qualification/sales-qua
 import { getIndustryProfile }                from '@/lib/economics/industry-models'
 import type { RawCandidate, DiscoveryCandidate, SearchMode } from './types'
 
+// Candidate tier based on qualification outputs (no web analysis at this stage)
+function computeCandidateTier(
+  sqs: number,
+  entityIsCommercial: boolean,
+  hasContact: boolean,
+  sellabilityClass: string,
+): 1 | 2 | 3 | 4 {
+  if (!entityIsCommercial || sellabilityClass === 'discard') return 4
+  if (sqs >= 70 && hasContact) return 1
+  if (sqs >= 50) return 2
+  if (sqs >= 25) return 3
+  return 4
+}
+
 // ── Normalizer options ─────────────────────────────────────────────────────────
 
 export interface NormalizerOptions {
@@ -270,6 +284,18 @@ function enrich(
     whyContact:             sqs.whyContact,
     whyNotContact:          sqs.whyNotContact,
     qualificationQuestions: sqs.qualificationQuestions,
+    // Evidence qualification (pre-web-analysis defaults)
+    candidateTier: computeCandidateTier(
+      sqs.score,
+      entityClass.isCommerciallyViable,
+      !!(raw.website || raw.phone),
+      sqs.sellabilityClass,
+    ),
+    websiteVerificationStatus: raw.website ? 'UNVERIFIED' : 'NOT_PROVIDED',
+    // At discovery stage coverage = 0 → always RESEARCH_REQUIRED or DISQUALIFIED
+    commercialState: !entityClass.isCommerciallyViable || sqs.sellabilityClass === 'discard'
+      ? 'DISQUALIFIED'
+      : 'RESEARCH_REQUIRED',
   }
 }
 

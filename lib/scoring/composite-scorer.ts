@@ -213,8 +213,8 @@ function getSalesPriority(
   // Sellability gate
   if (input.sellabilityClass === 'discard') return 'DISCARD'
 
-  // No evaluation at all → REVIEW (needs validation before contacting)
-  if (!input.eval && evidenceTier === 'LOW') return 'REVIEW'
+  // LOW evidence → always REVIEW (7% coverage must never surface as MEDIUM)
+  if (evidenceTier === 'LOW') return 'REVIEW'
 
   if (compositeScore >= 75) return 'HOT'
   if (compositeScore >= 60) return 'HIGH'

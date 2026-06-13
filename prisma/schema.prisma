@@ -80,6 +80,11 @@ model Company {
   disqualificationReason String? @map("disqualification_reason")  // why not commercial/qualified
   recommendedFirstAction String? @map("recommended_first_action") // immediate next step
 
+  // Evidence qualification — website identity + commercial state
+  websiteVerificationStatus String? @default("NOT_PROVIDED") @map("website_verification_status")
+  websiteVerifiedAt          DateTime? @map("website_verified_at")
+  commercialState            String?   @map("commercial_state")
+
   // Phase 4 — Direct contact info (denormalized for quick outreach)
   contactName      String?   @map("contact_name")
   contactRole      String?   @map("contact_role")
@@ -170,6 +175,8 @@ model Evaluation {
   researchCoverage  Int?    @map("research_coverage")
   scoreConfidence   String? @map("score_confidence")
   evaluationStatus  String? @map("evaluation_status")
+  isLowCoverageHold Boolean @default(false) @map("is_low_coverage_hold")
+  evaluationSource  String? @default("manual") @map("evaluation_source")
 
   // Package recommendation (Kronos official packages)
   recommendedPackageSlug  String?  @map("recommended_package_slug")

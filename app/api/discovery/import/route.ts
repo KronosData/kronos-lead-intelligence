@@ -16,6 +16,8 @@ import {
   applyEvidence,
 } from '@/lib/evidence'
 import { recommendPackage } from '@/lib/recommendations/package-mapper'
+import { verifyIdentity } from '@/lib/website-verifier'
+import { computeCommercialState } from '@/lib/commercial-state'
 import { ok, badRequest } from '@/lib/api-helpers'
 import type { SignalFlags } from '@/lib/types'
 import type { ResearchResult } from '@/lib/web-analyzer'
@@ -160,13 +162,25 @@ export async function POST(request: Request): Promise<Response> {
     let detectedPhone: string | null = candidate.phone ?? null
     let signals:      SignalFlags
     let evidence:     SignalEvidenceMap
+    let websiteVerifStatus = 'NOT_PROVIDED'
 
     if (candidate.website) {
       research    = await analyzeUrl(candidate.website)
       webAnalyzed = research.success
       if (research.detectedPhone) detectedPhone = research.detectedPhone
-      signals  = researchToSignals(research)
-      evidence = evidenceFromWebAnalysis(research)
+
+      // Identity check: is this the right website for this business?
+      const verif = verifyIdentity(candidate.name, research)
+      websiteVerifStatus = verif.status
+
+      // If parked, mismatch, or unreachable → treat as no website
+      if (verif.status === 'MISMATCH' || verif.status === 'UNKNOWN' || !research.success) {
+        signals  = noWebsiteSignals()
+        evidence = evidenceNoWebsite()
+      } else {
+        signals  = researchToSignals(research)
+        evidence = evidenceFromWebAnalysis(research)
+      }
     } else {
       signals  = noWebsiteSignals()
       evidence = evidenceNoWebsite()
@@ -183,6 +197,17 @@ export async function POST(request: Request): Promise<Response> {
     const pkgRec     = recommendPackage(neutralized, coverage, evidence)
 
     const leadSource = candidate.source === 'here' ? 'here_discovery' : 'osm_discovery'
+
+    // Commercial state at import time
+    const commercialState = computeCommercialState({
+      entityIsCommercial:        candidate.entityIsCommercial ?? true,
+      sellabilityClass:          candidate.sellabilityClass ?? null,
+      icpFitScore:               candidate.contactabilityScore ?? 30,
+      contactabilityScore:       candidate.contactabilityScore ?? 30,
+      painScore:                 50, // unknown at discovery stage
+      coveragePercent:           coverage,
+      websiteVerificationStatus: websiteVerifStatus,
+    })
 
     // Determine initial SalesNote action based on available contact info
     const hasContactInfo = !!(detectedPhone || research?.detectedWhatsapp)
@@ -237,6 +262,10 @@ export async function POST(request: Request): Promise<Response> {
           whyContact:              candidate.whyContact ?? [],
           whyNotContact:           candidate.whyNotContact ?? [],
           qualificationQuestions:  candidate.qualificationQuestions ?? [],
+          // Evidence qualification
+          websiteVerificationStatus: websiteVerifStatus,
+          websiteVerifiedAt:         candidate.website ? new Date() : null,
+          commercialState,
         },
       })
 
@@ -244,6 +273,7 @@ export async function POST(request: Request): Promise<Response> {
         data: {
           companyId:   co.id,
           evaluatedBy: 'discovery_engine',
+          evaluationSource: 'discovery_engine',
           // Store the raw boolean signals (before neutralization) for transparency
           signalHasWebsite:           signals.signalHasWebsite,
           signalHasWhatsapp:          signals.signalHasWhatsapp,

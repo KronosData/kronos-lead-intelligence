@@ -55,6 +55,11 @@ export interface DiscoveryCandidate {
   whyContact: string[]                       // positive signals (max 4)
   whyNotContact: string[]                    // red flags (max 4)
   qualificationQuestions: string[]           // for sales call prep (max 3)
+
+  // Evidence qualification
+  candidateTier: 1 | 2 | 3 | 4              // 1=best: ICP+contact+pain; 4=discard
+  websiteVerificationStatus: string          // NOT_PROVIDED | VERIFIED | MISMATCH | UNVERIFIED | UNREACHABLE | UNKNOWN
+  commercialState: string                    // READY_TO_CONTACT | OFFER_AUDIT | RESEARCH_REQUIRED | NURTURE | DISQUALIFIED
 }
 
 // Raw candidate produced by adapters (before any enrichment).
@@ -89,6 +94,9 @@ export type RawCandidate = Omit<DiscoveryCandidate,
   | 'whyContact'
   | 'whyNotContact'
   | 'qualificationQuestions'
+  | 'candidateTier'
+  | 'websiteVerificationStatus'
+  | 'commercialState'
 >
 
 // Search params from the frontend (API route schema).

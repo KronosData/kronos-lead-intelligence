@@ -19,6 +19,7 @@ export interface ResearchResult {
   detectedInstagram: string | null
   detectedLinkedin: string | null
   isSPA: boolean
+  isParkedDomain: boolean
   signals: {
     signalHasWebsite: SignalResult
     signalHasWhatsapp: SignalResult
@@ -183,6 +184,80 @@ function detectSPA(html: string): boolean {
   return text.length < 250
 }
 
+// ── SSRF Protection ───────────────────────────────────────────────────────────
+
+const PRIVATE_IP_PATTERNS: RegExp[] = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^0\./,
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+]
+
+function isPrivateHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase()
+  if (h === 'localhost' || h === 'ip6-localhost' || h === 'ip6-loopback') return true
+  if (PRIVATE_IP_PATTERNS.some(re => re.test(h))) return true
+  // Block .local, .internal, .lan
+  if (/\.(local|internal|lan|corp|intranet)$/.test(h)) return true
+  return false
+}
+
+function isSsrfSafe(url: string): boolean {
+  try {
+    const { hostname, protocol } = new URL(url)
+    if (protocol !== 'http:' && protocol !== 'https:') return false
+    return !isPrivateHostname(hostname)
+  } catch {
+    return false
+  }
+}
+
+// ── Parked domain detection ───────────────────────────────────────────────────
+
+function detectParkedDomain(html: string, status: number | null): boolean {
+  if (!html) return false
+  const lower = html.toLowerCase()
+  const parkingPhrases = [
+    'this domain is parked',
+    'domain is for sale',
+    'domain may be for sale',
+    'buy this domain',
+    'parked domain',
+    'sedoparking',
+    'sedo.com',
+    'parking.godaddy.com',
+    'bodis.com',
+    'domaincontrol.com',
+    'hugedomains.com',
+    'afternic.com',
+    'this domain has been registered',
+    'this domain name has been registered',
+    'dan.com/buy-domain',
+    'domain4sale',
+    'purchase this domain',
+    'this web page is parked',
+    'this site is currently unavailable',
+  ]
+  const found = parkingPhrases.some(p => lower.includes(p))
+  if (found) return true
+  // Very thin pages (< 500 chars of text) with a 200 status are often parked
+  if (status === 200) {
+    const textContent = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (textContent.length < 150) return true
+  }
+  return false
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export async function analyzeUrl(rawUrl: string): Promise<ResearchResult> {
@@ -217,12 +292,17 @@ export async function analyzeUrl(rawUrl: string): Promise<ResearchResult> {
     detectedInstagram: null,
     detectedLinkedin: null,
     isSPA: false,
+    isParkedDomain: false,
     signals: emptySignals,
     autoFilledCount: 0,
     manualRequiredCount: 15,
     warnings,
     error,
   })
+
+  if (!isSsrfSafe(url)) {
+    return fail('URL rechazada: apunta a una dirección de red privada o protocolo no permitido')
+  }
 
   let html = ''
   let httpStatus: number | null = null
@@ -272,6 +352,11 @@ export async function analyzeUrl(rawUrl: string): Promise<ResearchResult> {
 
   // ── Analyze ──────────────────────────────────────────────────────────────────
 
+  const isParkedDomain = detectParkedDomain(html, httpStatus)
+  if (isParkedDomain) {
+    warnings.push('El dominio parece estar aparcado o sin contenido real — los datos detectados no son confiables')
+  }
+
   const isSPA = detectSPA(html)
   if (isSPA) {
     warnings.push('El sitio renderiza contenido con JavaScript — los datos detectados pueden ser incompletos')
@@ -320,6 +405,7 @@ export async function analyzeUrl(rawUrl: string): Promise<ResearchResult> {
     detectedInstagram: ig,
     detectedLinkedin: li,
     isSPA,
+    isParkedDomain,
     signals: {
       signalHasWebsite,
       signalHasWhatsapp,
