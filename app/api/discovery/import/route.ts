@@ -198,12 +198,18 @@ export async function POST(request: Request): Promise<Response> {
 
     const leadSource = candidate.source === 'here' ? 'here_discovery' : 'osm_discovery'
 
+    // Raw contactability 0-100: website usable (+40), phone (+40), whatsapp (+20)
+    const websiteUsable = ['VERIFIED', 'UNVERIFIED'].includes(websiteVerifStatus)
+    const contactabilityRaw = (websiteUsable ? 40 : 0)
+      + (detectedPhone ? 40 : 0)
+      + (research?.detectedWhatsapp ? 20 : 0)
+
     // Commercial state at import time
     const commercialState = computeCommercialState({
       entityIsCommercial:        candidate.entityIsCommercial ?? true,
       sellabilityClass:          candidate.sellabilityClass ?? null,
-      icpFitScore:               candidate.contactabilityScore ?? 30,
-      contactabilityScore:       candidate.contactabilityScore ?? 30,
+      icpFitScore:               candidate.salesQualificationScore ?? 50,
+      contactabilityScore:       contactabilityRaw,
       painScore:                 50, // unknown at discovery stage
       coveragePercent:           coverage,
       websiteVerificationStatus: websiteVerifStatus,

@@ -1,0 +1,191 @@
+{
+  "timestamp": "2026-06-13T03:04:32.702Z",
+  "unitTests": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0
+  },
+  "cases": [
+    {
+      "num": 1,
+      "name": "Web válida y coincidente",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "Coverage: 60%, verif: VERIFIED, salesPriority: HIGH, commercialState: READY_TO_CONTACT"
+      ]
+    },
+    {
+      "num": 2,
+      "name": "Web caída / inaccesible",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "Coverage: 13%, unknownSignals: 13/15, verif: UNREACHABLE",
+        "commercialState: RESEARCH_REQUIRED, salesPriority: REVIEW"
+      ]
+    },
+    {
+      "num": 3,
+      "name": "Sin web",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "revenue estimado: $38/mes (debe ser bajo ≤ coverage penalty)",
+        "Coverage: 13%, commercialState: RESEARCH_REQUIRED"
+      ]
+    },
+    {
+      "num": 4,
+      "name": "Datos mínimos",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "Revenue (minimal data): $38/mes — debe ser bajo"
+      ]
+    },
+    {
+      "num": 5,
+      "name": "Con contacto real",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "contactabilityScore: 20, coverage: 60%",
+        "salesPriority: HIGH, commercialState: OFFER_AUDIT"
+      ]
+    },
+    {
+      "num": 6,
+      "name": "Sin contacto",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "contactabilityScore: 0, commercialState: RESEARCH_REQUIRED"
+      ]
+    },
+    {
+      "num": 7,
+      "name": "Entidad pública / no comercial",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "entityType: government_entity, exclusionReason: Entidad gubernamental u organismo estatal — sin decisor comercial privado"
+      ]
+    },
+    {
+      "num": 8,
+      "name": "Pyme dental con oportunidad real",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "commercialState: READY_TO_CONTACT, salesPriority: HIGH",
+        "coverage: 67%, icpFit: 85, pain: 51"
+      ]
+    },
+    {
+      "num": 9,
+      "name": "Reprocess con más cobertura → no hold",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "prev: 30%, new: 55% → isHold: false"
+      ]
+    },
+    {
+      "num": 10,
+      "name": "Reprocess con menos cobertura → hold",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "prev: 60%, new: 13% → isHold: true",
+        "Hold: eval saved to history only, latestOpportunityScore NOT overwritten"
+      ]
+    },
+    {
+      "num": 11,
+      "name": "Coverage hold protege eval alta",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "Hold logic: coverage < 40% AND prevCoverage >= 40%"
+      ]
+    },
+    {
+      "num": 12,
+      "name": "Cobertura baja → RESEARCH_REQUIRED",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "coverage: 13%, evaluationStatus: manual_review_required, commercialState: RESEARCH_REQUIRED"
+      ]
+    },
+    {
+      "num": 13,
+      "name": "Sin evidencia → no score definitivo",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "salesPriority: REVIEW, evidenceTier: LOW",
+        "revenue: $38/mes"
+      ]
+    },
+    {
+      "num": 14,
+      "name": "Evidencia real → OFFER_AUDIT/READY_TO_CONTACT",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "coverage: 100%, commercialState: READY_TO_CONTACT"
+      ]
+    },
+    {
+      "num": 15,
+      "name": "Outreach limitado con evidencia insuficiente",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "Messages generated: 3 (email, whatsapp, linkedin)",
+        "All include kronosdata.tech: true"
+      ]
+    },
+    {
+      "num": 16,
+      "name": "Sales Notes inicializadas",
+      "pass": true,
+      "failures": [],
+      "notes": [
+        "Found 1 sales notes in 'discovered/not_contacted' state"
+      ]
+    }
+  ],
+  "dentaClear": {
+    "pass": true,
+    "failures": [],
+    "notes": [
+      "ID: e1db7705-8b64-479f-ab1b-a36bbb320240",
+      "website: http://www.dentaclear.com",
+      "latestOpportunityScore: 11",
+      "latestPriorityLevel: low",
+      "salesPriority: HIGH",
+      "evidenceTier: HIGH",
+      "websiteVerificationStatus: UNREACHABLE",
+      "commercialState: RESEARCH_REQUIRED",
+      "Latest eval: coverage=100%, isHold=false, source=manual"
+    ]
+  },
+  "dbStats": {
+    "total": 1,
+    "withCommercialState": 1,
+    "withWebsiteVerif": 1,
+    "disqualified": 0,
+    "researchRequired": 1
+  },
+  "contradictions": {
+    "count": 0,
+    "examples": []
+  },
+  "coverageHolds": {
+    "holdCount": 1
+  },
+  "overallPass": true
+}

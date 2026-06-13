@@ -225,8 +225,8 @@ export async function POST(_request: Request, ctx: Ctx): Promise<Response> {
     const commercialState = computeCommercialState({
       entityIsCommercial:        entityClass.isCommerciallyViable,
       sellabilityClass:          sqsResult.sellabilityClass,
-      icpFitScore:               pfsResult.contactabilityScore, // proxy until composite is wired
-      contactabilityScore:       pfsResult.contactabilityScore,
+      icpFitScore:               pfsResult.score,              // PFS 0-100 as ICP proxy
+      contactabilityScore:       pfsResult.contactabilityRaw, // raw 0-100
       painScore:                 pfsResult.opportunityVisibleRaw,
       coveragePercent:           coverage,
       websiteVerificationStatus: websiteVerifStatus,
