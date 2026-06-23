@@ -1,0 +1,14 @@
+name: Keep database alive
+
+on:
+  schedule:
+    - cron: '0 12 */2 * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          curl -sf --retry 3 --retry-delay 10 https://kronos-lead-intelligence.vercel.app/api/health
