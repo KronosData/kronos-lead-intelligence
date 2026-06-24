@@ -77,7 +77,7 @@ export function buildApproachMessage(companyName: string, pkg: EntryPackageRecom
   const [low, high] = pkg.setupPriceUSD
 
   return (
-    `Hola 👋\n\n` +
+    `Hola,\n\n` +
     `${hook}\n\n` +
     `En Kronos Data nos enfocamos en ${outcome}. Lo implementamos en ${pkg.implementationTime}, sin que tengas que cambiar tu forma de trabajar — desde $${low} hasta $${high} de instalación + $${pkg.monthlyMaintenanceUSD}/mes de mantenimiento.\n\n` +
     `¿Te interesa una llamada de 15 min para mostrarte exactamente cómo se vería para ${companyName}?\n\n` +
