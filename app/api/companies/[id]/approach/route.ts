@@ -9,6 +9,7 @@ import { ok, notFound, serverError } from '@/lib/api-helpers'
 import { computeVisibleSymptoms } from '@/lib/signal-engine/visible-symptoms'
 import type { SignalEvidenceMap } from '@/lib/signal-engine/types'
 import { recommendEntryPackage, recommendChannel } from '@/lib/recommendations/entry-package'
+import { buildApproachMessage } from '@/lib/outreach/approach-message'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -51,16 +52,7 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
     }
 
     const channel = recommendChannel(company)
-    const [low, high] = pkg.setupPriceUSD
-
-    const message =
-      `Hola, soy de Kronos Data 👋\n\n` +
-      `Vimos que ${company.name} tiene una oportunidad clara: ${pkg.painDetected.toLowerCase()}. ` +
-      `Esto puede estar haciéndoles perder clientes u oportunidades sin que se note de inmediato.\n\n` +
-      `Podemos implementar ${pkg.name.toLowerCase()} para resolver justo eso — algo simple y rápido de poner en marcha, ` +
-      `desde $${low} hasta $${high} de instalación + $${pkg.monthlyMaintenanceUSD}/mes de mantenimiento.\n\n` +
-      `¿Te interesa una llamada de 15 min para mostrarte cómo se vería para ${company.name}?\n\n` +
-      `Más sobre nosotros: https://www.kronosdata.tech/`
+    const message = buildApproachMessage(company.name, pkg)
 
     return ok({
       available: true,

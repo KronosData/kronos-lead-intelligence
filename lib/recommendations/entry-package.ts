@@ -11,6 +11,7 @@ export type EntryPackageSlug = 'whatsapp_followup' | 'lead_tracking_crm' | 'webs
 export interface EntryPackageRecommendation {
   slug: EntryPackageSlug
   name: string
+  painKey: string
   painDetected: string
   setupPriceUSD: [number, number]
   monthlyMaintenanceUSD: number
@@ -39,7 +40,7 @@ const PACKAGE_BY_SYMPTOM: Record<string, EntryPackageSlug> = {
   signalHasLinkedin:          'website_seo',
 }
 
-const PACKAGE_INFO: Record<EntryPackageSlug, Omit<EntryPackageRecommendation, 'painDetected' | 'pitch'>> = {
+const PACKAGE_INFO: Record<EntryPackageSlug, Omit<EntryPackageRecommendation, 'painKey' | 'painDetected' | 'pitch'>> = {
   whatsapp_followup: {
     slug: 'whatsapp_followup',
     name: 'Sistema de Seguimiento por WhatsApp',
@@ -101,6 +102,7 @@ export function recommendEntryPackage(
 
   return {
     ...PACKAGE_INFO[winner],
+    painKey: topSymptom[winner]?.key ?? winner,
     painDetected: topSymptom[winner]?.label ?? 'Oportunidad de mejora detectada',
     pitch: PITCH_BY_SLUG[winner](companyName),
   }
