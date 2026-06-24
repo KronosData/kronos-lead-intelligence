@@ -24,9 +24,10 @@ import {
 } from '@/components/ui/dialog'
 import {
   getCompany, listEvaluations, listOutreach, createOutreach, upsertSalesNote,
-  evaluateCompany, deleteCompany, reprocessCompany,
+  evaluateCompany, deleteCompany, reprocessCompany, getCompanyApproach,
   listAudits, createAudit, updateAudit,
   type CompanyDetail, type Evaluation, type OutreachRecord, type SalesNote, type Audit,
+  type ApproachRecommendation,
 } from '@/lib/api-client'
 import { SIGNAL_DEFINITIONS, OUTREACH_CHANNELS, RESPONSE_TYPES, CONTACT_STATUSES, MEETING_STATUSES, PIPELINE_STAGES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -996,6 +997,106 @@ function buildWhatsAppUrl(number: string, message: string): string {
   return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`
 }
 
+// "Cómo acercarnos" — phase-1 land-and-expand pitch. One concrete visible
+// pain, one affordable entry package (WhatsApp follow-up / lead CRM /
+// web+SEO), one ready-to-send message, one recommended channel. No full
+// diagnosis pitched here — that's for after the client is already happy.
+function ApproachPanel({ companyId, whatsapp }: { companyId: string; whatsapp?: string | null }) {
+  const [data, setData] = useState<ApproachRecommendation | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    getCompanyApproach(companyId)
+      .then((r) => { if (active) setData(r) })
+      .catch(() => { if (active) setData({ available: false, reason: 'No se pudo calcular la recomendación.' }) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [companyId])
+
+  if (loading) {
+    return (
+      <div className="mb-4 rounded-xl border bg-card px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Calculando cómo acercarnos...
+      </div>
+    )
+  }
+
+  if (!data?.available || !data.package) {
+    return (
+      <div className="mb-4 rounded-xl border border-dashed bg-card px-4 py-3 text-sm text-muted-foreground">
+        {data?.reason ?? 'Sin recomendación de acercamiento todavía.'}
+      </div>
+    )
+  }
+
+  const { package: pkg } = data
+
+  function copyMessage() {
+    if (!data?.message) return
+    navigator.clipboard.writeText(data.message)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <Card className="mb-4 border-2 border-blue-500/30">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Target className="h-4 w-4 text-blue-400" /> Cómo acercarnos
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Dolor detectado</p>
+          <p className="text-sm font-medium">{data.painDetected}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted px-3 py-2.5">
+          <div className="flex-1 min-w-40">
+            <p className="text-xs text-muted-foreground">Paquete de entrada sugerido</p>
+            <p className="text-sm font-semibold">{pkg.name}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Instalación</p>
+            <p className="text-sm font-semibold">${pkg.setupPriceUSD[0]}–${pkg.setupPriceUSD[1]}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Mantenimiento</p>
+            <p className="text-sm font-semibold">${pkg.monthlyMaintenanceUSD}/mes</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Canal recomendado</p>
+            <p className="text-sm font-semibold">{data.channelLabel}</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Mensaje listo para enviar</p>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed rounded-lg border bg-background px-3 py-2.5">
+            {data.message}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={copyMessage}>
+            <Copy className="h-3.5 w-3.5" /> {copied ? 'Copiado' : 'Copiar mensaje'}
+          </Button>
+          {data.channel === 'whatsapp' && whatsapp && data.message && (
+            <Button size="sm" asChild>
+              <a href={buildWhatsAppUrl(whatsapp, data.message)} target="_blank" rel="noopener noreferrer">
+                <Send className="h-3.5 w-3.5" /> Abrir WhatsApp
+              </a>
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // Evidence level for outreach tone:
 // A = high coverage (≥65%), mention observed specifics + estimates.
 // B = medium coverage (40–64%), conditional language.
@@ -1820,6 +1921,8 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           )}
         </div>
       )}
+
+      <ApproachPanel companyId={id} whatsapp={company.whatsapp} />
 
       {/* Main content */}
       <Tabs defaultValue="evaluation">

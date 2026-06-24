@@ -63,10 +63,6 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
   const [priority, setPriority] = useState('')
   const [industry, setIndustry] = useState('')
-  const [pkgFilter, setPkgFilter] = useState('')
-  const [confidenceFilter, setConfidenceFilter] = useState('')
-  const [prospectProfileFilter, setProspectProfileFilter] = useState('')
-  const [sellabilityFilter,     setSellabilityFilter]     = useState('')
   const [sort, setSort] = useState<SortKey>('score_desc')
 
   const [importOpen, setImportOpen] = useState(false)
@@ -80,11 +76,7 @@ export default function DashboardPage() {
     setError('')
     try {
       const res = await listCompanies({
-        priority:         priority.trim() || undefined,
-        package:          pkgFilter.trim() || undefined,
-        confidence:       confidenceFilter.trim() || undefined,
-        prospectProfile:  prospectProfileFilter.trim() || undefined,
-        sellabilityClass: sellabilityFilter.trim() || undefined,
+        priority: priority.trim() || undefined,
         sort,
         limit: 200,
       })
@@ -103,7 +95,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [priority, pkgFilter, confidenceFilter, prospectProfileFilter, sellabilityFilter, sort, search, industry])
+  }, [priority, sort, search, industry])
 
   useEffect(() => { fetchCompanies() }, [fetchCompanies])
 
@@ -124,21 +116,7 @@ export default function DashboardPage() {
   const hotCount = companies.filter((c) => c.latestPriorityLevel === 'hot').length
   const unevaluated = companies.filter((c) => !c.latestEvaluatedAt).length
 
-  const PKG_LABELS: Record<string, string> = {
-    auditoria_gratuita:                    'Auditoría Gratuita',
-    sistemas_operaciones_autonomas:        'Operaciones',
-    arquitectura_datos_dashboards:         'Datos & Dash',
-    inteligencia_competitiva_scraping:     'Intel. Competitiva',
-    auditoria_conversion_digital:          'Conversión Digital',
-  }
-
-  function confidenceBadgeClass(c: string | null) {
-    if (c === 'high')   return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-    if (c === 'medium') return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-    return 'bg-muted text-muted-foreground border-border'
-  }
-
-  const hasFilters = !!(search || priority || industry || pkgFilter || confidenceFilter || prospectProfileFilter || sellabilityFilter)
+  const hasFilters = !!(search || priority || industry)
 
   return (
     <div className="p-8">
@@ -204,59 +182,6 @@ export default function DashboardPage() {
           </SelectContent>
         </Select>
 
-        <Select value={pkgFilter} onValueChange={setPkgFilter}>
-          <SelectTrigger className="w-52 bg-card">
-            <SelectValue placeholder="Paquete Kronos" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value=" ">Todos los paquetes</SelectItem>
-            <SelectItem value="auditoria_gratuita">Auditoría Gratuita</SelectItem>
-            <SelectItem value="sistemas_operaciones_autonomas">Operaciones Autónomas</SelectItem>
-            <SelectItem value="arquitectura_datos_dashboards">Datos & Dashboards</SelectItem>
-            <SelectItem value="inteligencia_competitiva_scraping">Inteligencia Competitiva</SelectItem>
-            <SelectItem value="auditoria_conversion_digital">Conversión Digital</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={confidenceFilter} onValueChange={setConfidenceFilter}>
-          <SelectTrigger className="w-36 bg-card">
-            <SelectValue placeholder="Confianza" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value=" ">Toda confianza</SelectItem>
-            <SelectItem value="high">Alta</SelectItem>
-            <SelectItem value="medium">Media</SelectItem>
-            <SelectItem value="low">Baja</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={prospectProfileFilter} onValueChange={setProspectProfileFilter}>
-          <SelectTrigger className="w-44 bg-card">
-            <SelectValue placeholder="Perfil PFS" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value=" ">Todos los perfiles</SelectItem>
-            <SelectItem value="ideal">Ideal</SelectItem>
-            <SelectItem value="good_opportunity">Oportunidad</SelectItem>
-            <SelectItem value="investigate">Investigar</SelectItem>
-            <SelectItem value="low_priority">Baja prioridad</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={sellabilityFilter} onValueChange={setSellabilityFilter}>
-          <SelectTrigger className="w-48 bg-card">
-            <SelectValue placeholder="Sellability" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value=" ">Toda sellability</SelectItem>
-            <SelectItem value="sell_now">✅ Contactar ahora</SelectItem>
-            <SelectItem value="contact_diagnosis">🔍 Diagnóstico</SelectItem>
-            <SelectItem value="investigate">🔎 Investigar</SelectItem>
-            <SelectItem value="nurture">⏳ Monitorear</SelectItem>
-            <SelectItem value="discard">❌ Descartar</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
           <SelectTrigger className="w-52 bg-card">
             <SelectValue />
@@ -264,9 +189,6 @@ export default function DashboardPage() {
           <SelectContent>
             <SelectItem value="score_desc">Mayor score primero</SelectItem>
             <SelectItem value="score_asc">Menor score primero</SelectItem>
-            <SelectItem value="sqs_desc">SQS desc</SelectItem>
-            <SelectItem value="sales_priority_desc">Sales Priority Score</SelectItem>
-            <SelectItem value="prospect_fit_desc">Prospect Fit Score</SelectItem>
             <SelectItem value="updated_desc">Actualizado recientemente</SelectItem>
             <SelectItem value="created_asc">Más antiguo primero</SelectItem>
           </SelectContent>
@@ -312,11 +234,8 @@ export default function DashboardPage() {
                 <TableHead>Industria</TableHead>
                 <TableHead>País</TableHead>
                 <TableHead className="text-center w-20">Score</TableHead>
-                <TableHead className="text-center w-20">SQS</TableHead>
-                <TableHead className="text-center w-20 hidden xl:table-cell">PFS</TableHead>
                 <TableHead className="w-28">Prioridad</TableHead>
-                <TableHead className="w-40">Paquete Kronos</TableHead>
-                <TableHead className="w-24">Confianza</TableHead>
+                <TableHead className="w-56">Dolor detectado</TableHead>
                 <TableHead className="w-32">Estado</TableHead>
                 <TableHead className="w-32">Evaluado</TableHead>
                 <TableHead className="w-16"></TableHead>
@@ -341,30 +260,6 @@ export default function DashboardPage() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-center">
-                    {c.salesQualificationScore !== null && c.salesQualificationScore !== undefined ? (
-                      <span className={`text-sm font-semibold ${
-                        c.salesQualificationScore >= 70 ? 'text-emerald-400' :
-                        c.salesQualificationScore >= 55 ? 'text-blue-400' :
-                        c.salesQualificationScore >= 35 ? 'text-amber-400' :
-                        'text-muted-foreground'
-                      }`}>{c.salesQualificationScore}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center hidden xl:table-cell">
-                    {c.prospectFitScore !== null && c.prospectFitScore !== undefined ? (
-                      <span className={`text-sm font-semibold ${
-                        c.prospectFitScore >= 70 ? 'text-emerald-400' :
-                        c.prospectFitScore >= 50 ? 'text-blue-400' :
-                        c.prospectFitScore >= 30 ? 'text-amber-400' :
-                        'text-muted-foreground'
-                      }`}>{c.prospectFitScore}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
                   <TableCell>
                     {c.latestEvaluatedAt ? (
                       <Badge variant={priorityVariant(c.latestPriorityLevel)}>
@@ -374,17 +269,8 @@ export default function DashboardPage() {
                       <span className="text-xs text-muted-foreground italic">Sin evaluar</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {c.latestPackageSlug
-                      ? PKG_LABELS[c.latestPackageSlug] ?? c.latestPackageSlug
-                      : <span className="text-muted-foreground">—</span>}
-                  </TableCell>
-                  <TableCell>
-                    {c.latestScoreConfidence ? (
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${confidenceBadgeClass(c.latestScoreConfidence)}`}>
-                        {c.latestScoreConfidence === 'high' ? 'Alta' : c.latestScoreConfidence === 'medium' ? 'Media' : 'Baja'}
-                      </span>
-                    ) : <span className="text-muted-foreground text-xs">—</span>}
+                  <TableCell className="text-xs text-muted-foreground max-w-56 truncate">
+                    {c.whyContact?.[0] ?? c.qualificationReason ?? <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell>{statusBadge(c.status)}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">

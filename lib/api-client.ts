@@ -347,6 +347,26 @@ export async function reprocessCompany(id: string): Promise<Record<string, unkno
   return req(`/companies/${id}/reprocess`, { method: 'POST' })
 }
 
+export interface ApproachRecommendation {
+  available: boolean
+  reason?: string
+  painDetected?: string
+  package?: {
+    slug: string
+    name: string
+    setupPriceUSD: [number, number]
+    monthlyMaintenanceUSD: number
+    pitch: string
+  }
+  channel?: string
+  channelLabel?: string
+  message?: string
+}
+
+export async function getCompanyApproach(id: string): Promise<ApproachRecommendation> {
+  return req(`/companies/${id}/approach`)
+}
+
 // ─── Outreach ─────────────────────────────────────────────────────────────────
 
 export async function listOutreach(id: string): Promise<{ data: OutreachRecord[]; total: number }> {
