@@ -1,3 +1,6 @@
+// @legacy — v2 does NOT compute ROI or project value before an audit.
+// ROI estimation belongs in the Audit model after real prospect data is gathered.
+// Archived: do not import in new routes or UI primary views.
 // ROI Fit Score: estimates whether a Kronos project is economically defensible
 // for a specific prospect, based on industry model + size + available signals.
 // Score range: 0-100. Labels: excellent | good | limited | not_defensible.

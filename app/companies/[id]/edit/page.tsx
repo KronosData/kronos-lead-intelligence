@@ -176,9 +176,9 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
           <h1 className="text-2xl font-bold text-slate-900">Editar Empresa</h1>
           <p className="text-sm text-slate-500">{name || 'Cargando...'}</p>
         </div>
-        {latestEvaluation && (
+        {latestEvaluation && latestEvaluation.priorityLevel && (
           <Badge variant={priorityVariant(latestEvaluation.priorityLevel)} className="ml-2">
-            {latestEvaluation.priorityLevel.toUpperCase()} · {latestEvaluation.opportunityScore}
+            {latestEvaluation.priorityLevel.toUpperCase()} · {latestEvaluation.opportunityScore ?? '—'}
           </Badge>
         )}
       </div>

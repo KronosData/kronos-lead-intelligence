@@ -1,3 +1,6 @@
+// @legacy — replaced by lib/signal-engine/ in v2.
+// v2 uses computeIcpFit() + computeVisibleSymptoms() + computeContactabilityV2() instead.
+// Archived: do not import in new routes.
 // Prospect Fit Score: measures how sellable a candidate is for Kronos.
 // Computed at discovery time from available data (before web analysis).
 // Score range: 0–100.

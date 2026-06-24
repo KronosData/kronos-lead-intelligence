@@ -1,3 +1,6 @@
+// @legacy — replaced by Audit Priority Score in v2.
+// v2 uses auditPriorityScore = ICP*0.4 + Symptoms*0.35 + Contactability*0.25.
+// Archived: do not import in new routes.
 // Sales Qualification Score (SQS): primary ranking for Phase 3.9 discovery.
 // Combines PFS + opportunity signals + ROI fit + contactability + budget + evidence.
 // Score range: 0-100. Maps to a Sellability class.

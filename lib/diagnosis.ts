@@ -1,3 +1,6 @@
+// @legacy — v2 does NOT generate automatic diagnoses before an audit.
+// Diagnoses belong in the Audit model (post-meeting, human-validated).
+// Archived: do not import in new routes or UI primary views.
 import type { SignalFlags, DiagnosisOutput } from './types'
 import type { SignalEvidenceMap } from './evidence'
 import { SIGNAL_DEFINITIONS } from './constants'

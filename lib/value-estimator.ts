@@ -1,3 +1,6 @@
+// @legacy — v2 Prospect Signal Engine does NOT compute revenue loss or ROI before an audit.
+// This module is archived. Do not import in new code. Data produced by this module
+// must NOT be shown in primary company views — display it only in the legacy evaluation history.
 import type { SignalFlags, RevenueOpportunityOutput } from './types'
 import { INDUSTRY_BASELINES } from './constants'
 

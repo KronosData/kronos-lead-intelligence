@@ -1,24 +1,19 @@
 // POST /api/discovery/import
-// Imports a single discovered company, runs all scoring engines with evidence model,
-// and creates an initial SalesNote. One request per company (Vercel 60s timeout).
+// v2: Imports a discovered company, runs the Prospect Signal Engine,
+// and creates an initial SalesNote. No ROI, revenue loss, or diagnosis before audit.
 
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { analyzeUrl } from '@/lib/web-analyzer'
-import { computeScoresWithEvidence } from '@/lib/scoring'
-import { generateDiagnosis } from '@/lib/diagnosis'
-import { matchServices } from '@/lib/service-match'
-import { estimateRevenueOpportunity } from '@/lib/value-estimator'
 import {
   evidenceNoWebsite,
   evidenceFromWebAnalysis,
   computeCoverage,
-  applyEvidence,
 } from '@/lib/evidence'
-import { recommendPackage } from '@/lib/recommendations/package-mapper'
 import { verifyIdentity } from '@/lib/website-verifier'
-import { computeCommercialState } from '@/lib/commercial-state'
 import { ok, badRequest } from '@/lib/api-helpers'
+import { computeProspectSignals } from '@/lib/signal-engine'
+import type { ProspectSignalInput } from '@/lib/signal-engine'
 import type { SignalFlags } from '@/lib/types'
 import type { ResearchResult } from '@/lib/web-analyzer'
 import type { ImportedCompanyResult } from '@/lib/discovery/types'
@@ -36,7 +31,7 @@ const ImportSchema = z.object({
   googleBusinessUrl: z.string().url().nullable().optional(),
   source:     z.enum(['here', 'osm']),
 
-  // Phase 3.8 — Prospect Fit fields from discovery normalizer
+  // Phase 3.8 — Prospect Fit provenance (kept for metadata, not used for scoring)
   prospectFitScore:       z.number().int().min(0).max(100).optional(),
   estimatedBusinessSize:  z.string().optional(),
   businessSizeConfidence: z.string().optional(),
@@ -51,10 +46,11 @@ const ImportSchema = z.object({
   discoveryMode:          z.string().optional(),
   discoveryRankBefore:    z.number().int().optional(),
   discoveryRankAfter:     z.number().int().optional(),
-  // Phase 3.9 — Commercial qualification
+  // Phase 3.9 — Entity classification (kept; scoring replaced by signal engine v2)
   entityType:             z.string().optional(),
   entityIsCommercial:     z.boolean().optional(),
   entityExclusionReason:  z.string().nullable().optional(),
+  // Legacy discovery scoring fields — accepted but replaced by signal engine in v2
   commercialQualification: z.string().optional(),
   salesQualificationScore: z.number().int().min(0).max(100).optional(),
   sellabilityClass:       z.string().optional(),
@@ -98,9 +94,6 @@ function researchToSignals(r: ResearchResult): SignalFlags {
 }
 
 // For companies without a website: only confirm what we actually know.
-// Confirmed: signalHasWebsite=false (from discovery source having no URL).
-// Inferred:  signalWeakOnlinePresence=true (derived from no website).
-// All others: unknown → neutral for scoring (do NOT assume problems).
 function noWebsiteSignals(): SignalFlags {
   return {
     signalHasWebsite:           false,  // confirmed negative
@@ -119,6 +112,13 @@ function noWebsiteSignals(): SignalFlags {
     signalManualWork:           false,  // unknown → neutral (NOT assumed true)
     signalWeakOnlinePresence:   true,   // inferred positive from no website
   }
+}
+
+function stateToAction(state: string): string {
+  if (state === 'OFFER_AUDIT')       return 'Enviar gancho para auditoría gratuita de 15 min'
+  if (state === 'CONTACT_READY')     return 'Iniciar primer contacto directo'
+  if (state === 'RESEARCH_REQUIRED') return 'Investigar datos de contacto antes de contactar'
+  return 'Prospect descalificado — no iniciar contacto'
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -186,40 +186,29 @@ export async function POST(request: Request): Promise<Response> {
       evidence = evidenceNoWebsite()
     }
 
-    // Coverage-aware scoring (unknown signals neutralized)
-    const coverage  = computeCoverage(evidence)
-    const scores    = computeScoresWithEvidence(signals, evidence)
-    // Re-apply evidence for diagnosis (pass raw booleans for confirmed problems)
-    const neutralized = applyEvidence(signals, evidence)
-    const diagnosis  = generateDiagnosis(neutralized, candidate.industry, scores.opportunityScore, coverage, evidence)
-    const services   = matchServices(neutralized, coverage)
-    const revenue    = estimateRevenueOpportunity(neutralized, candidate.industry, services.estimatedProjectPriceMin, coverage)
-    const pkgRec     = recommendPackage(neutralized, coverage, evidence)
+    const coverage = computeCoverage(evidence)
 
-    const leadSource = candidate.source === 'here' ? 'here_discovery' : 'osm_discovery'
-
-    // Raw contactability 0-100: website usable (+40), phone (+40), whatsapp (+20)
-    const websiteUsable = ['VERIFIED', 'UNVERIFIED'].includes(websiteVerifStatus)
-    const contactabilityRaw = (websiteUsable ? 40 : 0)
-      + (detectedPhone ? 40 : 0)
-      + (research?.detectedWhatsapp ? 20 : 0)
-
-    // Commercial state at import time
-    const commercialState = computeCommercialState({
-      entityIsCommercial:        candidate.entityIsCommercial ?? true,
-      sellabilityClass:          candidate.sellabilityClass ?? null,
-      icpFitScore:               candidate.salesQualificationScore ?? 50,
-      contactabilityScore:       contactabilityRaw,
-      painScore:                 50, // unknown at discovery stage
-      coveragePercent:           coverage,
+    // v2: Prospect Signal Engine — ICP Fit + Visible Symptoms + Contactability + Audit Priority
+    const prospectSignals = computeProspectSignals({
+      name:                     candidate.name,
+      industry:                 candidate.industry,
+      country:                  candidate.country,
+      city:                     candidate.city ?? null,
+      website:                  candidate.website ?? null,
+      isCommercial:             candidate.entityIsCommercial ?? true,
+      entityType:               candidate.entityType ?? null,
+      entityExclusionReason:    candidate.entityExclusionReason ?? null,
+      evidence:                 evidence as ProspectSignalInput['evidence'],
+      evidenceCoverage:         coverage,
       websiteVerificationStatus: websiteVerifStatus,
+      hasPhone:                 !!detectedPhone,
+      hasWhatsapp:              !!research?.detectedWhatsapp,
+      hasEmail:                 signals.signalHasContactForm,
+      hasInstagram:             !!research?.detectedInstagram,
+      hasLinkedin:              !!research?.detectedLinkedin,
     })
 
-    // Determine initial SalesNote action based on available contact info
-    const hasContactInfo = !!(detectedPhone || research?.detectedWhatsapp)
-    const nextAction = hasContactInfo
-      ? 'Revisar diagnóstico y realizar primer contacto'
-      : 'Investigar contacto y validar diagnóstico'
+    const leadSource = candidate.source === 'here' ? 'here_discovery' : 'osm_discovery'
 
     const company = await prisma.$transaction(async (tx) => {
       const co = await tx.company.create({
@@ -235,13 +224,12 @@ export async function POST(request: Request): Promise<Response> {
           googleBusinessUrl: candidate.googleBusinessUrl ?? null,
           status:            'active',
           leadSource,
-          // Phase 3.8 — discovery-stage prospect analysis
+          // Discovery provenance metadata (not used for v2 scoring)
           prospectFitScore:        candidate.prospectFitScore ?? null,
           estimatedBusinessSize:   candidate.estimatedBusinessSize ?? null,
           businessSizeConfidence:  candidate.businessSizeConfidence ?? null,
           chainDetected:           candidate.chainDetected ?? false,
           prospectProfile:         candidate.prospectProfile ?? null,
-          contactabilityScore:     candidate.contactabilityScore ?? null,
           opportunityReasons:      candidate.opportunityReasons ?? [],
           prospectRisks:           candidate.prospectRisks ?? [],
           discoverySearchCountry:  candidate.discoverySearchCountry ?? null,
@@ -250,37 +238,36 @@ export async function POST(request: Request): Promise<Response> {
           discoveryMode:           candidate.discoveryMode ?? null,
           discoveryRankBefore:     candidate.discoveryRankBefore ?? null,
           discoveryRankAfter:      candidate.discoveryRankAfter ?? null,
-          // Phase 3.9 — Commercial qualification
+          // Entity classification
           entityType:              candidate.entityType ?? null,
           entityIsCommercial:      candidate.entityIsCommercial ?? true,
           entityExclusionReason:   candidate.entityExclusionReason ?? null,
-          commercialQualification: candidate.commercialQualification ?? null,
-          salesQualificationScore: candidate.salesQualificationScore ?? null,
-          sellabilityClass:        candidate.sellabilityClass ?? null,
-          roiFitScore:             candidate.roiFitScore ?? null,
-          roiFitLabel:             candidate.roiFitLabel ?? null,
-          roiMultiple:             candidate.roiMultiple ?? null,
-          paybackMonths:           candidate.paybackMonths ?? null,
-          budgetCapacityScore:     candidate.budgetCapacityScore ?? null,
-          budgetCapacityLabel:     candidate.budgetCapacityLabel ?? null,
-          economicModelType:       candidate.economicModelType ?? null,
-          primaryProblem:          candidate.primaryProblem ?? null,
-          whyContact:              candidate.whyContact ?? [],
-          whyNotContact:           candidate.whyNotContact ?? [],
-          qualificationQuestions:  candidate.qualificationQuestions ?? [],
+          // v2 Prospect Signal Engine scores
+          icpFitScore:             prospectSignals.icpFitScore,
+          painScore:               prospectSignals.visibleSymptomsScore,
+          contactabilityScore:     prospectSignals.contactabilityScore,
+          salesOpportunityScore:   prospectSignals.auditPriorityScore,
+          commercialState:         prospectSignals.commercialState,
+          qualificationReason:     prospectSignals.auditHook,
+          qualificationQuestions:  prospectSignals.auditQuestions.map(q => q.question),
+          whyContact:              prospectSignals.confirmedSymptoms.map(s => s.label),
+          whyNotContact:           prospectSignals.disqualificationReason
+                                     ? [prospectSignals.disqualificationReason]
+                                     : [],
+          disqualificationReason:  prospectSignals.disqualificationReason,
+          recommendedFirstAction:  stateToAction(prospectSignals.commercialState),
           // Evidence qualification
           websiteVerificationStatus: websiteVerifStatus,
           websiteVerifiedAt:         candidate.website ? new Date() : null,
-          commercialState,
         },
       })
 
       await tx.evaluation.create({
         data: {
-          companyId:   co.id,
-          evaluatedBy: 'discovery_engine',
-          evaluationSource: 'discovery_engine',
-          // Store the raw boolean signals (before neutralization) for transparency
+          companyId:        co.id,
+          evaluatedBy:      'discovery_engine_v2',
+          evaluationSource: 'discovery_engine_v2',
+          // Signal boolean flags stored for transparency (not used for v2 scoring)
           signalHasWebsite:           signals.signalHasWebsite,
           signalHasWhatsapp:          signals.signalHasWhatsapp,
           signalHasContactForm:       signals.signalHasContactForm,
@@ -296,78 +283,34 @@ export async function POST(request: Request): Promise<Response> {
           signalWeakFollowup:         signals.signalWeakFollowup,
           signalManualWork:           signals.signalManualWork,
           signalWeakOnlinePresence:   signals.signalWeakOnlinePresence,
-          // Scores (evidence-aware)
-          scoreLeadGeneration:        scores.scoreLeadGeneration,
-          scoreFollowUp:              scores.scoreFollowUp,
-          scoreConversionProcess:     scores.scoreConversionProcess,
-          scoreAutomationOpportunity: scores.scoreAutomationOpportunity,
-          scoreOnlinePresence:        scores.scoreOnlinePresence,
-          scoreReputation:            scores.scoreReputation,
-          opportunityScore:           scores.opportunityScore,
-          // Diagnosis
-          priorityLevel:              scores.priorityLevel,
-          detectedProblems:           diagnosis.detectedProblems,
-          probablePainPoint:          diagnosis.probablePainPoint,
-          recommendedSolution:        diagnosis.recommendedSolution,
-          estimatedValueMin:          diagnosis.estimatedValueMin,
-          estimatedValueMax:          diagnosis.estimatedValueMax,
-          // Revenue
-          estimatedLeadsLostPerMonth:   revenue.estimatedLeadsLostPerMonth,
-          estimatedRevenueLostPerMonth: revenue.estimatedRevenueLostPerMonth,
-          estimatedRoiPotential:        revenue.estimatedRoiPotential,
-          // Service match (tiered)
-          recommendedServices:        services.recommendedServices,
-          primaryService:             services.primaryService,
-          complementaryServices:      services.complementaryServices,
-          futureServices:             services.futureServices,
-          implementationDifficulty:   services.implementationDifficulty,
-          implementationTimeEstimate: services.implementationTimeEstimate,
-          estimatedProjectPriceMin:   services.estimatedProjectPriceMin,
-          estimatedProjectPriceMax:   services.estimatedProjectPriceMax,
-          priceLabel:                 services.priceLabel,
+          // Audit Priority Score stored in opportunityScore for schema compatibility
+          opportunityScore:           prospectSignals.auditPriorityScore,
           // Evidence metadata
           signalEvidence:   evidence as object,
           researchCoverage: coverage,
-          scoreConfidence:  scores.scoreConfidence,
-          evaluationStatus: scores.evaluationStatus,
-          // Package recommendation
-          recommendedPackageSlug: pkgRec.recommendedPackageSlug,
-          recommendedPackageName: pkgRec.recommendedPackageName,
-          alternativePackageSlug: pkgRec.alternativePackageSlug,
-          alternativePackageName: pkgRec.alternativePackageName,
-          packageReason:          pkgRec.packageReason,
-          packageEvidence:        pkgRec.packageEvidence,
-          packageConfidence:      pkgRec.packageConfidence,
-          packageCoverage:        pkgRec.packageCoverage,
-          packagePriceMin:        pkgRec.packagePriceMin,
-          packagePriceMax:        pkgRec.packagePriceMax,
-          packageTimelineMin:     pkgRec.packageTimelineMin,
-          packageTimelineMax:     pkgRec.packageTimelineMax,
-          officialSourceUrl:      pkgRec.officialSourceUrl,
-          catalogVersion:         pkgRec.catalogVersion,
+          scoreConfidence:  coverage >= 60 ? 'high' : coverage >= 30 ? 'medium' : 'low',
+          evaluationStatus: 'v2_signal_engine',
+          // v2 — this is a clean evaluation, not legacy
+          isLegacyEval: false,
         },
       })
 
       await tx.company.update({
         where: { id: co.id },
         data: {
-          latestOpportunityScore: scores.opportunityScore,
-          latestPriorityLevel:    scores.priorityLevel,
+          latestOpportunityScore: prospectSignals.auditPriorityScore,
+          latestPriorityLevel:    prospectSignals.commercialState,
           latestEvaluatedAt:      new Date(),
-          latestPackageSlug:      pkgRec.recommendedPackageSlug,
-          latestPrimaryService:   services.primaryService,
-          latestScoreConfidence:  scores.scoreConfidence,
         },
       })
 
-      // Auto-initialize SalesNote — only empty fields, no overwrite
       await tx.salesNote.create({
         data: {
           companyId:     co.id,
           assignedTo:    'alejandro@kronosdata.tech',
           contactStatus: 'not_contacted',
           meetingStatus: 'not_scheduled',
-          nextAction,
+          nextAction:    stateToAction(prospectSignals.commercialState),
           contactPhone:  detectedPhone ?? null,
         },
       })
@@ -380,8 +323,8 @@ export async function POST(request: Request): Promise<Response> {
       status:              'imported',
       companyId:           company.id,
       companyName:         company.name,
-      opportunityScore:    scores.opportunityScore,
-      priorityLevel:       scores.priorityLevel,
+      opportunityScore:    prospectSignals.auditPriorityScore,
+      priorityLevel:       prospectSignals.commercialState,
       hasWebsite:          !!candidate.website,
       webAnalyzed,
       detectedPhone,

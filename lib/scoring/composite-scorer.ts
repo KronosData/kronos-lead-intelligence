@@ -1,3 +1,6 @@
+// @legacy — Phase 4 composite scorer archived in v2.
+// v2 uses lib/signal-engine/ instead: ICP Fit + Visible Symptoms + Contactability → Audit Priority.
+// HOT/HIGH/MEDIUM/LOW priority labels and salesOpportunityScore are no longer computed for new prospects.
 // Phase 4 — Multi-dimensional commercial scoring.
 // Answers two questions separately:
 //   1. Can Kronos help this company? (icpFitScore, painScore, paymentCapacityScore)

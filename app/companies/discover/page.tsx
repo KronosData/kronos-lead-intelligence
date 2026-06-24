@@ -5,7 +5,7 @@ import {
   ArrowLeft, Search, Loader2, AlertCircle, CheckCircle2,
   Globe, Phone, MapPin, ExternalLink, Compass,
   ChevronDown, ChevronUp, TrendingUp, ShieldAlert, Users,
-  ShieldX, DollarSign, Zap,
+  ShieldX, DollarSign,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -52,41 +52,35 @@ interface CandidateImportState {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function sqsBadge(score: number) {
-  if (score >= 70) return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold text-xs">SQS {score}</Badge>
-  if (score >= 55) return <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-bold text-xs">SQS {score}</Badge>
-  if (score >= 35) return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">SQS {score}</Badge>
-  return <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-xs">SQS {score}</Badge>
-}
-
-function sellabilityBadge(cls: string | undefined) {
-  switch (cls) {
-    case 'sell_now':          return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">Contactar ahora</Badge>
-    case 'contact_diagnosis': return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">Diagnóstico</Badge>
-    case 'investigate':       return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">Investigar</Badge>
-    case 'nurture':           return <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-[10px]">Monitorear</Badge>
-    case 'discard':           return <Badge className="bg-red-50 text-red-400 border-red-100 text-[10px]">Descartar</Badge>
-    default:                  return null
+function commercialStateBadge(state: string | undefined) {
+  switch (state) {
+    case 'OFFER_AUDIT':
+    case 'READY_TO_CONTACT':
+      return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">Auditoría</Badge>
+    case 'CONTACT_READY':
+      return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">Contactar</Badge>
+    case 'RESEARCH_REQUIRED':
+      return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">Investigar</Badge>
+    case 'NURTURE':
+      return <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-[10px]">Monitorear</Badge>
+    case 'DISQUALIFIED':
+      return <Badge className="bg-red-50 text-red-400 border-red-100 text-[10px]">Descartada</Badge>
+    default:
+      return null
   }
 }
 
-function roiBadge(label: string | undefined) {
-  switch (label) {
-    case 'excellent':       return <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">ROI Excelente</span>
-    case 'good':            return <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">ROI Bueno</span>
-    case 'limited':         return <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">ROI Limitado</span>
-    case 'not_defensible':  return <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">ROI No defendible</span>
-    default:                return null
-  }
+function icpFitBadge(score: number) {
+  if (score >= 70) return <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">ICP {score}</span>
+  if (score >= 50) return <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">ICP {score}</span>
+  if (score >= 30) return <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">ICP {score}</span>
+  return <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">ICP {score}</span>
 }
 
-function budgetBadge(label: string | undefined) {
-  switch (label) {
-    case 'high':    return <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded">💰 Alta capacidad</span>
-    case 'medium':  return <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">💰 Capacidad media</span>
-    case 'low':     return <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">💰 Baja capacidad</span>
-    default:        return null
-  }
+function contactabilityBadge(score: number) {
+  if (score >= 70) return <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded">📞 Contactable</span>
+  if (score >= 40) return <span className="text-[10px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">📞 Parcial</span>
+  return <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">📞 Difícil</span>
 }
 
 function entityBadge(entityType: string | undefined, isCommercial: boolean) {
@@ -362,7 +356,7 @@ export default function DiscoverPage() {
             Descubrir Prospectos Rentables
           </h1>
           <p className="text-sm text-slate-500">
-            Empresas privadas, contactables, con capacidad de pago y ROI defensible — ordenadas por SQS
+            Empresas privadas con síntomas visibles de mejora — candidatas a Auditoría Gratuita de 15 min
           </p>
         </div>
       </div>
@@ -512,7 +506,7 @@ export default function DiscoverPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>SQS mínimo</Label>
+                  <Label>Fit mínimo (pre-filtro)</Label>
                   <Input
                     value={minSalesQualScore}
                     onChange={e => setMinSalesQualScore(e.target.value)}
@@ -668,9 +662,9 @@ export default function DiscoverPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
                   <th className="w-8 px-2 py-2" />
-                  <th className="px-3 py-2 text-center w-20">SQS</th>
+                  <th className="px-3 py-2 text-center w-20">Estado</th>
                   <th className="px-3 py-2 text-left">Empresa</th>
-                  <th className="px-3 py-2 text-left hidden lg:table-cell">Calificación comercial</th>
+                  <th className="px-3 py-2 text-left hidden lg:table-cell">Señales visibles</th>
                   <th className="px-3 py-2 text-left hidden md:table-cell">Contacto</th>
                   <th className="px-3 py-2 text-left hidden xl:table-cell">Dirección</th>
                   <th className="px-3 py-2 text-center">Estado</th>
@@ -708,12 +702,11 @@ export default function DiscoverPage() {
                         )}
                       </td>
 
-                      {/* SQS score + rank */}
+                      {/* Commercial state + rank */}
                       <td className="px-2 py-3 text-center">
                         <div className="flex flex-col items-center gap-0.5">
-                          {sqsBadge(c.salesQualificationScore)}
+                          {commercialStateBadge(c.commercialState)}
                           <span className="text-[10px] text-slate-400">#{c.rankAfterReranking}</span>
-                          {sellabilityBadge(c.sellabilityClass)}
                         </div>
                       </td>
 
@@ -732,15 +725,8 @@ export default function DiscoverPage() {
                         </div>
                         {result?.status === 'imported' && result.opportunityScore !== null && (
                           <div className="mt-1 flex items-center gap-2">
-                            <span className="text-xs font-semibold text-slate-700">Score {result.opportunityScore}</span>
-                            {result.priorityLevel && (
-                              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                                result.priorityLevel === 'hot'    ? 'bg-red-100 text-red-700' :
-                                result.priorityLevel === 'high'   ? 'bg-orange-100 text-orange-700' :
-                                result.priorityLevel === 'medium' ? 'bg-amber-100 text-amber-700' :
-                                'bg-slate-100 text-slate-600'
-                              }`}>{result.priorityLevel}</span>
-                            )}
+                            <span className="text-xs font-semibold text-slate-700">APS {result.opportunityScore}</span>
+                            {result.priorityLevel && commercialStateBadge(result.priorityLevel)}
                           </div>
                         )}
                         {result?.status === 'imported' && result.companyId && (
@@ -756,9 +742,8 @@ export default function DiscoverPage() {
                         )}
                       </td>
 
-                      {/* Commercial qualification */}
+                      {/* Visible signals */}
                       <td className="px-3 py-3 hidden lg:table-cell max-w-[230px]">
-                        {/* Entity exclusion reason */}
                         {!c.entityIsCommercial && c.entityExclusionReason ? (
                           <div className="flex items-start gap-1">
                             <ShieldX className="h-3 w-3 text-red-400 mt-0.5 shrink-0" />
@@ -766,21 +751,18 @@ export default function DiscoverPage() {
                           </div>
                         ) : (
                           <>
-                            {/* ROI + Budget */}
+                            {/* ICP Fit + Contactability */}
                             <div className="flex flex-wrap gap-1 mb-1.5">
-                              {roiBadge(c.roiFitLabel)}
-                              {budgetBadge(c.budgetCapacityLabel)}
-                              {c.roiMultiple > 0 && (
-                                <span className="text-[10px] text-slate-400">×{c.roiMultiple} ROI</span>
-                              )}
+                              {icpFitBadge(c.prospectFitScore)}
+                              {contactabilityBadge(c.contactabilityScore)}
                             </div>
 
-                            {/* Why contact */}
+                            {/* Visible symptoms / why contact */}
                             {c.whyContact.length > 0 && (
                               <div className="mb-1">
                                 <div className="flex items-center gap-1 mb-0.5">
-                                  <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
-                                  <span className="text-[10px] font-semibold text-green-700 uppercase">Por qué contactar</span>
+                                  <TrendingUp className="h-3 w-3 text-amber-500 shrink-0" />
+                                  <span className="text-[10px] font-semibold text-amber-700 uppercase">Síntomas visibles</span>
                                 </div>
                                 {c.whyContact.slice(0, 2).map((r, i) => (
                                   <p key={i} className="text-[11px] text-slate-600 truncate">{r}</p>
@@ -788,24 +770,16 @@ export default function DiscoverPage() {
                               </div>
                             )}
 
-                            {/* Why NOT contact */}
+                            {/* Disqualification / risk signals */}
                             {c.whyNotContact.length > 0 && (
                               <div>
                                 <div className="flex items-center gap-1 mb-0.5">
-                                  <ShieldAlert className="h-3 w-3 text-amber-500 shrink-0" />
-                                  <span className="text-[10px] font-semibold text-amber-700 uppercase">Precauciones</span>
+                                  <ShieldAlert className="h-3 w-3 text-slate-400 shrink-0" />
+                                  <span className="text-[10px] font-semibold text-slate-500 uppercase">Señales de riesgo</span>
                                 </div>
                                 {c.whyNotContact.slice(0, 2).map((r, i) => (
                                   <p key={i} className="text-[11px] text-slate-500 truncate">{r}</p>
                                 ))}
-                              </div>
-                            )}
-
-                            {/* Primary problem */}
-                            {c.primaryProblem && c.whyContact.length === 0 && c.whyNotContact.length === 0 && (
-                              <div className="flex items-start gap-1">
-                                <Zap className="h-3 w-3 text-amber-400 mt-0.5 shrink-0" />
-                                <p className="text-[11px] text-slate-500 truncate">{c.primaryProblem}</p>
                               </div>
                             )}
                           </>
@@ -880,8 +854,8 @@ export default function DiscoverPage() {
           </div>
 
           <p className="mt-3 text-xs text-slate-400">
-            Ordenadas por Sales Qualification Score (SQS) — combina fit, ROI, capacidad de pago y contactabilidad.
-            Solo empresas privadas con decisor comercial identificable.
+            Ordenadas por ICP Fit × Contactabilidad. Solo empresas privadas con síntomas visibles detectados externamente.
+            El diagnóstico real se hace después de la Auditoría Gratuita.
           </p>
         </div>
       )}
@@ -892,7 +866,7 @@ export default function DiscoverPage() {
           <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-600 font-medium">Sin prospectos calificados con los filtros actuales</p>
           <p className="text-sm text-slate-400 mt-1">
-            Prueba con modo &quot;broad&quot;, reduce SQS mínimo, o amplía el radio.
+            Prueba con modo &quot;broad&quot;, reduce el filtro mínimo, o amplía el radio.
             {!meta.sources.here && ' Añadir HERE_API_KEY mejorará la cobertura.'}
           </p>
         </div>

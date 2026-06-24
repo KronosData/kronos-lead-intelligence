@@ -163,47 +163,57 @@ export default function NewCompanyPage() {
             <CardContent className="p-6">
               <div className="grid grid-cols-3 gap-4 mb-5">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-slate-900">{evaluation.opportunityScore}</p>
-                  <p className="text-xs text-slate-500 mt-1">Opportunity Score</p>
+                  <p className="text-4xl font-bold text-slate-900">{evaluation.opportunityScore ?? '—'}</p>
+                  <p className="text-xs text-slate-500 mt-1">Audit Priority Score</p>
                 </div>
-                <div className="text-center">
-                  <Badge variant={priorityVariant(evaluation.priorityLevel)} className="text-sm px-3 py-1">
-                    {evaluation.priorityLevel.toUpperCase()}
-                  </Badge>
-                  <p className="text-xs text-slate-500 mt-1">Prioridad</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-red-600">
-                    ${evaluation.estimatedRevenueLostPerMonth.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">Pérdida mensual est.</p>
-                </div>
+                {evaluation.priorityLevel && (
+                  <div className="text-center">
+                    <Badge variant={priorityVariant(evaluation.priorityLevel)} className="text-sm px-3 py-1">
+                      {evaluation.priorityLevel.toUpperCase()}
+                    </Badge>
+                    <p className="text-xs text-slate-500 mt-1">Estado</p>
+                  </div>
+                )}
+                {evaluation.estimatedRevenueLostPerMonth != null && (
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-red-600">
+                      ${evaluation.estimatedRevenueLostPerMonth.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">Pérdida mensual est.</p>
+                  </div>
+                )}
               </div>
 
               <Separator className="mb-4" />
 
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Dolor Principal</p>
-                <p className="text-sm text-slate-700">{evaluation.probablePainPoint}</p>
-              </div>
-
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Servicios Recomendados</p>
-                <div className="flex flex-wrap gap-2">
-                  {evaluation.recommendedServices.map((s) => (
-                    <span key={s} className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                      {s}
-                    </span>
-                  ))}
+              {evaluation.probablePainPoint && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Dolor Principal</p>
+                  <p className="text-sm text-slate-700">{evaluation.probablePainPoint}</p>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Valor del Proyecto</p>
-                <p className="text-sm font-semibold text-slate-900">
-                  ${evaluation.estimatedProjectPriceMin.toLocaleString()} – ${evaluation.estimatedProjectPriceMax.toLocaleString()} USD
-                </p>
-              </div>
+              {evaluation.recommendedServices.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Servicios Recomendados</p>
+                  <div className="flex flex-wrap gap-2">
+                    {evaluation.recommendedServices.map((s) => (
+                      <span key={s} className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(evaluation.estimatedProjectPriceMin != null && evaluation.estimatedProjectPriceMax != null) && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Valor del Proyecto</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    ${evaluation.estimatedProjectPriceMin.toLocaleString()} – ${evaluation.estimatedProjectPriceMax.toLocaleString()} USD
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

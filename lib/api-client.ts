@@ -80,6 +80,9 @@ export interface Company {
   qualificationReason: string | null
   disqualificationReason: string | null
   recommendedFirstAction: string | null
+  // v2 — Prospect Signal Engine
+  commercialState: string | null
+  websiteVerificationStatus: string | null
   // Phase 4 — Direct contact + compliance
   contactName: string | null
   contactRole: string | null
@@ -150,35 +153,37 @@ export interface Evaluation {
   signalWeakFollowup: boolean
   signalManualWork: boolean
   signalWeakOnlinePresence: boolean
-  scoreLeadGeneration: number
-  scoreFollowUp: number
-  scoreConversionProcess: number
-  scoreAutomationOpportunity: number
-  scoreOnlinePresence: number
-  scoreReputation: number
-  opportunityScore: number
-  priorityLevel: string
+  scoreLeadGeneration: number | null
+  scoreFollowUp: number | null
+  scoreConversionProcess: number | null
+  scoreAutomationOpportunity: number | null
+  scoreOnlinePresence: number | null
+  scoreReputation: number | null
+  opportunityScore: number | null
+  priorityLevel: string | null
   detectedProblems: string[]
-  probablePainPoint: string
-  recommendedSolution: string
-  estimatedValueMin: number
-  estimatedValueMax: number
-  estimatedLeadsLostPerMonth: number
-  estimatedRevenueLostPerMonth: number
-  estimatedRoiPotential: number
+  probablePainPoint: string | null
+  recommendedSolution: string | null
+  estimatedValueMin: number | null
+  estimatedValueMax: number | null
+  estimatedLeadsLostPerMonth: number | null
+  estimatedRevenueLostPerMonth: number | null
+  estimatedRoiPotential: number | null
   recommendedServices: string[]
   primaryService: string | null
   complementaryServices: string[]
   futureServices: string[]
-  implementationDifficulty: string
-  implementationTimeEstimate: string
-  estimatedProjectPriceMin: number
-  estimatedProjectPriceMax: number
+  implementationDifficulty: string | null
+  implementationTimeEstimate: string | null
+  estimatedProjectPriceMin: number | null
+  estimatedProjectPriceMax: number | null
   priceLabel: string | null
   signalEvidence: Record<string, { status: string; source: string; confidence: string; evidence: string | null }> | null
   researchCoverage: number | null
   scoreConfidence: string | null
   evaluationStatus: string | null
+  evaluationSource: string | null
+  isLegacyEval: boolean
   // Package recommendation fields
   recommendedPackageSlug: string | null
   recommendedPackageName: string | null

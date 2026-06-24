@@ -1,3 +1,6 @@
+// @legacy — v2 does NOT recommend specific services or packages before an audit.
+// Service and package recommendations belong in the Audit model (post-meeting).
+// Archived: do not import in new routes or UI primary views.
 import type { SignalFlags, ServiceMatchOutput, ImplementationDifficulty, KronosService } from './types'
 import { KRONOS_SERVICES } from './constants'
 

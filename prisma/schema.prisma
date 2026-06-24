@@ -178,6 +178,10 @@ model Evaluation {
   isLowCoverageHold Boolean @default(false) @map("is_low_coverage_hold")
   evaluationSource  String? @default("manual") @map("evaluation_source")
 
+  // v2 — legacy flag: evaluations with ROI/revenue/diagnosis without real evidence
+  isLegacyEval  Boolean @default(false) @map("is_legacy_eval")
+  legacyReason  String? @map("legacy_reason")
+
   // Package recommendation (Kronos official packages)
   recommendedPackageSlug  String?  @map("recommended_package_slug")
   recommendedPackageName  String?  @map("recommended_package_name")

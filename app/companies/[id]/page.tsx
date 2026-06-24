@@ -75,18 +75,20 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
   const isLowCoverage = coverage !== null && coverage < 40
 
   const categoryScores = [
-    { label: 'Generación de Leads', value: ev.scoreLeadGeneration },
-    { label: 'Seguimiento', value: ev.scoreFollowUp },
-    { label: 'Conversión', value: ev.scoreConversionProcess },
-    { label: 'Automatización', value: ev.scoreAutomationOpportunity },
-    { label: 'Presencia Online', value: ev.scoreOnlinePresence },
-    { label: 'Reputación', value: ev.scoreReputation },
+    { label: 'Generación de Leads', value: ev.scoreLeadGeneration ?? 0 },
+    { label: 'Seguimiento', value: ev.scoreFollowUp ?? 0 },
+    { label: 'Conversión', value: ev.scoreConversionProcess ?? 0 },
+    { label: 'Automatización', value: ev.scoreAutomationOpportunity ?? 0 },
+    { label: 'Presencia Online', value: ev.scoreOnlinePresence ?? 0 },
+    { label: 'Reputación', value: ev.scoreReputation ?? 0 },
   ]
+  const hasLegacyCategoryScores = ev.scoreLeadGeneration != null
 
   const statusConfig: Record<string, { label: string; cls: string }> = {
     complete:              { label: 'Completa',          cls: 'bg-green-100 text-green-700 border-green-200' },
     preliminary:           { label: 'Preliminar',        cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
     manual_review_required:{ label: 'Revisión manual',   cls: 'bg-amber-100 text-amber-700 border-amber-200' },
+    v2_signal_engine:      { label: 'Signal Engine v2',  cls: 'bg-blue-100 text-blue-700 border-blue-200' },
   }
 
   return (
@@ -124,62 +126,76 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         <div className="rounded-xl border bg-white p-4">
           <div className="flex items-center gap-2 mb-1">
             <Zap className="h-4 w-4 text-slate-400" />
-            <span className="text-xs text-slate-500 font-medium">Opportunity Score</span>
+            <span className="text-xs text-slate-500 font-medium">
+              {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority Score' : 'Opportunity Score'}
+            </span>
           </div>
-          <p className={`text-3xl font-bold ${scoreColor(ev.opportunityScore)}`}>{ev.opportunityScore}</p>
-          <ScoreMeter score={ev.opportunityScore} />
+          <p className={`text-3xl font-bold ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
+          <ScoreMeter score={ev.opportunityScore ?? 0} />
         </div>
 
-        <div className="rounded-xl border bg-white p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingDown className="h-4 w-4 text-slate-400" />
-            <span className="text-xs text-slate-500 font-medium">Pérdida mensual est.</span>
+        {ev.estimatedRevenueLostPerMonth != null && (
+          <div className="rounded-xl border bg-white p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingDown className="h-4 w-4 text-slate-400" />
+              <span className="text-xs text-slate-500 font-medium">Pérdida mensual est.</span>
+            </div>
+            <p className="text-2xl font-bold text-red-600">${ev.estimatedRevenueLostPerMonth.toLocaleString()}</p>
+            <p className="text-xs text-slate-400 mt-1">{ev.estimatedLeadsLostPerMonth ?? 0} leads/mes perdidos</p>
           </div>
-          <p className="text-2xl font-bold text-red-600">${ev.estimatedRevenueLostPerMonth.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-1">{ev.estimatedLeadsLostPerMonth} leads/mes perdidos</p>
-        </div>
+        )}
 
-        <div className="rounded-xl border bg-white p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-4 w-4 text-slate-400" />
-            <span className="text-xs text-slate-500 font-medium">Valor del Proyecto</span>
+        {ev.estimatedProjectPriceMin != null && (
+          <div className="rounded-xl border bg-white p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="h-4 w-4 text-slate-400" />
+              <span className="text-xs text-slate-500 font-medium">Valor del Proyecto</span>
+            </div>
+            <p className="text-lg font-bold text-slate-900">
+              ${ev.estimatedProjectPriceMin.toLocaleString()} – ${(ev.estimatedProjectPriceMax ?? 0).toLocaleString()}
+            </p>
+            {ev.priceLabel && <p className="text-xs text-slate-400 mt-1">{ev.priceLabel} · ROI: {ev.estimatedRoiPotential}×</p>}
+            {!ev.priceLabel && ev.estimatedRoiPotential != null && <p className="text-xs text-slate-400 mt-1">ROI estimado: {ev.estimatedRoiPotential}×</p>}
           </div>
-          <p className="text-lg font-bold text-slate-900">
-            ${ev.estimatedProjectPriceMin.toLocaleString()} – ${ev.estimatedProjectPriceMax.toLocaleString()}
-          </p>
-          {ev.priceLabel && <p className="text-xs text-slate-400 mt-1">{ev.priceLabel} · ROI: {ev.estimatedRoiPotential}×</p>}
-          {!ev.priceLabel && <p className="text-xs text-slate-400 mt-1">ROI estimado: {ev.estimatedRoiPotential}×</p>}
-        </div>
+        )}
 
-        <div className="rounded-xl border bg-white p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="h-4 w-4 text-slate-400" />
-            <span className="text-xs text-slate-500 font-medium">Implementación</span>
+        {ev.implementationTimeEstimate != null && (
+          <div className="rounded-xl border bg-white p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-4 w-4 text-slate-400" />
+              <span className="text-xs text-slate-500 font-medium">Implementación</span>
+            </div>
+            <p className="text-sm font-semibold text-slate-900">{ev.implementationTimeEstimate}</p>
+            <p className="text-xs text-slate-400 mt-1 capitalize">Dificultad: {ev.implementationDifficulty ?? '—'}</p>
           </div>
-          <p className="text-sm font-semibold text-slate-900">{ev.implementationTimeEstimate}</p>
-          <p className="text-xs text-slate-400 mt-1 capitalize">Dificultad: {ev.implementationDifficulty}</p>
-        </div>
+        )}
       </div>
 
-      {/* Pain + Solution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-700">Diagnóstico</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600 leading-relaxed">{ev.probablePainPoint}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-700">Solución Recomendada</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600 leading-relaxed">{ev.recommendedSolution}</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Pain + Solution (legacy — only shown when auto-diagnosis data exists) */}
+      {(ev.probablePainPoint != null || ev.recommendedSolution != null) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {ev.probablePainPoint != null && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-slate-700">Diagnóstico</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-slate-600 leading-relaxed">{ev.probablePainPoint}</p>
+              </CardContent>
+            </Card>
+          )}
+          {ev.recommendedSolution != null && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-slate-700">Solución Recomendada</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-slate-600 leading-relaxed">{ev.recommendedSolution}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* SECCIÓN A — Paquetes Kronos Recomendados */}
       {ev.recommendedPackageSlug && (
@@ -313,8 +329,8 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         </Card>
       </div>
 
-      {/* Category scores */}
-      <Card>
+      {/* Category scores (legacy — hidden for v2 evals) */}
+      {hasLegacyCategoryScores && <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-slate-700">Scores por Categoría</CardTitle>
         </CardHeader>
@@ -331,7 +347,7 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Detected problems */}
       <div>
@@ -434,12 +450,14 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
                       {new Date(h.evaluatedAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' })}
                     </td>
                     <td className="px-4 py-2 text-center">
-                      <span className={`font-bold ${scoreColor(h.opportunityScore)}`}>{h.opportunityScore}</span>
+                      <span className={`font-bold ${scoreColor(h.opportunityScore ?? 0)}`}>{h.opportunityScore ?? '—'}</span>
                     </td>
                     <td className="px-4 py-2">
-                      <Badge variant={priorityVariant(h.priorityLevel)} className="text-xs">
-                        {h.priorityLevel.toUpperCase()}
-                      </Badge>
+                      {h.priorityLevel ? (
+                        <Badge variant={priorityVariant(h.priorityLevel)} className="text-xs">
+                          {h.priorityLevel.toUpperCase()}
+                        </Badge>
+                      ) : <span className="text-xs text-slate-400">—</span>}
                     </td>
                     <td className="px-4 py-2 text-xs text-slate-400">{h.evaluatedBy}</td>
                   </tr>
@@ -453,7 +471,14 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
   )
 }
 
-// ─── Composite scoring panel ───────────────────────────────────────────────────
+// ─── v2 Prospect Signal Panel ─────────────────────────────────────────────────
+
+const COMMERCIAL_STATE_CONFIG: Record<string, { label: string; cls: string }> = {
+  OFFER_AUDIT:        { label: 'OFFER AUDIT',       cls: 'bg-blue-100 text-blue-700 border-blue-300' },
+  CONTACT_READY:      { label: 'CONTACT READY',     cls: 'bg-green-100 text-green-700 border-green-300' },
+  RESEARCH_REQUIRED:  { label: 'RESEARCH REQUIRED', cls: 'bg-amber-100 text-amber-700 border-amber-300' },
+  DISQUALIFIED:       { label: 'DISQUALIFIED',      cls: 'bg-slate-100 text-slate-500 border-slate-300' },
+}
 
 const SALES_PRIORITY_CONFIG: Record<string, { label: string; cls: string }> = {
   HOT:     { label: 'HOT 🔥',    cls: 'bg-red-100 text-red-700 border-red-300' },
@@ -470,14 +495,14 @@ const EVIDENCE_TIER_CONFIG: Record<string, { label: string; cls: string }> = {
   LOW:    { label: 'Evidencia BAJA',   cls: 'bg-amber-100 text-amber-700 border-amber-300' },
 }
 
-function CompositeMeter({ label, value }: { label: string; value: number | null }) {
+function ScoreBar({ label, value }: { label: string; value: number | null }) {
   const v = value ?? 0
-  const color = v >= 75 ? 'bg-green-500' : v >= 55 ? 'bg-blue-500' : v >= 35 ? 'bg-yellow-400' : 'bg-slate-300'
+  const color = v >= 70 ? 'bg-green-500' : v >= 50 ? 'bg-blue-500' : v >= 30 ? 'bg-yellow-400' : 'bg-slate-300'
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
         <span className="text-slate-600">{label}</span>
-        <span className={`font-semibold ${v >= 60 ? 'text-slate-900' : 'text-slate-400'}`}>{value ?? '—'}</span>
+        <span className={`font-semibold ${v >= 50 ? 'text-slate-900' : 'text-slate-400'}`}>{value ?? '—'}</span>
       </div>
       <div className="w-full bg-slate-100 rounded-full h-1.5">
         <div className={`${color} h-1.5 rounded-full transition-all`} style={{ width: `${v}%` }} />
@@ -486,71 +511,106 @@ function CompositeMeter({ label, value }: { label: string; value: number | null 
   )
 }
 
-function CompositeScorePanel({ company }: { company: CompanyDetail }) {
-  const sp = company.salesPriority ? SALES_PRIORITY_CONFIG[company.salesPriority] : null
-  const et = company.evidenceTier ? EVIDENCE_TIER_CONFIG[company.evidenceTier] : null
+function ProspectSignalPanel({ company }: { company: CompanyDetail }) {
+  const v2State = company.commercialState
+    ? COMMERCIAL_STATE_CONFIG[company.commercialState] ?? null
+    : null
 
-  const hasAny = company.salesOpportunityScore !== null || company.icpFitScore !== null
+  const hasV2Scores = company.icpFitScore !== null || company.salesOpportunityScore !== null
+  const hasLegacyState = company.salesPriority && !v2State
 
-  if (!hasAny) {
+  if (!hasV2Scores && !hasLegacyState) {
     return (
       <div className="rounded-xl border-2 border-dashed border-slate-200 px-6 py-8 text-center text-slate-400 text-sm">
         <BarChart2 className="h-8 w-8 mx-auto mb-2 text-slate-200" />
-        <p>Scoring compuesto no disponible.</p>
-        <p className="text-xs mt-1">Evalúa y reprocesa la empresa para calcularlo.</p>
+        <p>Señales no disponibles.</p>
+        <p className="text-xs mt-1">Reprocesa la empresa para calcular el Prospect Signal Engine.</p>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Priority + tier badges */}
+      {/* Commercial state badge */}
       <div className="flex flex-wrap items-center gap-3">
-        {sp && (
-          <span className={`text-sm font-bold border rounded-full px-3 py-1 ${sp.cls}`}>{sp.label}</span>
+        {v2State && (
+          <span className={`text-sm font-bold border rounded-full px-3 py-1 ${v2State.cls}`}>{v2State.label}</span>
         )}
-        {et && (
-          <span className={`text-xs font-medium border rounded-full px-3 py-1 ${et.cls}`}>{et.label}</span>
+        {!v2State && company.salesPriority && SALES_PRIORITY_CONFIG[company.salesPriority] && (
+          <span className={`text-sm font-bold border rounded-full px-3 py-1 ${SALES_PRIORITY_CONFIG[company.salesPriority].cls}`}>
+            {SALES_PRIORITY_CONFIG[company.salesPriority].label}
+          </span>
         )}
         {company.salesOpportunityScore !== null && (
           <div className="ml-auto text-right">
-            <p className="text-xs text-slate-400">Sales Opp. Score</p>
+            <p className="text-xs text-slate-400">{v2State ? 'Audit Priority' : 'Sales Opp.'} Score</p>
             <p className={`text-3xl font-bold ${scoreColor(company.salesOpportunityScore)}`}>{company.salesOpportunityScore}</p>
           </div>
         )}
       </div>
 
-      {/* 5 dimension scores */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-        <CompositeMeter label="ICP Fit"           value={company.icpFitScore} />
-        <CompositeMeter label="Pain"              value={company.painScore} />
-        <CompositeMeter label="Payment Capacity"  value={company.paymentCapacityScore} />
-        <CompositeMeter label="Evidence Coverage" value={company.evidenceCoverageScore} />
-        <CompositeMeter label="Commercial Intent" value={company.commercialIntentScore} />
-      </div>
-
-      {/* Qualification / disqualification reasons */}
-      {company.qualificationReason && (
-        <div className="rounded-lg bg-green-50 border border-green-100 px-4 py-3">
-          <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Por qué califica</p>
-          <p className="text-sm text-green-800 leading-relaxed">{company.qualificationReason}</p>
+      {/* v2 signal scores */}
+      {hasV2Scores && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+          <ScoreBar label="ICP Fit"           value={company.icpFitScore} />
+          <ScoreBar label="Síntomas Visibles" value={company.painScore} />
+          <ScoreBar label="Contactabilidad"   value={company.contactabilityScore} />
         </div>
       )}
+
+      {/* Audit hook */}
+      {company.qualificationReason && (
+        <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3">
+          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Gancho de auditoría</p>
+          <p className="text-sm text-blue-900 leading-relaxed">{company.qualificationReason}</p>
+        </div>
+      )}
+
+      {/* Confirmed symptoms */}
+      {company.whyContact.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Síntomas confirmados</p>
+          <div className="flex flex-wrap gap-1.5">
+            {company.whyContact.map((s, i) => (
+              <span key={i} className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded px-2 py-0.5">{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Audit questions */}
+      {company.qualificationQuestions.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Preguntas de auditoría</p>
+          <ol className="list-decimal list-inside space-y-1">
+            {company.qualificationQuestions.map((q, i) => (
+              <li key={i} className="text-sm text-slate-600">{q}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Disqualification reason */}
       {company.disqualificationReason && (
         <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3">
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Por qué no califica / riesgo</p>
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Por qué no califica</p>
           <p className="text-sm text-red-800 leading-relaxed">{company.disqualificationReason}</p>
         </div>
       )}
+
+      {/* Next action */}
       {company.recommendedFirstAction && (
-        <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3">
-          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Primera acción recomendada</p>
-          <p className="text-sm text-blue-900 leading-relaxed">{company.recommendedFirstAction}</p>
+        <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Primera acción recomendada</p>
+          <p className="text-sm text-slate-700 leading-relaxed">{company.recommendedFirstAction}</p>
         </div>
       )}
     </div>
   )
 }
+
+// Legacy alias kept for PipelinePanel ref below
+const CompositeScorePanel = ProspectSignalPanel
 
 // ─── CRM Pipeline panel ────────────────────────────────────────────────────────
 
@@ -949,123 +1009,62 @@ function outreachEvidenceLevel(ev: Evaluation): 'A' | 'B' | 'C' {
 
 const OFFICIAL_URL = 'https://www.kronosdata.tech/'
 
+// v2: Generates audit-focused outreach based on commercial state and visible symptoms.
+// No revenue estimates, no auto-diagnosis, no package/ROI claims before the audit.
 function generateOutreachTemplate(
   channel: 'whatsapp' | 'email' | 'linkedin',
   version: number,
   companyName: string,
   industry: string,
-  ev: Evaluation,
+  commercialState: string | null,
+  auditHook: string | null,
+  confirmedSymptoms: string[],
   contactName?: string | null,
-  templateType: 'package' | 'individual_service' | 'free_audit' | 'exploratory' = 'individual_service',
 ): string {
   const nombre = contactName?.trim() || companyName || 'equipo'
-  const revenue = `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}`
-  const implTime = ev.implementationTimeEstimate ?? '1–2 semanas'
-  const primary = (ev.primaryService ?? ev.recommendedServices[0] ?? '').toLowerCase()
-  const level = outreachEvidenceLevel(ev)
   const v = version % 2
-  const pkgName = ev.recommendedPackageName ?? 'Sistemas de Operaciones Autónomas'
+  const hookLine = auditHook
+    ? auditHook
+    : `Revisé ${companyName} externamente y hay señales visibles de mejora para un negocio de ${industry}.`
+  const symptomLine = confirmedSymptoms.length > 0
+    ? `Lo que identifiqué externamente: ${confirmedSymptoms.slice(0, 2).join(', ')}.`
+    : ''
 
-  // Free audit template — always exploratory, no claims
-  if (templateType === 'free_audit' || level === 'C') {
-    if (channel === 'whatsapp') {
-      return v === 0
-        ? `Hola ${nombre} 👋\n\nHice una revisión externa de ${companyName}, pero prefiero no asumir procesos internos únicamente con información pública.\n\nEl siguiente paso más útil sería una Auditoría Gratuita para validar oportunidades reales antes de recomendar una solución.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\nSi te parece, coordinamos una conversación breve. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-        : `Hola ${nombre},\n\nEncontré ${companyName} en mi investigación de negocios de ${industry} en la región.\n\nEn Kronos Data trabajamos con empresas de ${industry} para identificar oportunidades concretas de eficiencia y captación. El primer paso es siempre una conversación sin compromiso.\n\nTe comparto la web de Kronos Data para que veas cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Podríamos hablar 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-    }
-    if (channel === 'email') {
-      return `Asunto: ${companyName} — Auditoría Gratuita de oportunidades\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Nos especializamos en ayudar a negocios de ${industry} a identificar y resolver sus principales fricciones operativas y digitales.\n\nMe gustaría explorar si hay oportunidades relevantes para ${companyName}. El primer paso es siempre una Auditoría Gratuita — sin compromiso.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 minutos esta semana?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
-    }
-    return `${nombre}, soy Alejandro de Kronos Data — ayudamos a negocios de ${industry} a resolver sus principales fricciones operativas y digitales.\n\nMe gustaría explorar si hay algo relevante para ${companyName}. El primer paso es una Auditoría Gratuita sin compromiso.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+  // RESEARCH_REQUIRED or DISQUALIFIED: no outreach template
+  if (commercialState === 'RESEARCH_REQUIRED' || commercialState === 'DISQUALIFIED') {
+    return `[Sin plantilla — estado ${commercialState ?? 'desconocido'}. No se recomienda contacto en esta etapa.]`
   }
 
-  // Package-focused template
-  if (templateType === 'package' && ev.recommendedPackageName) {
-    const maybeRevenue = level === 'B' ? `posiblemente ${revenue}/mes` : `${revenue}/mes`
-    const implText = level === 'B' ? `En aproximadamente ${implTime}` : `Lo resolvemos en ${implTime}`
-    const detected = level === 'B' ? 'encontré indicios de que' : 'detecté'
+  // OFFER_AUDIT: invite to free 15-min audit
+  if (!commercialState || commercialState === 'OFFER_AUDIT') {
     if (channel === 'whatsapp') {
       return v === 0
-        ? `Hola ${nombre} 👋\n\nRevisé ${companyName} y ${detected} oportunidades claras para el paquete "${pkgName}" de Kronos Data.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en impacto potencial.\n\n${implText} lo resolvemos.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\nPreparé un diagnóstico inicial. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-        : `Hola ${nombre},\n\nAnalizando ${companyName} identifiqué que "${pkgName}" sería el mejor encaje para las necesidades actuales.\n\n${ev.probablePainPoint}\n\nImpacto estimado: ${maybeRevenue}.\n\nTe comparto cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Podemos revisarlo en una llamada breve?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+        ? `Hola ${nombre} 👋\n\n${hookLine}\n\n${symptomLine}\n\nAntes de asumir cualquier solución, me gustaría validar los detalles contigo en una Auditoría Gratuita de 15 min.\n\nPuedes conocer cómo trabajamos aquí:\n${OFFICIAL_URL}\n\n¿Tienes disponibilidad esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+        : `Hola ${nombre},\n\n${hookLine}\n\nEl primer paso siempre es una conversación de 15 min para entender la situación real antes de recomendar nada.\n\nTe comparto nuestro enfoque:\n${OFFICIAL_URL}\n\n¿Podemos coordinar?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
     }
     if (channel === 'email') {
-      const serviceList = [ev.primaryService, ...(ev.complementaryServices ?? [])].filter(Boolean)
-      return `Asunto: ${companyName} — ${pkgName}\n\nHola ${nombre},\n\nAnalizamos ${companyName} y encontramos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso puede representar ${maybeRevenue} al mes.\n\nEl mejor encaje sería nuestro paquete "${pkgName}", comenzando por:\n${serviceList.map((s) => `→ ${s}`).join('\n')}\n\nTiempo estimado de implementación: ${implTime}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+      return `Asunto: ${companyName} — Auditoría Gratuita (15 min)\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. ${hookLine}\n\n${symptomLine ? symptomLine + '\n\n' : ''}El primer paso que propongo es siempre una Auditoría Gratuita sin compromiso — para validar si hay una oportunidad real antes de recomendar cualquier solución.\n\nPuedes conocer cómo trabajamos aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15–20 minutos esta semana?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
     }
-    // LinkedIn
     return v === 0
-      ? `${nombre}, revisé ${companyName} (${industry}) y encontré oportunidades concretas.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en impacto potencial.\n\nLa ruta que más probablemente encaja es "${pkgName}", ${implText}.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-      : `${nombre}, una pregunta directa sobre ${companyName}:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry} eso es ${maybeRevenue} de impacto estimado. El paquete "${pkgName}" lo resuelve directamente.\n\nTe comparto cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+      ? `${nombre}, ${hookLine}\n\n${symptomLine ? symptomLine + '\n\n' : ''}Me gustaría validarlo contigo en una Auditoría Gratuita de 15 min antes de proponer nada.\n\nCómo trabajamos:\n${OFFICIAL_URL}\n\n¿Tienes disponibilidad?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+      : `${nombre}, hice una revisión externa de ${companyName} (${industry}) y me gustaría compartirte lo que encontré en una conversación breve.\n\nSin diagnóstico previo — solo quiero validar contigo si tiene sentido explorar.\n\nCómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
   }
 
-  // Individual service template (default for A/B levels)
-  let scenario = 'followup'
-  if (primary.includes('reserva') || primary.includes('cita')) scenario = 'booking'
-  else if (primary.includes('google')) scenario = 'google'
-  else if (primary.includes('reseña')) scenario = 'reviews'
-  else if (primary.includes('funnel') || primary.includes('captura')) scenario = 'leads'
-  else if (primary.includes('sitio web') || primary.includes('presencia') || primary.includes('redes') || primary.includes('diagnóstico') || primary.includes('auditor')) scenario = 'presence'
-
-  const maybeRevenue = level === 'B' ? `posiblemente ${revenue}/mes` : `${revenue}/mes`
-  const maybeDetected = level === 'B' ? 'es posible que haya' : 'detecté'
-  const implText = level === 'B' ? `En aproximadamente ${implTime}` : `Lo resolvemos en ${implTime}`
-  const webLine = `\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n`
-
+  // CONTACT_READY: direct contact, no diagnosis claims
   if (channel === 'whatsapp') {
-    const tpl: Record<string, [string, string]> = {
-      booking: [
-        `Hola ${nombre} 👋\n\nVi que ${companyName} no tiene sistema de reservas online. En ${industry}, el 40% de las citas se intenta agendar fuera de horario — sin sistema, esos clientes eligen a quien responde primero.\n\nEso puede representar ${maybeRevenue} en citas no concretadas.\n${webLine}\n${implText} lo resolvemos. ¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\n¿Cuántas reservas pierde ${companyName} fuera de horario?\n\nSin sistema automático hay prospectos que no se concretan — ${maybeRevenue} en ingresos que se evaporan.\n${webLine}\n${implText} tenemos el sistema listo. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-      ],
-      google: [
-        `Hola ${nombre} 👋\n\nBusqué "${companyName}" en Google y el perfil digital tiene margen de mejora importante.\n\nEl 76% de los clientes busca en Google antes de contactar. En ${industry}, la visibilidad local marca la diferencia — ${maybeRevenue} en consultas van a quien aparece primero.\n${webLine}\n${implText} lo optimizamos. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nSi alguien busca "${industry}" en Google, ¿${companyName} aparece entre los primeros resultados?\n\n${maybeRevenue} en visibilidad perdida.\n${webLine}\n15 minutos y te muestro cómo cambiarlo.\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-      ],
-      reviews: [
-        `Hola ${nombre} 👋\n\nVi reseñas de ${companyName} en Google sin responder.\n\nEl 68% de los clientes lee las respuestas antes de decidir. Sin respuesta = señal negativa para los prospectos.\n\n${maybeRevenue} en conversiones en juego.\n${webLine}\nTenemos sistema automático de gestión. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nLas reseñas sin responder de ${companyName} en Google pueden estar frenando a nuevos clientes.\n${webLine}\n${implText} lo resolvemos con gestión automática. ¿15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-      ],
-      presence: [
-        `Hola ${nombre} 👋\n\nRevisé la presencia digital de ${companyName} y ${maybeDetected} margen significativo de mejora para un negocio de ${industry}.\n\nCada cliente que no te encuentra online elige a la competencia. Impacto estimado: ${maybeRevenue}.\n${webLine}\n${implText} mejoramos el panorama. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nAnalizamos ${companyName} y hay una brecha entre tu presencia digital actual y lo que los clientes de ${industry} esperan encontrar.\n\nImpacto estimado: ${maybeRevenue}.\n${webLine}\n¿Te muestro el análisis? 15 min.\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-      ],
-      leads: [
-        `Hola ${nombre} 👋\n\nRevisé ${companyName} y ${maybeDetected} oportunidad de capturar mejor los leads que ya llegan.\n\nEl tráfico que ya tienes no siempre se convierte — ${maybeRevenue} en oportunidades que se podrían retener.\n${webLine}\nFunnel optimizado en ${implTime}. ¿Hablamos?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\nEn ${companyName} puede no haber un "paso siguiente" claro para los visitantes.\n\nSin CTA ni captura de contacto, el interés se pierde — ${maybeRevenue} en leads.\n${webLine}\n¿15 min para mostrarte la solución?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-      ],
-      followup: [
-        `Hola ${nombre} 👋\n\nVi ${companyName} en ${industry} y ${maybeDetected} señales de que hay margen de mejora en seguimiento de leads.\n\nEso puede representar ${maybeRevenue} en clientes que eligen a la competencia por responder más rápido.\n${webLine}\n${implText} lo mejoramos. ¿Tienes 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-        `Hola ${nombre},\n\n¿Los leads que llegan a ${companyName} reciben respuesta el mismo día?\n\nEn negocios de ${industry} esa velocidad marca la diferencia — ${maybeRevenue} de impacto estimado.\n${webLine}\n¿Hablamos 10 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`,
-      ],
-    }
-    const [t0, t1] = tpl[scenario] ?? tpl.followup
-    return (v === 0 ? t0 : t1)
+    return v === 0
+      ? `Hola ${nombre} 👋\n\n${hookLine}\n\nMe gustaría explorar si hay algo útil para ${companyName}. No tengo un diagnóstico definitivo — eso lo hacemos juntos.\n\nPuedes ver cómo trabajamos aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+      : `Hola ${nombre},\n\nEncontré ${companyName} en mi investigación de negocios de ${industry} y me generó interés.\n\n${symptomLine ? symptomLine + '\n\n' : ''}¿Podríamos hablar brevemente para ver si hay algo relevante?\n\nTe comparto nuestro enfoque:\n${OFFICIAL_URL}\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
   }
-
   if (channel === 'email') {
-    const subjects: Record<string, [string, string]> = {
-      booking: [`${companyName}: citas que se pierden fuera de horario`, `Sistema de reservas para ${companyName}`],
-      google: [`${companyName} — visibilidad en Google para ${industry}`, `Presencia en Google para ${companyName}`],
-      reviews: [`Las reseñas de ${companyName} y su impacto en nuevos clientes`, `Gestión de reputación para ${companyName}`],
-      presence: [`Presencia digital de ${companyName} — análisis`, `Análisis de presencia digital — ${companyName}`],
-      leads: [`Captación de leads en ${companyName}`, `${companyName}: cómo capturar el tráfico que ya tienes`],
-      followup: [`Seguimiento de leads en ${companyName}`, `${companyName}: optimización comercial`],
-    }
-    const [s0, s1] = subjects[scenario] ?? subjects.followup
-    const subject = v === 0 ? s0 : s1
-    const serviceList = [ev.primaryService, ...(ev.complementaryServices ?? [])].filter(Boolean)
-    return `Asunto: ${subject}\n\nHola ${nombre},\n\nAnalizamos el perfil digital de ${companyName} y encontramos la siguiente oportunidad:\n\n${ev.probablePainPoint}\n\nEn negocios de ${industry}, eso puede representar ${maybeRevenue} al mes.\n\nServicios que resuelven esto directamente:\n${serviceList.map((s) => `→ ${s}`).join('\n')}\n\nTiempo estimado de implementación: ${implTime}. ROI estimado: ${ev.estimatedRoiPotential}×.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 minutos esta semana para revisarlo juntos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+    return `Asunto: ${companyName} — ¿Conversación breve?\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. ${hookLine}\n\n${symptomLine ? symptomLine + '\n\n' : ''}Me gustaría explorar contigo si hay algo relevante para ${companyName}. Sin diagnóstico previo — eso lo hacemos en conversación.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15–20 minutos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
   }
-
-  // LinkedIn
-  return v === 0
-    ? `${nombre}, revisé la presencia digital de ${companyName} (${industry}) y encontré una oportunidad concreta.\n\n${ev.probablePainPoint}\n\nEso puede representar ${maybeRevenue} en clientes que no se convierten.\n\n${implText}.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 20 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-    : `${nombre}, una pregunta directa sobre ${companyName}:\n\n¿Los leads que llegan por digital reciben seguimiento el mismo día?\n\nEn negocios de ${industry} esa velocidad es clave — ${maybeRevenue} de impacto estimado.\n\nTe comparto cómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+  return `${nombre}, encontré ${companyName} (${industry}) en mi investigación y me interesa explorar si hay algo útil para tu negocio.\n\n${symptomLine ? symptomLine + '\n\n' : ''}Sin diagnóstico previo — eso lo validamos juntos.\n\nCómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
 }
 
 function OutreachPanel({
   companyId,
+  company,
   evaluation,
   companyName,
   industry,
@@ -1073,6 +1072,7 @@ function OutreachPanel({
   whatsapp,
 }: {
   companyId: string
+  company: CompanyDetail
   evaluation: Evaluation | null
   companyName: string
   industry: string
@@ -1096,19 +1096,20 @@ function OutreachPanel({
   const [editedTemplate, setEditedTemplate] = useState('')
   const [copied, setCopied] = useState(false)
 
-  // Default template type based on package confidence and coverage
-  const defaultTemplateType = (): 'package' | 'individual_service' | 'free_audit' | 'exploratory' => {
-    if (!evaluation) return 'exploratory'
-    const level = outreachEvidenceLevel(evaluation)
-    if (level === 'C') return 'free_audit'
-    if (evaluation.recommendedPackageSlug && evaluation.recommendedPackageSlug !== 'auditoria_gratuita' &&
-        (evaluation.packageConfidence === 'high' || evaluation.packageConfidence === 'medium')) return 'package'
-    return 'individual_service'
-  }
-  const [templateType, setTemplateType] = useState<'package' | 'individual_service' | 'free_audit' | 'exploratory'>(defaultTemplateType())
+  const commercialState = company.commercialState ?? null
+  const canContact = commercialState !== 'RESEARCH_REQUIRED' && commercialState !== 'DISQUALIFIED'
 
-  const liveTemplate = evaluation
-    ? generateOutreachTemplate(templateChannel, templateVersion, companyName, industry, evaluation, contactName, templateType)
+  const liveTemplate = canContact
+    ? generateOutreachTemplate(
+        templateChannel,
+        templateVersion,
+        companyName,
+        industry,
+        commercialState,
+        company.qualificationReason ?? null,
+        company.whyContact ?? [],
+        contactName,
+      )
     : ''
   const templateText = editingTemplate ? editedTemplate : liveTemplate
 
@@ -1163,13 +1164,8 @@ function OutreachPanel({
         responseType: responseType || undefined,
         responseNotes: responseNotes.trim() || undefined,
         sequenceNumber: records.length + 1,
-        // Commercial alignment tracking
-        packageSlug: evaluation?.recommendedPackageSlug ?? undefined,
-        individualService: evaluation?.primaryService ?? undefined,
-        evidenceLevel: evaluation ? outreachEvidenceLevel(evaluation) : undefined,
-        templateType,
         officialUrlIncluded: true,
-        catalogVersion: evaluation?.catalogVersion ?? undefined,
+        commercialState: commercialState ?? undefined,
       })
       setRecords([rec, ...records])
       setModalOpen(false)
@@ -1192,22 +1188,34 @@ function OutreachPanel({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── No-contact state notice ── */}
+      {!canContact && (
+        <div className="rounded-xl border-2 border-slate-200 bg-slate-50 px-5 py-4">
+          <p className="text-sm font-semibold text-slate-600">
+            {commercialState === 'DISQUALIFIED'
+              ? 'Prospect descalificado — no se recomienda outreach en este momento.'
+              : 'Datos de contacto insuficientes — investigar antes de iniciar contacto.'}
+          </p>
+          {company.disqualificationReason && (
+            <p className="mt-1 text-xs text-slate-500">{company.disqualificationReason}</p>
+          )}
+        </div>
+      )}
+
       {/* ── Suggested Template ── */}
-      {evaluation && (
+      {canContact && (
         <div className="rounded-xl border-2 border-amber-200 bg-amber-50/40">
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-amber-100">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400 inline-block" />
               <span className="text-sm font-semibold text-amber-900">Plantilla Sugerida</span>
-              <span className="text-xs text-slate-500">· Score {evaluation.opportunityScore} · {evaluation.primaryService ?? evaluation.recommendedServices[0]}</span>
-              {evaluation.evaluationStatus === 'manual_review_required' && (
-                <span className="text-xs rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-amber-700 font-medium">
-                  Nivel C — exploratoria (datos insuficientes)
-                </span>
-              )}
-              {evaluation.evaluationStatus === 'preliminary' && (
-                <span className="text-xs rounded-full bg-yellow-100 border border-yellow-300 px-2 py-0.5 text-yellow-700 font-medium">
-                  Nivel B — lenguaje condicional
+              {commercialState && (
+                <span className={`text-xs rounded-full px-2 py-0.5 font-medium border ${
+                  commercialState === 'OFFER_AUDIT'
+                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                    : 'bg-green-100 text-green-700 border-green-200'
+                }`}>
+                  {commercialState === 'OFFER_AUDIT' ? 'Invitación a auditoría' : 'Contacto directo'}
                 </span>
               )}
             </div>
@@ -1226,26 +1234,6 @@ function OutreachPanel({
               ? <span className="text-green-700 font-medium">👤 {contactName}</span>
               : <span className="text-slate-400">👤 Sin contacto identificado</span>
             }
-          </div>
-
-          {/* Template type selector */}
-          <div className="flex flex-wrap gap-1 px-4 pt-3 pb-1 border-b border-amber-100">
-            {([
-              { value: 'package', label: '📦 Paquete', show: !!(evaluation.recommendedPackageSlug && evaluation.recommendedPackageSlug !== 'auditoria_gratuita') },
-              { value: 'individual_service', label: '⚡ Servicio', show: true },
-              { value: 'free_audit', label: '🆓 Auditoría Gratuita', show: true },
-              { value: 'exploratory', label: '🔍 Exploratorio', show: true },
-            ] as const).filter(t => t.show).map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => { setTemplateType(value as typeof templateType); setEditingTemplate(false) }}
-                className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                  templateType === value ? 'bg-amber-800 text-white' : 'text-amber-700 hover:bg-amber-100'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
           </div>
 
           <div className="flex gap-1 px-4 pt-2">
@@ -1715,7 +1703,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
     for (const s of SIGNAL_DEFINITIONS) signals[s.key] = (ev as unknown as Record<string, boolean>)[s.key]
     try {
       const newEv = await evaluateCompany(id, { evaluatedBy: 'alejandro@kronosdata.tech', ...signals })
-      setCompany((prev) => prev ? { ...prev, latestEvaluation: newEv, latestOpportunityScore: newEv.opportunityScore, latestPriorityLevel: newEv.priorityLevel } : prev)
+      setCompany((prev) => prev ? { ...prev, latestEvaluation: newEv, latestOpportunityScore: newEv.opportunityScore ?? 0, latestPriorityLevel: newEv.priorityLevel ?? '' } : prev)
     } catch { /* ignore */ }
     finally { setRevaluating(false) }
   }
@@ -1764,8 +1752,15 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-bold text-slate-900">{company.name}</h1>
               {company.latestEvaluatedAt && (
-                <Badge variant={priorityVariant(company.latestPriorityLevel)}>
-                  {company.latestPriorityLevel.toUpperCase()}
+                <Badge variant={
+                  company.commercialState === 'OFFER_AUDIT' ? 'high' :
+                  company.commercialState === 'CONTACT_READY' ? 'hot' :
+                  company.commercialState === 'DISQUALIFIED' ? 'secondary' :
+                  priorityVariant(company.latestPriorityLevel)
+                }>
+                  {company.commercialState
+                    ? (COMMERCIAL_STATE_CONFIG[company.commercialState]?.label ?? company.commercialState)
+                    : company.latestPriorityLevel.toUpperCase()}
                 </Badge>
               )}
             </div>
@@ -1802,23 +1797,26 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* Composite score summary bar */}
-      {(company.salesPriority || company.evidenceTier || company.salesOpportunityScore !== null) && (
+      {/* Signal summary bar */}
+      {(company.commercialState || company.salesPriority || company.salesOpportunityScore !== null) && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-slate-50 px-4 py-3">
           <Target className="h-4 w-4 text-slate-400" />
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Scoring compuesto</span>
-          {company.salesPriority && (
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            {company.commercialState && COMMERCIAL_STATE_CONFIG[company.commercialState] ? 'Prospect Signal Engine v2' : 'Scoring compuesto'}
+          </span>
+          {company.commercialState && COMMERCIAL_STATE_CONFIG[company.commercialState] ? (
+            <span className={`text-xs font-bold border rounded-full px-2.5 py-0.5 ${COMMERCIAL_STATE_CONFIG[company.commercialState].cls}`}>
+              {COMMERCIAL_STATE_CONFIG[company.commercialState].label}
+            </span>
+          ) : company.salesPriority ? (
             <span className={`text-xs font-bold border rounded-full px-2.5 py-0.5 ${SALES_PRIORITY_CONFIG[company.salesPriority]?.cls ?? 'bg-slate-100 text-slate-500'}`}>
               {SALES_PRIORITY_CONFIG[company.salesPriority]?.label ?? company.salesPriority}
             </span>
-          )}
-          {company.evidenceTier && (
-            <span className={`text-xs font-medium border rounded-full px-2.5 py-0.5 ${EVIDENCE_TIER_CONFIG[company.evidenceTier]?.cls ?? 'bg-slate-100 text-slate-500'}`}>
-              {EVIDENCE_TIER_CONFIG[company.evidenceTier]?.label ?? company.evidenceTier}
-            </span>
-          )}
+          ) : null}
           {company.salesOpportunityScore !== null && (
-            <span className="text-xs text-slate-400 ml-auto">Sales Opp: <strong className="text-slate-700">{company.salesOpportunityScore}</strong></span>
+            <span className="text-xs text-slate-400 ml-auto">
+              {company.commercialState && COMMERCIAL_STATE_CONFIG[company.commercialState] ? 'Audit Priority' : 'Sales Opp.'}: <strong className="text-slate-700">{company.salesOpportunityScore}</strong>
+            </span>
           )}
         </div>
       )}
@@ -1861,6 +1859,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         <TabsContent value="outreach">
           <OutreachPanel
             companyId={id}
+            company={company}
             evaluation={company.latestEvaluation}
             companyName={company.name}
             industry={company.industry}

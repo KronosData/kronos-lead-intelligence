@@ -1,3 +1,6 @@
+// @legacy — v2 does NOT estimate budget capacity before an audit.
+// Budget is validated during the free audit conversation with the prospect.
+// Archived: do not import in new routes or UI primary views.
 // Budget Capacity Score: estimates a prospect's ability to pay for Kronos services.
 // Inferred from industry type, business size, and available signals.
 // Score range: 0-100. Labels: low | medium | high | unknown.

@@ -1,3 +1,6 @@
+// @legacy — v2 does NOT pre-assign packages before an audit.
+// Package selection belongs in the Audit model (post-meeting, human-validated).
+// Archived: do not import in new routes or UI primary views.
 // Package recommendation engine.
 // Maps confirmed signals + coverage + evidence to official Kronos packages.
 // Output is separate from individual service recommendations (service-match.ts).
