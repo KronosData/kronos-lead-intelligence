@@ -358,6 +358,7 @@ export interface ApproachRecommendation {
     name: string
     setupPriceUSD: [number, number]
     monthlyMaintenanceUSD: number
+    implementationTime: string
     pitch: string
   }
   channel?: string

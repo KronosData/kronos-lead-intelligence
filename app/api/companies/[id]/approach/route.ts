@@ -72,6 +72,7 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
         name: pkg.name,
         setupPriceUSD: pkg.setupPriceUSD,
         monthlyMaintenanceUSD: pkg.monthlyMaintenanceUSD,
+        implementationTime: pkg.implementationTime,
         pitch: pkg.pitch,
       },
       channel,

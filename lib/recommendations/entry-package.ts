@@ -14,6 +14,7 @@ export interface EntryPackageRecommendation {
   painDetected: string
   setupPriceUSD: [number, number]
   monthlyMaintenanceUSD: number
+  implementationTime: string
   pitch: string
 }
 
@@ -44,18 +45,21 @@ const PACKAGE_INFO: Record<EntryPackageSlug, Omit<EntryPackageRecommendation, 'p
     name: 'Sistema de Seguimiento por WhatsApp',
     setupPriceUSD: [150, 300],
     monthlyMaintenanceUSD: 50,
+    implementationTime: '1–2 semanas',
   },
   lead_tracking_crm: {
     slug: 'lead_tracking_crm',
     name: 'Sistema de Seguimiento de Leads',
     setupPriceUSD: [200, 400],
     monthlyMaintenanceUSD: 60,
+    implementationTime: '2–3 semanas',
   },
   website_seo: {
     slug: 'website_seo',
     name: 'Página Web + Posicionamiento SEO',
     setupPriceUSD: [300, 600],
     monthlyMaintenanceUSD: 80,
+    implementationTime: '3–4 semanas',
   },
 }
 

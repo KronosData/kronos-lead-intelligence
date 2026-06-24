@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   getCompany, listEvaluations, listOutreach, createOutreach, upsertSalesNote,
-  evaluateCompany, deleteCompany, reprocessCompany, getCompanyApproach,
+  evaluateCompany, deleteCompany, getCompanyApproach,
   listAudits, createAudit, updateAudit,
   type CompanyDetail, type Evaluation, type OutreachRecord, type SalesNote, type Audit,
   type ApproachRecommendation,
@@ -47,19 +47,42 @@ function scoreColor(score: number) {
   return 'text-muted-foreground'
 }
 
-function OpportunityScoreCard({ ev }: { ev: Evaluation | null }) {
+function OpportunityScoreCard({ ev, approach }: { ev: Evaluation | null; approach: ApproachRecommendation | null }) {
   if (!ev) return null
+  const pkg = approach?.available ? approach.package : null
+
   return (
     <Card className="mb-4 glass-panel">
-      <CardContent className="p-5 flex items-center gap-4">
-        <Zap className="h-5 w-5 text-blue-400 shrink-0" />
-        <div className="flex-1">
-          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-            {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority Score' : 'Opportunity Score'}
-          </span>
-          <div className="flex items-center gap-4">
-            <p className={`text-4xl font-bold ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
-            <div className="flex-1"><ScoreMeter score={ev.opportunityScore ?? 0} /></div>
+      <CardContent className="p-5 flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <Zap className="h-5 w-5 text-blue-400 shrink-0" />
+          <div className="flex-1">
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+              {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority Score' : 'Opportunity Score'}
+            </span>
+            <div className="flex items-center gap-4">
+              <p className={`text-4xl font-bold ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
+              <div className="flex-1"><ScoreMeter score={ev.opportunityScore ?? 0} /></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 border-t border-blue-500/15 pt-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Pérdida mensual est.</p>
+            <p className="text-lg font-bold text-red-400">
+              {ev.estimatedRevenueLostPerMonth != null ? `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}` : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Inversión (paquete sugerido)</p>
+            <p className="text-lg font-bold text-foreground">
+              {pkg ? `$${pkg.setupPriceUSD[0]}–$${pkg.setupPriceUSD[1]} + $${pkg.monthlyMaintenanceUSD}/mes` : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Tiempo de implementación</p>
+            <p className="text-lg font-bold text-foreground">{pkg?.implementationTime ?? '—'}</p>
           </div>
         </div>
       </CardContent>
@@ -603,7 +626,7 @@ function ProspectSignalPanel({ company }: { company: CompanyDetail }) {
       {/* Disqualification reason */}
       {company.disqualificationReason && (
         <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3">
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Por qué no califica</p>
+          <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-1">Por qué no califica</p>
           <p className="text-sm text-red-400 leading-relaxed">{company.disqualificationReason}</p>
         </div>
       )}
@@ -1010,20 +1033,10 @@ function buildWhatsAppUrl(number: string, message: string): string {
 // pain, one affordable entry package (WhatsApp follow-up / lead CRM /
 // web+SEO), one ready-to-send message, one recommended channel. No full
 // diagnosis pitched here — that's for after the client is already happy.
-function ApproachPanel({ companyId, whatsapp }: { companyId: string; whatsapp?: string | null }) {
-  const [data, setData] = useState<ApproachRecommendation | null>(null)
-  const [loading, setLoading] = useState(true)
+function ApproachPanel({
+  data, loading, whatsapp,
+}: { data: ApproachRecommendation | null; loading: boolean; whatsapp?: string | null }) {
   const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    getCompanyApproach(companyId)
-      .then((r) => { if (active) setData(r) })
-      .catch(() => { if (active) setData({ available: false, reason: 'No se pudo calcular la recomendación.' }) })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [companyId])
 
   if (loading) {
     return (
@@ -1817,13 +1830,24 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [revaluating, setRevaluating] = useState(false)
-  const [reprocessing, setReprocessing] = useState(false)
+  const [approach, setApproach] = useState<ApproachRecommendation | null>(null)
+  const [approachLoading, setApproachLoading] = useState(true)
 
   useEffect(() => {
     getCompany(id)
       .then(setCompany)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
+  }, [id])
+
+  useEffect(() => {
+    let active = true
+    setApproachLoading(true)
+    getCompanyApproach(id)
+      .then((r) => { if (active) setApproach(r) })
+      .catch(() => { if (active) setApproach({ available: false, reason: 'No se pudo calcular la recomendación.' }) })
+      .finally(() => { if (active) setApproachLoading(false) })
+    return () => { active = false }
   }, [id])
 
   async function handleDelete() {
@@ -1845,16 +1869,6 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
     finally { setRevaluating(false) }
   }
 
-  async function handleReprocess() {
-    setReprocessing(true)
-    try {
-      await reprocessCompany(id)
-      const updated = await getCompany(id)
-      setCompany(updated)
-    } catch { /* ignore */ }
-    finally { setReprocessing(false) }
-  }
-
   if (loading) return (
     <div className="flex items-center justify-center p-16 text-muted-foreground">
       <Loader2 className="h-6 w-6 animate-spin" />
@@ -1863,7 +1877,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
 
   if (error || !company) return (
     <div className="p-8">
-      <div className="flex items-center gap-2 text-red-600 text-sm">
+      <div className="flex items-center gap-2 text-red-400 text-sm">
         <AlertCircle className="h-4 w-4" />
         {error || 'Empresa no encontrada'}
       </div>
@@ -1915,12 +1929,6 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
 
         <div className="flex items-center gap-2">
           {company.latestEvaluation && (
-            <Button variant="outline" size="sm" onClick={handleReprocess} disabled={reprocessing}
-              title="Recalcula con el modelo de evidencia (corrige señales sin datos)">
-              <RefreshCw className={`h-4 w-4 ${reprocessing ? 'animate-spin' : ''}`} /> Reprocesar
-            </Button>
-          )}
-          {company.latestEvaluation && (
             <Button variant="outline" size="sm" onClick={handleRevaluate} disabled={revaluating}>
               <RefreshCw className={`h-4 w-4 ${revaluating ? 'animate-spin' : ''}`} /> Re-evaluar
             </Button>
@@ -1934,7 +1942,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <OpportunityScoreCard ev={company.latestEvaluation} />
+      <OpportunityScoreCard ev={company.latestEvaluation} approach={approach} />
 
       {/* Signal summary bar */}
       {(company.commercialState || company.salesPriority || company.salesOpportunityScore !== null) && (
@@ -1960,7 +1968,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      <ApproachPanel companyId={id} whatsapp={company.whatsapp} />
+      <ApproachPanel data={approach} loading={approachLoading} whatsapp={company.whatsapp} />
 
       {/* Main content */}
       <Tabs defaultValue="evaluation">
