@@ -41,10 +41,30 @@ function priorityVariant(p: string): 'hot' | 'high' | 'medium' | 'low' | 'second
 }
 
 function scoreColor(score: number) {
-  if (score >= 80) return 'text-red-600'
-  if (score >= 60) return 'text-orange-500'
-  if (score >= 40) return 'text-yellow-500'
+  if (score >= 80) return 'text-red-400'
+  if (score >= 60) return 'text-orange-400'
+  if (score >= 40) return 'text-yellow-400'
   return 'text-muted-foreground'
+}
+
+function OpportunityScoreCard({ ev }: { ev: Evaluation | null }) {
+  if (!ev) return null
+  return (
+    <Card className="mb-4 glass-panel">
+      <CardContent className="p-5 flex items-center gap-4">
+        <Zap className="h-5 w-5 text-blue-400 shrink-0" />
+        <div className="flex-1">
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+            {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority Score' : 'Opportunity Score'}
+          </span>
+          <div className="flex items-center gap-4">
+            <p className={`text-4xl font-bold ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
+            <div className="flex-1"><ScoreMeter score={ev.opportunityScore ?? 0} /></div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 function ScoreMeter({ score }: { score: number }) {
@@ -123,25 +143,14 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       )}
 
       {/* Key metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border bg-card p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Zap className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground font-medium">
-              {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority Score' : 'Opportunity Score'}
-            </span>
-          </div>
-          <p className={`text-3xl font-bold ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
-          <ScoreMeter score={ev.opportunityScore ?? 0} />
-        </div>
-
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {ev.estimatedRevenueLostPerMonth != null && (
           <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center gap-2 mb-2">
               <TrendingDown className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs text-muted-foreground font-medium">Pérdida mensual est.</span>
             </div>
-            <p className="text-2xl font-bold text-red-600">${ev.estimatedRevenueLostPerMonth.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-red-400">${ev.estimatedRevenueLostPerMonth.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-1">{ev.estimatedLeadsLostPerMonth ?? 0} leads/mes perdidos</p>
           </div>
         )}
@@ -1924,6 +1933,8 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           </Button>
         </div>
       </div>
+
+      <OpportunityScoreCard ev={company.latestEvaluation} />
 
       {/* Signal summary bar */}
       {(company.commercialState || company.salesPriority || company.salesOpportunityScore !== null) && (
