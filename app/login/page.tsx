@@ -44,11 +44,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
       <div className="w-full max-w-sm px-6">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <Building2 className="h-7 w-7 text-orange-400" />
+          <Building2 className="h-7 w-7 text-blue-400" />
           <div>
             <p className="text-lg font-bold text-white leading-none">Kronos</p>
             <p className="text-xs text-slate-400 leading-none mt-0.5">Lead Intelligence</p>
@@ -56,7 +56,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-2xl">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-2xl">
           <h1 className="text-base font-semibold text-white mb-1">Iniciar sesión</h1>
           <p className="text-xs text-slate-400 mb-6">Acceso privado — solo usuarios autorizados</p>
 
@@ -73,7 +73,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="alejandro@kronosdata.tech"
-                className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -103,7 +103,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-md bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2 text-sm font-semibold text-white transition-colors"
+              className="w-full flex items-center justify-center gap-2 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2 text-sm font-semibold text-white transition-colors"
             >
               {loading ? (
                 <>

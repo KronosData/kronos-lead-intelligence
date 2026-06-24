@@ -21,10 +21,10 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-slate-700 bg-slate-900">
-      <div className="flex h-14 items-center px-4 border-b border-slate-700">
+    <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-slate-800 bg-background">
+      <div className="flex h-14 items-center px-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-orange-400" />
+          <Building2 className="h-5 w-5 text-blue-400" />
           <div>
             <p className="text-sm font-semibold text-white leading-none">Kronos</p>
             <p className="text-[10px] text-slate-400 leading-none mt-0.5">Lead Intelligence</p>
@@ -42,7 +42,7 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-slate-700 text-white'
+                  ? 'bg-blue-600/15 text-blue-400'
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
               )}
             >
@@ -53,7 +53,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-3 border-t border-slate-700 space-y-2">
+      <div className="p-3 border-t border-slate-800 space-y-2">
         <p className="text-[10px] text-slate-500 px-3">Kronos Data · Internal</p>
         <button
           onClick={handleLogout}
