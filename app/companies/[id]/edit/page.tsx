@@ -152,7 +152,7 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center p-16 text-slate-400">
+    <div className="flex items-center justify-center p-16 text-muted-foreground">
       <Loader2 className="h-6 w-6 animate-spin" />
     </div>
   )
@@ -173,8 +173,8 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
           <Link href={`/companies/${id}`}><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Editar Empresa</h1>
-          <p className="text-sm text-slate-500">{name || 'Cargando...'}</p>
+          <h1 className="text-2xl font-bold text-foreground">Editar Empresa</h1>
+          <p className="text-sm text-muted-foreground">{name || 'Cargando...'}</p>
         </div>
         {latestEvaluation && latestEvaluation.priorityLevel && (
           <Badge variant={priorityVariant(latestEvaluation.priorityLevel)} className="ml-2">
@@ -312,14 +312,14 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Señales Actualizadas</CardTitle>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Actualiza las señales y haz clic en "Re-evaluar" para obtener un nuevo score.
               </p>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               {Object.entries(SIGNAL_BY_CATEGORY).map(([cat, sigs]) => (
                 <div key={cat}>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                     {CATEGORY_LABELS[cat] ?? cat}
                   </p>
                   <div className="flex flex-col gap-2">
@@ -328,15 +328,15 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
                         key={s.key}
                         className={`flex items-center gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors ${
                           signals[s.key]
-                            ? s.problemWhen ? 'bg-red-50' : 'bg-green-50'
-                            : 'hover:bg-slate-50'
+                            ? s.problemWhen ? 'bg-red-500/10' : 'bg-emerald-500/10'
+                            : 'hover:bg-muted'
                         }`}
                       >
                         <Checkbox
                           checked={!!signals[s.key]}
                           onCheckedChange={() => toggleSignal(s.key)}
                         />
-                        <span className="text-sm text-slate-700">{s.label}</span>
+                        <span className="text-sm text-foreground">{s.label}</span>
                       </label>
                     ))}
                   </div>

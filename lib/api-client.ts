@@ -350,6 +350,8 @@ export async function reprocessCompany(id: string): Promise<Record<string, unkno
 export interface ApproachRecommendation {
   available: boolean
   reason?: string
+  score?: number | null
+  deficiencias?: string[]
   painDetected?: string
   package?: {
     slug: string

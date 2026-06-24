@@ -56,31 +56,31 @@ function commercialStateBadge(state: string | undefined) {
   switch (state) {
     case 'OFFER_AUDIT':
     case 'READY_TO_CONTACT':
-      return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">Auditoría</Badge>
+      return <Badge className="bg-blue-500/100/10 text-blue-400 border-blue-500/30 text-[10px]">Auditoría</Badge>
     case 'CONTACT_READY':
-      return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">Contactar</Badge>
+      return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">Contactar</Badge>
     case 'RESEARCH_REQUIRED':
-      return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">Investigar</Badge>
+      return <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px]">Investigar</Badge>
     case 'NURTURE':
-      return <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-[10px]">Monitorear</Badge>
+      return <Badge className="bg-muted text-muted-foreground border-border text-[10px]">Monitorear</Badge>
     case 'DISQUALIFIED':
-      return <Badge className="bg-red-50 text-red-400 border-red-100 text-[10px]">Descartada</Badge>
+      return <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px]">Descartada</Badge>
     default:
       return null
   }
 }
 
 function icpFitBadge(score: number) {
-  if (score >= 70) return <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">ICP {score}</span>
-  if (score >= 50) return <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">ICP {score}</span>
-  if (score >= 30) return <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">ICP {score}</span>
-  return <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">ICP {score}</span>
+  if (score >= 70) return <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">ICP {score}</span>
+  if (score >= 50) return <span className="text-[10px] font-semibold text-blue-600 bg-blue-500/10 px-1.5 py-0.5 rounded">ICP {score}</span>
+  if (score >= 30) return <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">ICP {score}</span>
+  return <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">ICP {score}</span>
 }
 
 function contactabilityBadge(score: number) {
-  if (score >= 70) return <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded">📞 Contactable</span>
-  if (score >= 40) return <span className="text-[10px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">📞 Parcial</span>
-  return <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">📞 Difícil</span>
+  if (score >= 70) return <span className="text-[10px] font-semibold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">📞 Contactable</span>
+  if (score >= 40) return <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">📞 Parcial</span>
+  return <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">📞 Difícil</span>
 }
 
 function entityBadge(entityType: string | undefined, isCommercial: boolean) {
@@ -97,36 +97,36 @@ function entityBadge(entityType: string | undefined, isCommercial: boolean) {
       branch_large_chain:     '🏢 Cadena multinacional',
     }
     const label = labels[entityType] ?? `⚠ ${entityType}`
-    return <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">{label}</span>
+    return <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">{label}</span>
   }
   return null
 }
 
 function sizeBadge(size: string | undefined) {
   switch (size) {
-    case 'micro':   return <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded">Micro</span>
-    case 'small':   return <span className="text-[10px] font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">Pequeña</span>
-    case 'medium':  return <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Mediana</span>
-    case 'large':   return <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">Grande</span>
+    case 'micro':   return <span className="text-[10px] font-semibold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">Micro</span>
+    case 'small':   return <span className="text-[10px] font-semibold text-green-600 bg-emerald-500/10 px-1.5 py-0.5 rounded">Pequeña</span>
+    case 'medium':  return <span className="text-[10px] font-semibold text-blue-600 bg-blue-500/10 px-1.5 py-0.5 rounded">Mediana</span>
+    case 'large':   return <span className="text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded">Grande</span>
     default:        return null
   }
 }
 
 function importStatusBadge(c: DiscoveryCandidate, imp: CandidateImportState | undefined) {
-  if (imp?.status === 'imported')   return <Badge className="bg-green-100 text-green-700 border-green-200">Importada</Badge>
-  if (imp?.status === 'importing')  return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><Loader2 className="h-3 w-3 animate-spin mr-1" />Importando</Badge>
-  if (imp?.status === 'duplicate')  return <Badge className="bg-slate-100 text-slate-500 border-slate-200">Ya existe</Badge>
-  if (imp?.status === 'failed')     return <Badge className="bg-red-100 text-red-600 border-red-200">Error</Badge>
-  if (c.alreadyExists)              return <Badge className="bg-slate-100 text-slate-500 border-slate-200">Ya existe</Badge>
-  if (!c.website && !c.phone)       return <Badge className="bg-rose-100 text-rose-600 border-rose-200">Sin contacto</Badge>
-  if (!c.website)                   return <Badge className="bg-amber-100 text-amber-600 border-amber-200">Sin web</Badge>
-  return <Badge className="bg-blue-100 text-blue-600 border-blue-200">Nueva</Badge>
+  if (imp?.status === 'imported')   return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">Importada</Badge>
+  if (imp?.status === 'importing')  return <Badge className="bg-blue-500/100/10 text-blue-400 border-blue-500/30"><Loader2 className="h-3 w-3 animate-spin mr-1" />Importando</Badge>
+  if (imp?.status === 'duplicate')  return <Badge className="bg-muted text-muted-foreground border-border">Ya existe</Badge>
+  if (imp?.status === 'failed')     return <Badge className="bg-red-500/10 text-red-400 border-red-500/30">Error</Badge>
+  if (c.alreadyExists)              return <Badge className="bg-muted text-muted-foreground border-border">Ya existe</Badge>
+  if (!c.website && !c.phone)       return <Badge className="bg-rose-500/10 text-rose-400 border-rose-500/30">Sin contacto</Badge>
+  if (!c.website)                   return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30">Sin web</Badge>
+  return <Badge className="bg-blue-500/100/10 text-blue-600 border-blue-500/30">Nueva</Badge>
 }
 
 function sourceBadge(source: 'here' | 'osm') {
   return source === 'here'
-    ? <span className="text-[10px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">HERE</span>
-    : <span className="text-[10px] font-semibold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded">OSM</span>
+    ? <span className="text-[10px] font-semibold text-purple-600 bg-purple-500/10 px-1.5 py-0.5 rounded">HERE</span>
+    : <span className="text-[10px] font-semibold text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded">OSM</span>
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -351,11 +351,11 @@ export default function DiscoverPage() {
           <Link href="/"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Compass className="h-6 w-6 text-orange-500" />
             Descubrir Prospectos Rentables
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Empresas privadas con síntomas visibles de mejora — candidatas a Auditoría Gratuita de 15 min
           </p>
         </div>
@@ -442,7 +442,7 @@ export default function DiscoverPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="mt-0.5 text-[11px] text-slate-400">{modeConfig.description}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{modeConfig.description}</p>
             </div>
 
             <div className="w-36">
@@ -472,7 +472,7 @@ export default function DiscoverPage() {
             <button
               type="button"
               onClick={() => setShowFilters(f => !f)}
-              className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors ml-auto"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors ml-auto"
             >
               {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               Filtros avanzados
@@ -582,9 +582,9 @@ export default function DiscoverPage() {
 
       {/* Meta info */}
       {meta && (
-        <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 max-w-5xl">
+        <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground max-w-5xl">
           <span>
-            <span className="font-semibold text-slate-700">{meta.city}</span>
+            <span className="font-semibold text-foreground">{meta.city}</span>
             {meta.state ? `, ${meta.state}` : ''}
             {' · '}{meta.country}
           </span>
@@ -605,7 +605,7 @@ export default function DiscoverPage() {
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
                 <Checkbox
                   checked={allImportableSelected}
                   onCheckedChange={toggleSelectAll}
@@ -614,7 +614,7 @@ export default function DiscoverPage() {
                 Seleccionar nuevas ({importable.length})
               </label>
               {selected.size > 0 && (
-                <span className="text-xs text-slate-500">{selected.size} seleccionadas</span>
+                <span className="text-xs text-muted-foreground">{selected.size} seleccionadas</span>
               )}
             </div>
 
@@ -634,14 +634,14 @@ export default function DiscoverPage() {
 
           {/* Import summary */}
           {importSummary && (
-            <div className="mb-4 rounded-lg border bg-slate-50 px-4 py-3 flex flex-wrap gap-4 text-sm">
+            <div className="mb-4 rounded-lg border bg-muted px-4 py-3 flex flex-wrap gap-4 text-sm">
               {importSummary.imported > 0 && (
-                <span className="flex items-center gap-1 text-green-700">
+                <span className="flex items-center gap-1 text-emerald-400">
                   <CheckCircle2 className="h-4 w-4" /> {importSummary.imported} importadas
                 </span>
               )}
               {importSummary.duplicate > 0 && (
-                <span className="text-slate-500">{importSummary.duplicate} ya existían</span>
+                <span className="text-muted-foreground">{importSummary.duplicate} ya existían</span>
               )}
               {importSummary.failed > 0 && (
                 <span className="flex items-center gap-1 text-red-600">
@@ -657,10 +657,10 @@ export default function DiscoverPage() {
           )}
 
           {/* Table */}
-          <div className="rounded-lg border border-slate-200 overflow-hidden">
+          <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                <tr className="border-b border-border bg-muted text-xs text-muted-foreground uppercase tracking-wide">
                   <th className="w-8 px-2 py-2" />
                   <th className="px-3 py-2 text-center w-20">Estado</th>
                   <th className="px-3 py-2 text-left">Empresa</th>
@@ -671,7 +671,7 @@ export default function DiscoverPage() {
                   <th className="px-3 py-2 text-center hidden xl:table-cell">Fuente</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {candidates.map(c => {
                   const impState    = importStates[c.externalId]
                   const isSelected  = selected.has(c.externalId)
@@ -683,11 +683,11 @@ export default function DiscoverPage() {
                     <tr
                       key={c.externalId}
                       className={`transition-colors ${
-                        isSelected ? 'bg-orange-50' :
-                        isDiscard  ? 'bg-slate-50 opacity-40' :
+                        isSelected ? 'bg-orange-500/10' :
+                        isDiscard  ? 'bg-muted opacity-40' :
                         c.alreadyExists || impState?.status === 'imported' || impState?.status === 'duplicate'
-                          ? 'bg-slate-50 opacity-60'
-                          : 'hover:bg-slate-50'
+                          ? 'bg-muted opacity-60'
+                          : 'hover:bg-muted'
                       }`}
                     >
                       {/* Checkbox */}
@@ -706,26 +706,26 @@ export default function DiscoverPage() {
                       <td className="px-2 py-3 text-center">
                         <div className="flex flex-col items-center gap-0.5">
                           {commercialStateBadge(c.commercialState)}
-                          <span className="text-[10px] text-slate-400">#{c.rankAfterReranking}</span>
+                          <span className="text-[10px] text-muted-foreground">#{c.rankAfterReranking}</span>
                         </div>
                       </td>
 
                       {/* Name + entity + size */}
                       <td className="px-3 py-3">
-                        <p className="font-medium text-slate-900 leading-tight">{c.name}</p>
-                        <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[180px]">{c.industry}</p>
+                        <p className="font-medium text-foreground leading-tight">{c.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[180px]">{c.industry}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {!c.entityIsCommercial
                             ? entityBadge(c.entityType, c.entityIsCommercial)
                             : sizeBadge(c.estimatedBusinessSize)
                           }
                           {c.chainDetected && (
-                            <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">Cadena</span>
+                            <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">Cadena</span>
                           )}
                         </div>
                         {result?.status === 'imported' && result.opportunityScore !== null && (
                           <div className="mt-1 flex items-center gap-2">
-                            <span className="text-xs font-semibold text-slate-700">APS {result.opportunityScore}</span>
+                            <span className="text-xs font-semibold text-foreground">APS {result.opportunityScore}</span>
                             {result.priorityLevel && commercialStateBadge(result.priorityLevel)}
                           </div>
                         )}
@@ -762,10 +762,10 @@ export default function DiscoverPage() {
                               <div className="mb-1">
                                 <div className="flex items-center gap-1 mb-0.5">
                                   <TrendingUp className="h-3 w-3 text-amber-500 shrink-0" />
-                                  <span className="text-[10px] font-semibold text-amber-700 uppercase">Síntomas visibles</span>
+                                  <span className="text-[10px] font-semibold text-amber-400 uppercase">Síntomas visibles</span>
                                 </div>
                                 {c.whyContact.slice(0, 2).map((r, i) => (
-                                  <p key={i} className="text-[11px] text-slate-600 truncate">{r}</p>
+                                  <p key={i} className="text-[11px] text-muted-foreground truncate">{r}</p>
                                 ))}
                               </div>
                             )}
@@ -774,11 +774,11 @@ export default function DiscoverPage() {
                             {c.whyNotContact.length > 0 && (
                               <div>
                                 <div className="flex items-center gap-1 mb-0.5">
-                                  <ShieldAlert className="h-3 w-3 text-slate-400 shrink-0" />
-                                  <span className="text-[10px] font-semibold text-slate-500 uppercase">Señales de riesgo</span>
+                                  <ShieldAlert className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Señales de riesgo</span>
                                 </div>
                                 {c.whyNotContact.slice(0, 2).map((r, i) => (
-                                  <p key={i} className="text-[11px] text-slate-500 truncate">{r}</p>
+                                  <p key={i} className="text-[11px] text-muted-foreground truncate">{r}</p>
                                 ))}
                               </div>
                             )}
@@ -790,7 +790,7 @@ export default function DiscoverPage() {
                       <td className="px-3 py-3 hidden md:table-cell">
                         <div className="flex flex-col gap-1">
                           {(result?.detectedPhone ?? c.phone) && (
-                            <span className="flex items-center gap-1 text-xs text-slate-600">
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Phone className="h-3 w-3 shrink-0" />
                               {result?.detectedPhone ?? c.phone}
                             </span>
@@ -807,19 +807,19 @@ export default function DiscoverPage() {
                             </a>
                           )}
                           {!c.website && !c.phone && (
-                            <span className="text-xs text-slate-300 flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Users className="h-3 w-3" /> Sin contacto
                             </span>
                           )}
                           {/* Qualification questions hint */}
                           {c.qualificationQuestions.length > 0 && (
                             <details className="mt-1">
-                              <summary className="text-[10px] text-slate-400 cursor-pointer hover:text-slate-600 flex items-center gap-1">
+                              <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-muted-foreground flex items-center gap-1">
                                 <DollarSign className="h-3 w-3" /> {c.qualificationQuestions.length} pregunta(s)
                               </summary>
                               <div className="mt-1 space-y-0.5">
                                 {c.qualificationQuestions.map((q, i) => (
-                                  <p key={i} className="text-[10px] text-slate-500 pl-1 border-l border-slate-200">
+                                  <p key={i} className="text-[10px] text-muted-foreground pl-1 border-l border-border">
                                     {q}
                                   </p>
                                 ))}
@@ -831,7 +831,7 @@ export default function DiscoverPage() {
 
                       {/* Address */}
                       <td className="px-3 py-3 hidden xl:table-cell">
-                        <span className="flex items-start gap-1 text-xs text-slate-500 max-w-[180px]">
+                        <span className="flex items-start gap-1 text-xs text-muted-foreground max-w-[180px]">
                           <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
                           <span className="truncate">{c.address}</span>
                         </span>
@@ -853,7 +853,7 @@ export default function DiscoverPage() {
             </table>
           </div>
 
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-muted-foreground">
             Ordenadas por ICP Fit × Contactabilidad. Solo empresas privadas con síntomas visibles detectados externamente.
             El diagnóstico real se hace después de la Auditoría Gratuita.
           </p>
@@ -863,9 +863,9 @@ export default function DiscoverPage() {
       {/* Empty state */}
       {!searching && meta && candidates.length === 0 && (
         <div className="max-w-md text-center py-16">
-          <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600 font-medium">Sin prospectos calificados con los filtros actuales</p>
-          <p className="text-sm text-slate-400 mt-1">
+          <Search className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">Sin prospectos calificados con los filtros actuales</p>
+          <p className="text-sm text-muted-foreground mt-1">
             Prueba con modo &quot;broad&quot;, reduce el filtro mínimo, o amplía el radio.
             {!meta.sources.here && ' Añadir HERE_API_KEY mejorará la cobertura.'}
           </p>

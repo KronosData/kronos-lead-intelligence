@@ -150,12 +150,12 @@ export default function NewCompanyPage() {
       <div className="p-8 max-w-2xl">
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Empresa creada y evaluada</h1>
-              <p className="text-sm text-slate-500">{name}</p>
+              <h1 className="text-xl font-bold text-foreground">Empresa creada y evaluada</h1>
+              <p className="text-sm text-muted-foreground">{name}</p>
             </div>
           </div>
 
@@ -163,15 +163,15 @@ export default function NewCompanyPage() {
             <CardContent className="p-6">
               <div className="grid grid-cols-3 gap-4 mb-5">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-slate-900">{evaluation.opportunityScore ?? '—'}</p>
-                  <p className="text-xs text-slate-500 mt-1">Audit Priority Score</p>
+                  <p className="text-4xl font-bold text-foreground">{evaluation.opportunityScore ?? '—'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Audit Priority Score</p>
                 </div>
                 {evaluation.priorityLevel && (
                   <div className="text-center">
                     <Badge variant={priorityVariant(evaluation.priorityLevel)} className="text-sm px-3 py-1">
                       {evaluation.priorityLevel.toUpperCase()}
                     </Badge>
-                    <p className="text-xs text-slate-500 mt-1">Estado</p>
+                    <p className="text-xs text-muted-foreground mt-1">Estado</p>
                   </div>
                 )}
                 {evaluation.estimatedRevenueLostPerMonth != null && (
@@ -179,7 +179,7 @@ export default function NewCompanyPage() {
                     <p className="text-lg font-bold text-red-600">
                       ${evaluation.estimatedRevenueLostPerMonth.toLocaleString()}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">Pérdida mensual est.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Pérdida mensual est.</p>
                   </div>
                 )}
               </div>
@@ -188,17 +188,17 @@ export default function NewCompanyPage() {
 
               {evaluation.probablePainPoint && (
                 <div className="mb-4">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Dolor Principal</p>
-                  <p className="text-sm text-slate-700">{evaluation.probablePainPoint}</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Dolor Principal</p>
+                  <p className="text-sm text-foreground">{evaluation.probablePainPoint}</p>
                 </div>
               )}
 
               {evaluation.recommendedServices.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Servicios Recomendados</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Servicios Recomendados</p>
                   <div className="flex flex-wrap gap-2">
                     {evaluation.recommendedServices.map((s) => (
-                      <span key={s} className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                      <span key={s} className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
                         {s}
                       </span>
                     ))}
@@ -208,8 +208,8 @@ export default function NewCompanyPage() {
 
               {(evaluation.estimatedProjectPriceMin != null && evaluation.estimatedProjectPriceMax != null) && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Valor del Proyecto</p>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Valor del Proyecto</p>
+                  <p className="text-sm font-semibold text-foreground">
                     ${evaluation.estimatedProjectPriceMin.toLocaleString()} – ${evaluation.estimatedProjectPriceMax.toLocaleString()} USD
                   </p>
                 </div>
@@ -237,8 +237,8 @@ export default function NewCompanyPage() {
           <Link href="/"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Nueva Empresa</h1>
-          <p className="text-sm text-slate-500">Completa la información y el checklist de señales para evaluar automáticamente</p>
+          <h1 className="text-2xl font-bold text-foreground">Nueva Empresa</h1>
+          <p className="text-sm text-muted-foreground">Completa la información y el checklist de señales para evaluar automáticamente</p>
         </div>
       </div>
 
@@ -247,11 +247,11 @@ export default function NewCompanyPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-slate-400" />
+              <Globe className="h-4 w-4 text-muted-foreground" />
               <CardTitle className="text-base">Analizar sitio web</CardTitle>
-              <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">opcional</span>
+              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">opcional</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Pega la URL del prospecto y el sistema pre-completará señales y datos de contacto automáticamente.
             </p>
           </CardHeader>
@@ -281,22 +281,22 @@ export default function NewCompanyPage() {
             {researchResult && (
               <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${
                 researchResult.success
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                  : 'bg-red-500/10 border-red-500/30'
               }`}>
                 {researchResult.success ? (
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-green-800">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-emerald-400">
                     <span className="font-medium">✓ {researchResult.autoFilledCount} señales detectadas</span>
-                    <span className="text-green-700">· {researchResult.manualRequiredCount} requieren confirmación</span>
+                    <span className="text-emerald-400">· {researchResult.manualRequiredCount} requieren confirmación</span>
                     {researchResult.isSPA && (
-                      <span className="text-amber-700">· Sitio dinámico — análisis parcial</span>
+                      <span className="text-amber-400">· Sitio dinámico — análisis parcial</span>
                     )}
                   </div>
                 ) : (
-                  <span className="text-red-700">{researchResult.error ?? 'No se pudo analizar el sitio'}</span>
+                  <span className="text-red-400">{researchResult.error ?? 'No se pudo analizar el sitio'}</span>
                 )}
                 {researchResult.warnings.map((w, i) => (
-                  <p key={i} className="text-xs text-amber-700 mt-1">{w}</p>
+                  <p key={i} className="text-xs text-amber-400 mt-1">{w}</p>
                 ))}
               </div>
             )}
@@ -413,14 +413,14 @@ export default function NewCompanyPage() {
           <Card className="h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Checklist de Señales</CardTitle>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Marca lo que ya tiene. Lo que falta = oportunidad para Kronos.
               </p>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               {Object.entries(SIGNAL_BY_CATEGORY).map(([cat, sigs]) => (
                 <div key={cat}>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                     {CATEGORY_LABELS[cat] ?? cat}
                   </p>
                   <div className="flex flex-col gap-2">
@@ -429,22 +429,22 @@ export default function NewCompanyPage() {
                         key={s.key}
                         className={`flex items-center gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors ${
                           signals[s.key]
-                            ? s.problemWhen ? 'bg-red-50' : 'bg-green-50'
-                            : 'hover:bg-slate-50'
+                            ? s.problemWhen ? 'bg-red-500/10' : 'bg-emerald-500/10'
+                            : 'hover:bg-muted'
                         }`}
                       >
                         <Checkbox
                           checked={signals[s.key]}
                           onCheckedChange={() => toggleSignal(s.key)}
                         />
-                        <span className="text-sm text-slate-700">{s.label}</span>
+                        <span className="text-sm text-foreground">{s.label}</span>
                         {signalConfidence[s.key] && signalConfidence[s.key] !== 'none' && (
                           <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium ${
                             signalConfidence[s.key] === 'high'
-                              ? 'bg-green-100 text-green-700'
+                              ? 'bg-emerald-500/10 text-emerald-400'
                               : signalConfidence[s.key] === 'medium'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-slate-100 text-slate-500'
+                                ? 'bg-amber-500/10 text-amber-400'
+                                : 'bg-muted text-muted-foreground'
                           }`}>auto</span>
                         )}
                         {signals[s.key] && s.problemWhen && (

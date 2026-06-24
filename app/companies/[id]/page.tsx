@@ -44,14 +44,14 @@ function scoreColor(score: number) {
   if (score >= 80) return 'text-red-600'
   if (score >= 60) return 'text-orange-500'
   if (score >= 40) return 'text-yellow-500'
-  return 'text-slate-400'
+  return 'text-muted-foreground'
 }
 
 function ScoreMeter({ score }: { score: number }) {
   const color =
-    score >= 80 ? 'bg-red-500' : score >= 60 ? 'bg-orange-500' : score >= 40 ? 'bg-yellow-400' : 'bg-slate-300'
+    score >= 80 ? 'bg-red-500' : score >= 60 ? 'bg-orange-500' : score >= 40 ? 'bg-yellow-400' : 'bg-muted'
   return (
-    <div className="w-full bg-slate-100 rounded-full h-2 mt-1">
+    <div className="w-full bg-muted rounded-full h-2 mt-1">
       <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${score}%` }} />
     </div>
   )
@@ -86,10 +86,10 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
   const hasLegacyCategoryScores = ev.scoreLeadGeneration != null
 
   const statusConfig: Record<string, { label: string; cls: string }> = {
-    complete:              { label: 'Completa',          cls: 'bg-green-100 text-green-700 border-green-200' },
-    preliminary:           { label: 'Preliminar',        cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-    manual_review_required:{ label: 'Revisión manual',   cls: 'bg-amber-100 text-amber-700 border-amber-200' },
-    v2_signal_engine:      { label: 'Signal Engine v2',  cls: 'bg-blue-100 text-blue-700 border-blue-200' },
+    complete:              { label: 'Completa',          cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+    preliminary:           { label: 'Preliminar',        cls: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' },
+    manual_review_required:{ label: 'Revisión manual',   cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+    v2_signal_engine:      { label: 'Signal Engine v2',  cls: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
   }
 
   return (
@@ -97,12 +97,12 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       {/* Coverage / confidence banner */}
       {coverage !== null && (
         <div className={`rounded-lg border px-4 py-3 flex items-center gap-4 flex-wrap ${
-          isLowCoverage ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'
+          isLowCoverage ? 'bg-amber-500/10 border-amber-500/30' : 'bg-muted border-border'
         }`}>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cobertura</span>
-            <span className={`text-sm font-bold ${isLowCoverage ? 'text-amber-700' : 'text-slate-800'}`}>{coverage}%</span>
-            <div className="w-20 bg-slate-200 rounded-full h-1.5">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cobertura</span>
+            <span className={`text-sm font-bold ${isLowCoverage ? 'text-amber-400' : 'text-foreground'}`}>{coverage}%</span>
+            <div className="w-20 bg-muted rounded-full h-1.5">
               <div
                 className={`h-1.5 rounded-full ${coverage >= 70 ? 'bg-green-500' : coverage >= 40 ? 'bg-yellow-500' : 'bg-amber-500'}`}
                 style={{ width: `${coverage}%` }}
@@ -115,7 +115,7 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
             </span>
           )}
           {isLowCoverage && (
-            <p className="text-xs text-amber-700 ml-auto">
+            <p className="text-xs text-amber-400 ml-auto">
               Datos insuficientes para diagnóstico definitivo — score y precio son orientativos.
             </p>
           )}
@@ -124,10 +124,10 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
 
       {/* Key metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border bg-white p-4">
+        <div className="rounded-xl border bg-card p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Zap className="h-4 w-4 text-slate-400" />
-            <span className="text-xs text-slate-500 font-medium">
+            <Zap className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground font-medium">
               {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority Score' : 'Opportunity Score'}
             </span>
           </div>
@@ -136,38 +136,38 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         </div>
 
         {ev.estimatedRevenueLostPerMonth != null && (
-          <div className="rounded-xl border bg-white p-4">
+          <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingDown className="h-4 w-4 text-slate-400" />
-              <span className="text-xs text-slate-500 font-medium">Pérdida mensual est.</span>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">Pérdida mensual est.</span>
             </div>
             <p className="text-2xl font-bold text-red-600">${ev.estimatedRevenueLostPerMonth.toLocaleString()}</p>
-            <p className="text-xs text-slate-400 mt-1">{ev.estimatedLeadsLostPerMonth ?? 0} leads/mes perdidos</p>
+            <p className="text-xs text-muted-foreground mt-1">{ev.estimatedLeadsLostPerMonth ?? 0} leads/mes perdidos</p>
           </div>
         )}
 
         {ev.estimatedProjectPriceMin != null && (
-          <div className="rounded-xl border bg-white p-4">
+          <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-4 w-4 text-slate-400" />
-              <span className="text-xs text-slate-500 font-medium">Valor del Proyecto</span>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">Valor del Proyecto</span>
             </div>
-            <p className="text-lg font-bold text-slate-900">
+            <p className="text-lg font-bold text-foreground">
               ${ev.estimatedProjectPriceMin.toLocaleString()} – ${(ev.estimatedProjectPriceMax ?? 0).toLocaleString()}
             </p>
-            {ev.priceLabel && <p className="text-xs text-slate-400 mt-1">{ev.priceLabel} · ROI: {ev.estimatedRoiPotential}×</p>}
-            {!ev.priceLabel && ev.estimatedRoiPotential != null && <p className="text-xs text-slate-400 mt-1">ROI estimado: {ev.estimatedRoiPotential}×</p>}
+            {ev.priceLabel && <p className="text-xs text-muted-foreground mt-1">{ev.priceLabel} · ROI: {ev.estimatedRoiPotential}×</p>}
+            {!ev.priceLabel && ev.estimatedRoiPotential != null && <p className="text-xs text-muted-foreground mt-1">ROI estimado: {ev.estimatedRoiPotential}×</p>}
           </div>
         )}
 
         {ev.implementationTimeEstimate != null && (
-          <div className="rounded-xl border bg-white p-4">
+          <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-4 w-4 text-slate-400" />
-              <span className="text-xs text-slate-500 font-medium">Implementación</span>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">Implementación</span>
             </div>
-            <p className="text-sm font-semibold text-slate-900">{ev.implementationTimeEstimate}</p>
-            <p className="text-xs text-slate-400 mt-1 capitalize">Dificultad: {ev.implementationDifficulty ?? '—'}</p>
+            <p className="text-sm font-semibold text-foreground">{ev.implementationTimeEstimate}</p>
+            <p className="text-xs text-muted-foreground mt-1 capitalize">Dificultad: {ev.implementationDifficulty ?? '—'}</p>
           </div>
         )}
       </div>
@@ -178,20 +178,20 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
           {ev.probablePainPoint != null && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-700">Diagnóstico</CardTitle>
+                <CardTitle className="text-sm text-foreground">Diagnóstico</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-slate-600 leading-relaxed">{ev.probablePainPoint}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{ev.probablePainPoint}</p>
               </CardContent>
             </Card>
           )}
           {ev.recommendedSolution != null && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-700">Solución Recomendada</CardTitle>
+                <CardTitle className="text-sm text-foreground">Solución Recomendada</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-slate-600 leading-relaxed">{ev.recommendedSolution}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{ev.recommendedSolution}</p>
               </CardContent>
             </Card>
           )}
@@ -202,19 +202,19 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       {ev.recommendedPackageSlug && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-slate-200 rounded px-1.5 py-0.5">A</span>
-            <span className="text-sm font-semibold text-slate-800">Paquetes Kronos Recomendados</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border border-border rounded px-1.5 py-0.5">A</span>
+            <span className="text-sm font-semibold text-foreground">Paquetes Kronos Recomendados</span>
           </div>
-          <Card className={`border-2 ${ev.packageConfidence === 'high' ? 'border-orange-200' : ev.packageConfidence === 'medium' ? 'border-yellow-200' : 'border-slate-200'}`}>
+          <Card className={`border-2 ${ev.packageConfidence === 'high' ? 'border-orange-500/30' : ev.packageConfidence === 'medium' ? 'border-yellow-500/30' : 'border-border'}`}>
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="text-base text-slate-900">{ev.recommendedPackageName}</CardTitle>
+                  <CardTitle className="text-base text-foreground">{ev.recommendedPackageName}</CardTitle>
                   {ev.packageConfidence && (
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full border mt-1 inline-block ${
-                      ev.packageConfidence === 'high' ? 'bg-green-50 text-green-700 border-green-200' :
-                      ev.packageConfidence === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                      'bg-slate-50 text-slate-500 border-slate-200'
+                      ev.packageConfidence === 'high' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      ev.packageConfidence === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
+                      'bg-muted text-muted-foreground border-border'
                     }`}>
                       Confianza {ev.packageConfidence === 'high' ? 'alta' : ev.packageConfidence === 'medium' ? 'media' : 'baja'}
                     </span>
@@ -222,27 +222,27 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
                 </div>
                 {ev.packagePriceMin !== null && ev.packagePriceMax !== null && (
                   <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900">
+                    <p className="text-sm font-bold text-foreground">
                       {ev.packagePriceMin === 0 ? 'Gratuito' : `$${ev.packagePriceMin.toLocaleString()} – $${ev.packagePriceMax.toLocaleString()}`}
                     </p>
-                    <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Rango preliminar sujeto a<br/>validación de alcance</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Rango preliminar sujeto a<br/>validación de alcance</p>
                   </div>
                 )}
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0">
               {ev.packageReason && (
-                <p className="text-sm text-slate-600 leading-relaxed">{ev.packageReason}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{ev.packageReason}</p>
               )}
               {(ev.packageEvidence?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {ev.packageEvidence!.map((e) => (
-                    <span key={e} className="text-xs bg-slate-100 text-slate-600 rounded px-2 py-0.5">{e}</span>
+                    <span key={e} className="text-xs bg-muted text-muted-foreground rounded px-2 py-0.5">{e}</span>
                   ))}
                 </div>
               )}
               {ev.packageTimelineMin !== null && ev.packageTimelineMax !== null && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Plazo preliminar: {ev.packageTimelineMin}–{ev.packageTimelineMax} semanas · Sujeto a validación técnica
                 </p>
               )}
@@ -251,25 +251,25 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
                   href="https://www.kronosdata.tech/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white px-3 py-1.5 text-xs font-medium hover:bg-slate-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary text-white px-3 py-1.5 text-xs font-medium hover:bg-blue-700 transition-colors"
                 >
                   Ver oferta de Kronos Data →
                 </a>
-                <span className="text-xs text-slate-400">Garantía de Optimización Operativa 30 días</span>
+                <span className="text-xs text-muted-foreground">Garantía de Optimización Operativa 30 días</span>
               </div>
             </CardContent>
           </Card>
           {ev.alternativePackageSlug && ev.alternativePackageName && (
-            <div className="rounded-lg border bg-slate-50 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+            <div className="rounded-lg border bg-muted px-4 py-3 flex items-center justify-between flex-wrap gap-2">
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Paquete alternativo</p>
-                <p className="text-sm font-medium text-slate-700">{ev.alternativePackageName}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Paquete alternativo</p>
+                <p className="text-sm font-medium text-foreground">{ev.alternativePackageName}</p>
               </div>
               <a
                 href="https://www.kronosdata.tech/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-slate-600 hover:text-slate-900 hover:underline"
+                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
               >
                 Ver detalles en kronosdata.tech →
               </a>
@@ -281,47 +281,47 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       {/* SECCIÓN B — Servicios Individuales Recomendados */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-slate-200 rounded px-1.5 py-0.5">B</span>
-          <span className="text-sm font-semibold text-slate-800">Servicios Individuales Recomendados</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border border-border rounded px-1.5 py-0.5">B</span>
+          <span className="text-sm font-semibold text-foreground">Servicios Individuales Recomendados</span>
           {ev.recommendedPackageSlug && (
-            <span className="text-xs text-slate-400">(componente prioritario del paquete)</span>
+            <span className="text-xs text-muted-foreground">(componente prioritario del paquete)</span>
           )}
         </div>
         <Card>
           <CardContent className="flex flex-col gap-3 pt-4">
             {ev.primaryService ? (
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Servicio prioritario</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Servicio prioritario</p>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-800">
+                  <span className="inline-flex items-center rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-sm font-semibold text-orange-400">
                     {ev.primaryService}
                   </span>
-                  <span className="text-xs text-slate-400">{ev.implementationTimeEstimate} · {ev.priceLabel ?? ''}</span>
+                  <span className="text-xs text-muted-foreground">{ev.implementationTimeEstimate} · {ev.priceLabel ?? ''}</span>
                 </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {ev.recommendedServices.map((s) => (
-                  <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">{s}</span>
+                  <span key={s} className="inline-flex items-center rounded-md border bg-muted px-3 py-1 text-sm font-medium text-foreground">{s}</span>
                 ))}
               </div>
             )}
             {(ev.complementaryServices?.length ?? 0) > 0 && (
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Complementarios</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Complementarios</p>
                 <div className="flex flex-wrap gap-2">
                   {ev.complementaryServices!.map((s) => (
-                    <span key={s} className="inline-flex items-center rounded-md border bg-slate-50 px-3 py-1 text-sm text-slate-700">{s}</span>
+                    <span key={s} className="inline-flex items-center rounded-md border bg-muted px-3 py-1 text-sm text-foreground">{s}</span>
                   ))}
                 </div>
               </div>
             )}
             {(ev.futureServices?.length ?? 0) > 0 && (
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Oportunidades futuras</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Oportunidades futuras</p>
                 <div className="flex flex-wrap gap-2">
                   {ev.futureServices!.map((s) => (
-                    <span key={s} className="inline-flex items-center rounded-md border border-dashed bg-slate-50 px-3 py-1 text-xs text-slate-500">{s}</span>
+                    <span key={s} className="inline-flex items-center rounded-md border border-dashed bg-muted px-3 py-1 text-xs text-muted-foreground">{s}</span>
                   ))}
                 </div>
               </div>
@@ -333,14 +333,14 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       {/* Category scores (legacy — hidden for v2 evals) */}
       {hasLegacyCategoryScores && <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-700">Scores por Categoría</CardTitle>
+          <CardTitle className="text-sm text-foreground">Scores por Categoría</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             {categoryScores.map((cs) => (
               <div key={cs.label}>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600">{cs.label}</span>
+                  <span className="text-muted-foreground">{cs.label}</span>
                   <span className={`font-semibold ${scoreColor(cs.value)}`}>{cs.value}</span>
                 </div>
                 <ScoreMeter score={cs.value} />
@@ -354,7 +354,7 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       <div>
         <button
           onClick={() => setShowProblems((v) => !v)}
-          className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           {showProblems ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           {ev.detectedProblems.length} problemas detectados
@@ -363,14 +363,14 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         {showProblems && (
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {ev.detectedProblems.length === 0 ? (
-              <p className="text-sm text-slate-400 col-span-2">Sin problemas confirmados con la evidencia disponible.</p>
+              <p className="text-sm text-muted-foreground col-span-2">Sin problemas confirmados con la evidencia disponible.</p>
             ) : (
               ev.detectedProblems.map((p) => (
                 <div key={p} className={`flex items-start gap-2 rounded-md border px-3 py-2 ${
-                  p.startsWith('(posible)') ? 'bg-yellow-50 border-yellow-100' : 'bg-red-50 border-red-100'
+                  p.startsWith('(posible)') ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-red-500/10 border-red-500/20'
                 }`}>
                   <XCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${p.startsWith('(posible)') ? 'text-yellow-500' : 'text-red-400'}`} />
-                  <span className={`text-xs ${p.startsWith('(posible)') ? 'text-yellow-800' : 'text-red-700'}`}>{p}</span>
+                  <span className={`text-xs ${p.startsWith('(posible)') ? 'text-yellow-400' : 'text-red-400'}`}>{p}</span>
                 </div>
               ))
             )}
@@ -380,7 +380,7 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
 
       {/* Signal summary — evidence-aware */}
       <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Señales evaluadas</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Señales evaluadas</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
           {SIGNAL_DEFINITIONS.map((s) => {
             const val = (ev as unknown as Record<string, boolean>)[s.key]
@@ -390,8 +390,8 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
 
             if (status === 'unknown') {
               return (
-                <div key={s.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-slate-300">
-                  <span className="h-3 w-3 shrink-0 rounded-full border border-slate-300 inline-block" />
+                <div key={s.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-muted-foreground">
+                  <span className="h-3 w-3 shrink-0 rounded-full border border-border inline-block" />
                   {s.label}
                 </div>
               )
@@ -402,8 +402,8 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
                 key={s.key}
                 className={`flex items-center gap-2 rounded px-2 py-1.5 text-xs ${
                   status === 'inferred'
-                    ? 'bg-yellow-50 text-yellow-700'
-                    : isGood ? 'text-slate-500' : 'bg-amber-50 text-amber-700'
+                    ? 'bg-yellow-500/10 text-yellow-400'
+                    : isGood ? 'text-muted-foreground' : 'bg-amber-500/10 text-amber-400'
                 }`}
               >
                 {status === 'inferred'
@@ -418,7 +418,7 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
           })}
         </div>
         {ev.signalEvidence && (
-          <p className="text-xs text-slate-300 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             ○ = no investigado · ~ = inferido · ✓ = confirmado positivo · ✗ = confirmado problema
           </p>
         )}
@@ -428,7 +428,7 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
       <div>
         <button
           onClick={loadHistory}
-          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           {showHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           Ver historial de evaluaciones
@@ -436,18 +436,18 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
         {showHistory && history.length > 0 && (
           <div className="mt-3 border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="text-left px-4 py-2 text-xs text-slate-500 font-medium">Fecha</th>
-                  <th className="text-center px-4 py-2 text-xs text-slate-500 font-medium">Score</th>
-                  <th className="px-4 py-2 text-xs text-slate-500 font-medium">Prioridad</th>
-                  <th className="text-left px-4 py-2 text-xs text-slate-500 font-medium">Por</th>
+                  <th className="text-left px-4 py-2 text-xs text-muted-foreground font-medium">Fecha</th>
+                  <th className="text-center px-4 py-2 text-xs text-muted-foreground font-medium">Score</th>
+                  <th className="px-4 py-2 text-xs text-muted-foreground font-medium">Prioridad</th>
+                  <th className="text-left px-4 py-2 text-xs text-muted-foreground font-medium">Por</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((h, i) => (
-                  <tr key={h.id} className={i % 2 === 0 ? '' : 'bg-slate-50'}>
-                    <td className="px-4 py-2 text-slate-600 text-xs">
+                  <tr key={h.id} className={i % 2 === 0 ? '' : 'bg-muted'}>
+                    <td className="px-4 py-2 text-muted-foreground text-xs">
                       {new Date(h.evaluatedAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' })}
                     </td>
                     <td className="px-4 py-2 text-center">
@@ -458,9 +458,9 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
                         <Badge variant={priorityVariant(h.priorityLevel)} className="text-xs">
                           {h.priorityLevel.toUpperCase()}
                         </Badge>
-                      ) : <span className="text-xs text-slate-400">—</span>}
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-4 py-2 text-xs text-slate-400">{h.evaluatedBy}</td>
+                    <td className="px-4 py-2 text-xs text-muted-foreground">{h.evaluatedBy}</td>
                   </tr>
                 ))}
               </tbody>
@@ -475,37 +475,37 @@ function EvaluationView({ ev }: { ev: Evaluation }) {
 // ─── v2 Prospect Signal Panel ─────────────────────────────────────────────────
 
 const COMMERCIAL_STATE_CONFIG: Record<string, { label: string; cls: string }> = {
-  OFFER_AUDIT:        { label: 'OFFER AUDIT',       cls: 'bg-blue-100 text-blue-700 border-blue-300' },
-  CONTACT_READY:      { label: 'CONTACT READY',     cls: 'bg-green-100 text-green-700 border-green-300' },
-  RESEARCH_REQUIRED:  { label: 'RESEARCH REQUIRED', cls: 'bg-amber-100 text-amber-700 border-amber-300' },
-  DISQUALIFIED:       { label: 'DISQUALIFIED',      cls: 'bg-slate-100 text-slate-500 border-slate-300' },
+  OFFER_AUDIT:        { label: 'OFFER AUDIT',       cls: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
+  CONTACT_READY:      { label: 'CONTACT READY',     cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  RESEARCH_REQUIRED:  { label: 'RESEARCH REQUIRED', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+  DISQUALIFIED:       { label: 'DISQUALIFIED',      cls: 'bg-muted text-muted-foreground border-border' },
 }
 
 const SALES_PRIORITY_CONFIG: Record<string, { label: string; cls: string }> = {
-  HOT:     { label: 'HOT 🔥',    cls: 'bg-red-100 text-red-700 border-red-300' },
-  HIGH:    { label: 'HIGH',      cls: 'bg-orange-100 text-orange-700 border-orange-300' },
-  MEDIUM:  { label: 'MEDIUM',    cls: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  LOW:     { label: 'LOW',       cls: 'bg-slate-100 text-slate-600 border-slate-300' },
-  REVIEW:  { label: 'REVIEW',    cls: 'bg-purple-100 text-purple-700 border-purple-300' },
-  DISCARD: { label: 'DISCARD',   cls: 'bg-slate-100 text-slate-400 border-slate-200' },
+  HOT:     { label: 'HOT 🔥',    cls: 'bg-red-500/10 text-red-400 border-red-500/30' },
+  HIGH:    { label: 'HIGH',      cls: 'bg-orange-500/10 text-orange-400 border-orange-500/30' },
+  MEDIUM:  { label: 'MEDIUM',    cls: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' },
+  LOW:     { label: 'LOW',       cls: 'bg-muted text-muted-foreground border-border' },
+  REVIEW:  { label: 'REVIEW',    cls: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
+  DISCARD: { label: 'DISCARD',   cls: 'bg-muted text-muted-foreground border-border' },
 }
 
 const EVIDENCE_TIER_CONFIG: Record<string, { label: string; cls: string }> = {
-  HIGH:   { label: 'Evidencia ALTA',   cls: 'bg-green-100 text-green-700 border-green-300' },
-  MEDIUM: { label: 'Evidencia MEDIA',  cls: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  LOW:    { label: 'Evidencia BAJA',   cls: 'bg-amber-100 text-amber-700 border-amber-300' },
+  HIGH:   { label: 'Evidencia ALTA',   cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  MEDIUM: { label: 'Evidencia MEDIA',  cls: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' },
+  LOW:    { label: 'Evidencia BAJA',   cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
 }
 
 function ScoreBar({ label, value }: { label: string; value: number | null }) {
   const v = value ?? 0
-  const color = v >= 70 ? 'bg-green-500' : v >= 50 ? 'bg-blue-500' : v >= 30 ? 'bg-yellow-400' : 'bg-slate-300'
+  const color = v >= 70 ? 'bg-green-500' : v >= 50 ? 'bg-blue-500' : v >= 30 ? 'bg-yellow-400' : 'bg-muted'
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-slate-600">{label}</span>
-        <span className={`font-semibold ${v >= 50 ? 'text-slate-900' : 'text-slate-400'}`}>{value ?? '—'}</span>
+        <span className="text-muted-foreground">{label}</span>
+        <span className={`font-semibold ${v >= 50 ? 'text-foreground' : 'text-muted-foreground'}`}>{value ?? '—'}</span>
       </div>
-      <div className="w-full bg-slate-100 rounded-full h-1.5">
+      <div className="w-full bg-muted rounded-full h-1.5">
         <div className={`${color} h-1.5 rounded-full transition-all`} style={{ width: `${v}%` }} />
       </div>
     </div>
@@ -522,8 +522,8 @@ function ProspectSignalPanel({ company }: { company: CompanyDetail }) {
 
   if (!hasV2Scores && !hasLegacyState) {
     return (
-      <div className="rounded-xl border-2 border-dashed border-slate-200 px-6 py-8 text-center text-slate-400 text-sm">
-        <BarChart2 className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+      <div className="rounded-xl border-2 border-dashed border-border px-6 py-8 text-center text-muted-foreground text-sm">
+        <BarChart2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
         <p>Señales no disponibles.</p>
         <p className="text-xs mt-1">Reprocesa la empresa para calcular el Prospect Signal Engine.</p>
       </div>
@@ -544,7 +544,7 @@ function ProspectSignalPanel({ company }: { company: CompanyDetail }) {
         )}
         {company.salesOpportunityScore !== null && (
           <div className="ml-auto text-right">
-            <p className="text-xs text-slate-400">{v2State ? 'Audit Priority' : 'Sales Opp.'} Score</p>
+            <p className="text-xs text-muted-foreground">{v2State ? 'Audit Priority' : 'Sales Opp.'} Score</p>
             <p className={`text-3xl font-bold ${scoreColor(company.salesOpportunityScore)}`}>{company.salesOpportunityScore}</p>
           </div>
         )}
@@ -561,19 +561,19 @@ function ProspectSignalPanel({ company }: { company: CompanyDetail }) {
 
       {/* Audit hook */}
       {company.qualificationReason && (
-        <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3">
-          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Gancho de auditoría</p>
-          <p className="text-sm text-blue-900 leading-relaxed">{company.qualificationReason}</p>
+        <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-4 py-3">
+          <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-1">Gancho de auditoría</p>
+          <p className="text-sm text-foreground leading-relaxed">{company.qualificationReason}</p>
         </div>
       )}
 
       {/* Confirmed symptoms */}
       {company.whyContact.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Síntomas confirmados</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Síntomas confirmados</p>
           <div className="flex flex-wrap gap-1.5">
             {company.whyContact.map((s, i) => (
-              <span key={i} className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded px-2 py-0.5">{s}</span>
+              <span key={i} className="text-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded px-2 py-0.5">{s}</span>
             ))}
           </div>
         </div>
@@ -582,10 +582,10 @@ function ProspectSignalPanel({ company }: { company: CompanyDetail }) {
       {/* Audit questions */}
       {company.qualificationQuestions.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Preguntas de auditoría</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Preguntas de auditoría</p>
           <ol className="list-decimal list-inside space-y-1">
             {company.qualificationQuestions.map((q, i) => (
-              <li key={i} className="text-sm text-slate-600">{q}</li>
+              <li key={i} className="text-sm text-muted-foreground">{q}</li>
             ))}
           </ol>
         </div>
@@ -593,17 +593,17 @@ function ProspectSignalPanel({ company }: { company: CompanyDetail }) {
 
       {/* Disqualification reason */}
       {company.disqualificationReason && (
-        <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3">
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3">
           <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Por qué no califica</p>
-          <p className="text-sm text-red-800 leading-relaxed">{company.disqualificationReason}</p>
+          <p className="text-sm text-red-400 leading-relaxed">{company.disqualificationReason}</p>
         </div>
       )}
 
       {/* Next action */}
       {company.recommendedFirstAction && (
-        <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Primera acción recomendada</p>
-          <p className="text-sm text-slate-700 leading-relaxed">{company.recommendedFirstAction}</p>
+        <div className="rounded-lg bg-muted border border-border px-4 py-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Primera acción recomendada</p>
+          <p className="text-sm text-foreground leading-relaxed">{company.recommendedFirstAction}</p>
         </div>
       )}
     </div>
@@ -658,7 +658,7 @@ function PipelinePanel({
     <div className="flex flex-col gap-6">
       {/* Stage selector */}
       <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Etapa del pipeline</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Etapa del pipeline</p>
         <div className="flex flex-wrap gap-2">
           {PIPELINE_STAGES.map((s, i) => (
             <button
@@ -669,8 +669,8 @@ function PipelinePanel({
                 stage === s.value
                   ? s.color + ' border-current ring-2 ring-offset-1 ring-slate-400'
                   : i < currentIdx
-                    ? 'bg-slate-50 text-slate-400 border-slate-200'
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                    ? 'bg-muted text-muted-foreground border-border'
+                    : 'bg-card text-muted-foreground border-border hover:border-muted-foreground'
               }`}
             >
               {i < currentIdx && <CheckCircle2 className="h-3 w-3 text-green-400" />}
@@ -724,7 +724,7 @@ function PipelinePanel({
       {/* Composite scores in pipeline context */}
       <Separator />
       <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Scoring compuesto</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Scoring compuesto</p>
         <CompositeScorePanel company={company} />
       </div>
     </div>
@@ -820,9 +820,9 @@ function AuditPanel({ companyId, industry }: { companyId: string; industry: stri
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-700">
+        <p className="text-sm font-medium text-foreground">
           Auditorías gratuitas
-          <span className="ml-2 text-slate-400 font-normal">({audits.length})</span>
+          <span className="ml-2 text-muted-foreground font-normal">({audits.length})</span>
         </p>
         <Button size="sm" variant="outline" onClick={handleCreate} disabled={creating}>
           {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
@@ -832,11 +832,11 @@ function AuditPanel({ companyId, industry }: { companyId: string; industry: stri
 
       {loading ? (
         <div className="flex justify-center p-8">
-          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : audits.length === 0 ? (
-        <div className="text-center py-10 text-slate-400 text-sm rounded-xl border-2 border-dashed border-slate-200">
-          <ClipboardList className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+        <div className="text-center py-10 text-muted-foreground text-sm rounded-xl border-2 border-dashed border-border">
+          <ClipboardList className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p>Sin auditorías todavía.</p>
           <p className="text-xs mt-1">Crea una para iniciar el proceso de diagnóstico estructurado.</p>
         </div>
@@ -850,8 +850,8 @@ function AuditPanel({ companyId, industry }: { companyId: string; industry: stri
                 onClick={() => selectAudit(a)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
                   selected?.id === a.id
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-card text-muted-foreground border-border hover:border-muted-foreground'
                 }`}
               >
                 {new Date(a.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
@@ -864,7 +864,7 @@ function AuditPanel({ companyId, industry }: { companyId: string; industry: stri
           </div>
 
           {selected && (
-            <div className="flex flex-col gap-5 rounded-xl border bg-white p-5">
+            <div className="flex flex-col gap-5 rounded-xl border bg-card p-5">
               {/* Status selector */}
               <div className="flex items-center gap-3 flex-wrap">
                 <Label className="text-xs shrink-0">Estado</Label>
@@ -878,20 +878,20 @@ function AuditPanel({ companyId, industry }: { companyId: string; industry: stri
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-400 ml-auto">Sector: {selected.sector ?? '—'}</p>
+                <p className="text-xs text-muted-foreground ml-auto">Sector: {selected.sector ?? '—'}</p>
               </div>
 
               {/* Checklist */}
               {checklist && checklist.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Checklist de auditoría</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Checklist de auditoría</p>
                   <div className="flex flex-col gap-1.5">
                     {checklist.map((item) => {
                       const statusConfig = {
-                        pending:        { cls: 'bg-slate-50 border-slate-200 text-slate-500', label: '○' },
-                        confirmed:      { cls: 'bg-green-50 border-green-200 text-green-700', label: '✓' },
-                        flagged:        { cls: 'bg-red-50 border-red-200 text-red-700',       label: '✗' },
-                        not_applicable: { cls: 'bg-slate-50 border-slate-200 text-slate-300', label: 'N/A' },
+                        pending:        { cls: 'bg-muted border-border text-muted-foreground', label: '○' },
+                        confirmed:      { cls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', label: '✓' },
+                        flagged:        { cls: 'bg-red-500/10 border-red-500/30 text-red-400',       label: '✗' },
+                        not_applicable: { cls: 'bg-muted border-border text-muted-foreground', label: 'N/A' },
                       }
                       const cfg = statusConfig[item.status as keyof typeof statusConfig] ?? statusConfig.pending
                       return (
@@ -906,7 +906,7 @@ function AuditPanel({ companyId, industry }: { companyId: string; industry: stri
                       )
                     })}
                   </div>
-                  <p className="text-xs text-slate-300 mt-1.5">Haz clic para cambiar el estado: ○ → ✓ → ✗ → N/A</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">Haz clic para cambiar el estado: ○ → ✓ → ✗ → N/A</p>
                 </div>
               )}
 
@@ -1042,40 +1042,67 @@ function ApproachPanel({ companyId, whatsapp }: { companyId: string; whatsapp?: 
   }
 
   return (
-    <Card className="mb-4 border-2 border-blue-500/30">
+    <Card className="mb-4 glass-panel">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Target className="h-4 w-4 text-blue-400" /> Cómo acercarnos
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Dolor detectado</p>
-          <p className="text-sm font-medium">{data.painDetected}</p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted px-3 py-2.5">
-          <div className="flex-1 min-w-40">
-            <p className="text-xs text-muted-foreground">Paquete de entrada sugerido</p>
-            <p className="text-sm font-semibold">{pkg.name}</p>
+      <CardContent className="space-y-5">
+        {/* 1. Score */}
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-blue-500/40 bg-blue-500/10">
+            <span className="text-xl font-bold text-blue-400">{data.score ?? '—'}</span>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Instalación</p>
-            <p className="text-sm font-semibold">${pkg.setupPriceUSD[0]}–${pkg.setupPriceUSD[1]}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Mantenimiento</p>
-            <p className="text-sm font-semibold">${pkg.monthlyMaintenanceUSD}/mes</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Canal recomendado</p>
-            <p className="text-sm font-semibold">{data.channelLabel}</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">1. Score</p>
+            <p className="text-sm text-muted-foreground">Audit Priority Score de esta empresa</p>
           </div>
         </div>
 
+        {/* 2. Deficiencias */}
         <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Mensaje listo para enviar</p>
-          <p className="text-sm whitespace-pre-wrap leading-relaxed rounded-lg border bg-background px-3 py-2.5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">2. Deficiencias detectadas</p>
+          {data.deficiencias && data.deficiencias.length > 0 ? (
+            <ul className="space-y-1">
+              {data.deficiencias.map((d, i) => (
+                <li key={i} className="text-sm flex items-start gap-2">
+                  <span className="text-amber-400 mt-0.5">•</span> {d}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm font-medium">{data.painDetected}</p>
+          )}
+        </div>
+
+        {/* 3. Solución */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">3. Solución sugerida</p>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted px-3 py-2.5">
+            <div className="flex-1 min-w-40">
+              <p className="text-xs text-muted-foreground">Paquete de entrada</p>
+              <p className="text-sm font-semibold">{pkg.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Instalación</p>
+              <p className="text-sm font-semibold">${pkg.setupPriceUSD[0]}–${pkg.setupPriceUSD[1]}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Mantenimiento</p>
+              <p className="text-sm font-semibold">${pkg.monthlyMaintenanceUSD}/mes</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Canal recomendado</p>
+              <p className="text-sm font-semibold">{data.channelLabel}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Mensaje */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">4. Mensaje listo para enviar</p>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed rounded-lg border border-blue-500/15 bg-background px-3 py-2.5">
             {data.message}
           </p>
         </div>
@@ -1291,49 +1318,49 @@ function OutreachPanel({
     <div className="flex flex-col gap-6">
       {/* ── No-contact state notice ── */}
       {!canContact && (
-        <div className="rounded-xl border-2 border-slate-200 bg-slate-50 px-5 py-4">
-          <p className="text-sm font-semibold text-slate-600">
+        <div className="rounded-xl border-2 border-border bg-muted px-5 py-4">
+          <p className="text-sm font-semibold text-muted-foreground">
             {commercialState === 'DISQUALIFIED'
               ? 'Prospect descalificado — no se recomienda outreach en este momento.'
               : 'Datos de contacto insuficientes — investigar antes de iniciar contacto.'}
           </p>
           {company.disqualificationReason && (
-            <p className="mt-1 text-xs text-slate-500">{company.disqualificationReason}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{company.disqualificationReason}</p>
           )}
         </div>
       )}
 
       {/* ── Suggested Template ── */}
       {canContact && (
-        <div className="rounded-xl border-2 border-amber-200 bg-amber-50/40">
-          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-amber-100">
+        <div className="rounded-xl border-2 border-amber-500/30 bg-amber-500/10">
+          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-amber-500/10">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400 inline-block" />
-              <span className="text-sm font-semibold text-amber-900">Plantilla Sugerida</span>
+              <span className="text-sm font-semibold text-amber-400">Plantilla Sugerida</span>
               {commercialState && (
                 <span className={`text-xs rounded-full px-2 py-0.5 font-medium border ${
                   commercialState === 'OFFER_AUDIT'
-                    ? 'bg-blue-100 text-blue-700 border-blue-200'
-                    : 'bg-green-100 text-green-700 border-green-200'
+                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                 }`}>
                   {commercialState === 'OFFER_AUDIT' ? 'Invitación a auditoría' : 'Contacto directo'}
                 </span>
               )}
             </div>
-            <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-xs text-amber-700 font-medium shrink-0">
+            <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-xs text-amber-400 font-medium shrink-0">
               No enviada
             </span>
           </div>
           {/* Contact availability */}
           <div className="px-4 pt-3 pb-0 flex flex-wrap gap-3 text-xs">
-            <span className="font-semibold text-slate-500">Contactos localizados:</span>
+            <span className="font-semibold text-muted-foreground">Contactos localizados:</span>
             {whatsapp
-              ? <span className="text-green-700 font-medium">💬 WhatsApp {whatsapp}</span>
-              : <span className="text-slate-400">💬 Sin WhatsApp</span>
+              ? <span className="text-emerald-400 font-medium">💬 WhatsApp {whatsapp}</span>
+              : <span className="text-muted-foreground">💬 Sin WhatsApp</span>
             }
             {contactName
-              ? <span className="text-green-700 font-medium">👤 {contactName}</span>
-              : <span className="text-slate-400">👤 Sin contacto identificado</span>
+              ? <span className="text-emerald-400 font-medium">👤 {contactName}</span>
+              : <span className="text-muted-foreground">👤 Sin contacto identificado</span>
             }
           </div>
 
@@ -1343,7 +1370,7 @@ function OutreachPanel({
                 key={ch}
                 onClick={() => { setTemplateChannel(ch); setEditingTemplate(false) }}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  templateChannel === ch ? 'bg-amber-900 text-white' : 'text-amber-800 hover:bg-amber-100'
+                  templateChannel === ch ? 'bg-amber-900 text-white' : 'text-amber-400 hover:bg-amber-500/10'
                 }`}
               >
                 {ch === 'whatsapp' ? '💬' : ch === 'email' ? '📧' : '💼'}{' '}
@@ -1357,10 +1384,10 @@ function OutreachPanel({
               <Textarea
                 value={editedTemplate}
                 onChange={(e) => setEditedTemplate(e.target.value)}
-                className="min-h-[160px] text-sm bg-white border-amber-200 font-mono"
+                className="min-h-[160px] text-sm bg-card border-amber-500/30 font-mono"
               />
             ) : (
-              <div className="rounded-lg bg-white border border-amber-100 px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+              <div className="rounded-lg bg-card border border-amber-500/10 px-4 py-3 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                 {templateText}
               </div>
             )}
@@ -1369,14 +1396,14 @@ function OutreachPanel({
           <div className="flex flex-wrap items-center gap-2 px-4 pb-4">
             <Button
               size="sm" variant="outline"
-              className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+              className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 h-8 text-xs"
               onClick={handleCopy}
             >
               {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
               {copied ? 'Copiado' : 'Copiar'}
             </Button>
             {templateChannel === 'whatsapp' && whatsapp && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs" asChild>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs" asChild>
                 <a href={buildWhatsAppUrl(whatsapp, templateText)} target="_blank" rel="noopener noreferrer">
                   <MessageSquare className="h-3 w-3" /> Abrir WhatsApp
                 </a>
@@ -1385,7 +1412,7 @@ function OutreachPanel({
             {editingTemplate ? (
               <Button
                 size="sm" variant="outline"
-                className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+                className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 h-8 text-xs"
                 onClick={() => setEditingTemplate(false)}
               >
                 <X className="h-3 w-3" /> Cancelar
@@ -1393,7 +1420,7 @@ function OutreachPanel({
             ) : (
               <Button
                 size="sm" variant="outline"
-                className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+                className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 h-8 text-xs"
                 onClick={handleEdit}
               >
                 <Pencil className="h-3 w-3" /> Editar
@@ -1401,7 +1428,7 @@ function OutreachPanel({
             )}
             <Button
               size="sm" variant="outline"
-              className="border-amber-200 text-amber-800 hover:bg-amber-100 h-8 text-xs"
+              className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 h-8 text-xs"
               onClick={handleNextVersion}
             >
               <RefreshCw className="h-3 w-3" /> Nueva versión
@@ -1419,9 +1446,9 @@ function OutreachPanel({
 
       {/* ── History header ── */}
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-700">
+        <p className="text-sm font-medium text-foreground">
           Historial de contactos
-          <span className="ml-2 text-slate-400 font-normal">({records.length})</span>
+          <span className="ml-2 text-muted-foreground font-normal">({records.length})</span>
         </p>
         <Button size="sm" variant="outline" onClick={openModalBlank}>
           <Plus className="h-3 w-3" /> Registrar contacto
@@ -1431,11 +1458,11 @@ function OutreachPanel({
       {/* ── History list ── */}
       {loading ? (
         <div className="flex justify-center p-8">
-          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : records.length === 0 ? (
-        <div className="text-center py-10 text-slate-400 text-sm rounded-xl border-2 border-dashed border-slate-200">
-          <MessageSquare className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+        <div className="text-center py-10 text-muted-foreground text-sm rounded-xl border-2 border-dashed border-border">
+          <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           Sin contactos registrados todavía.
         </div>
       ) : (
@@ -1445,36 +1472,36 @@ function OutreachPanel({
             const PREVIEW = 120
             const needsTrunc = (r.messageSent?.length ?? 0) > PREVIEW
             return (
-              <div key={r.id} className="rounded-xl border bg-white shadow-sm overflow-hidden">
+              <div key={r.id} className="rounded-xl border bg-card shadow-sm overflow-hidden">
                 <div className="flex">
                   <div className={`w-1 shrink-0 ${r.responseReceived ? 'bg-blue-400' : 'bg-green-400'}`} />
                   <div className="flex-1 p-4">
                     <div className="flex items-center justify-between mb-2 flex-wrap gap-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-base">{channelIcon[r.channel] ?? '🔗'}</span>
-                        <span className="font-semibold text-sm capitalize text-slate-800">{r.channel}</span>
-                        <span className="text-xs text-slate-400">· #{r.sequenceNumber}</span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-xs text-green-700 font-medium">
+                        <span className="font-semibold text-sm capitalize text-foreground">{r.channel}</span>
+                        <span className="text-xs text-muted-foreground">· #{r.sequenceNumber}</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-xs text-emerald-400 font-medium">
                           <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Enviado
                         </span>
                         {r.responseReceived ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs text-blue-700 font-medium">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 text-xs text-blue-400 font-medium">
                             <span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Respondió
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs text-slate-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-slate-300" /> Sin respuesta
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                            <span className="h-1.5 w-1.5 rounded-full bg-muted" /> Sin respuesta
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-slate-400 shrink-0">
+                      <span className="text-xs text-muted-foreground shrink-0">
                         {new Date(r.sentAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' })}
                       </span>
                     </div>
 
                     {r.messageSent && (
                       <div className="mb-2">
-                        <p className="text-sm text-slate-600 bg-slate-50 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-sm text-muted-foreground bg-muted rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">
                           {isExpanded || !needsTrunc
                             ? r.messageSent
                             : `${r.messageSent.slice(0, PREVIEW)}…`}
@@ -1482,7 +1509,7 @@ function OutreachPanel({
                         {needsTrunc && (
                           <button
                             onClick={() => toggleExpand(r.id)}
-                            className="flex items-center gap-1 mt-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                            className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground hover:text-muted-foreground transition-colors"
                           >
                             {isExpanded
                               ? <><ChevronUp className="h-3 w-3" /> Ocultar mensaje</>
@@ -1493,12 +1520,12 @@ function OutreachPanel({
                     )}
 
                     {r.responseType && (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Respuesta: <span className="font-medium capitalize">{r.responseType.replace(/_/g, ' ')}</span>
                       </p>
                     )}
                     {r.responseNotes && (
-                      <p className="text-xs text-slate-400 mt-0.5 italic">"{r.responseNotes}"</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 italic">"{r.responseNotes}"</p>
                     )}
                   </div>
                 </div>
@@ -1820,7 +1847,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center p-16 text-slate-400">
+    <div className="flex items-center justify-center p-16 text-muted-foreground">
       <Loader2 className="h-6 w-6 animate-spin" />
     </div>
   )
@@ -1851,7 +1878,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           </Button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-slate-900">{company.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{company.name}</h1>
               {company.latestEvaluatedAt && (
                 <Badge variant={
                   company.commercialState === 'OFFER_AUDIT' ? 'high' :
@@ -1865,12 +1892,12 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               {company.industry} · {company.city ? `${company.city}, ` : ''}{company.country.toUpperCase()}
               {company.leadSource && ` · Fuente: ${company.leadSource.replace(/_/g, ' ')}`}
             </p>
-            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-              {company.website && <a href={company.website} target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 underline truncate max-w-[200px]">{company.website}</a>}
+            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+              {company.website && <a href={company.website} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground underline truncate max-w-[200px]">{company.website}</a>}
               {company.whatsapp && <span>📱 {company.whatsapp}</span>}
               {company.instagram && <span>📷 {company.instagram}</span>}
             </div>
@@ -1892,7 +1919,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           <Button variant="outline" size="sm" asChild>
             <Link href={`/companies/${id}/edit`}><Edit className="h-4 w-4" /> Editar</Link>
           </Button>
-          <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteOpen(true)}>
+          <Button variant="outline" size="sm" className="text-red-400 hover:bg-red-500/10" onClick={() => setDeleteOpen(true)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -1900,9 +1927,9 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Signal summary bar */}
       {(company.commercialState || company.salesPriority || company.salesOpportunityScore !== null) && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-slate-50 px-4 py-3">
-          <Target className="h-4 w-4 text-slate-400" />
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-muted px-4 py-3">
+          <Target className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             {company.commercialState && COMMERCIAL_STATE_CONFIG[company.commercialState] ? 'Prospect Signal Engine v2' : 'Scoring compuesto'}
           </span>
           {company.commercialState && COMMERCIAL_STATE_CONFIG[company.commercialState] ? (
@@ -1910,13 +1937,13 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
               {COMMERCIAL_STATE_CONFIG[company.commercialState].label}
             </span>
           ) : company.salesPriority ? (
-            <span className={`text-xs font-bold border rounded-full px-2.5 py-0.5 ${SALES_PRIORITY_CONFIG[company.salesPriority]?.cls ?? 'bg-slate-100 text-slate-500'}`}>
+            <span className={`text-xs font-bold border rounded-full px-2.5 py-0.5 ${SALES_PRIORITY_CONFIG[company.salesPriority]?.cls ?? 'bg-muted text-muted-foreground'}`}>
               {SALES_PRIORITY_CONFIG[company.salesPriority]?.label ?? company.salesPriority}
             </span>
           ) : null}
           {company.salesOpportunityScore !== null && (
-            <span className="text-xs text-slate-400 ml-auto">
-              {company.commercialState && COMMERCIAL_STATE_CONFIG[company.commercialState] ? 'Audit Priority' : 'Sales Opp.'}: <strong className="text-slate-700">{company.salesOpportunityScore}</strong>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {company.commercialState && COMMERCIAL_STATE_CONFIG[company.commercialState] ? 'Audit Priority' : 'Sales Opp.'}: <strong className="text-foreground">{company.salesOpportunityScore}</strong>
             </span>
           )}
         </div>
@@ -1939,10 +1966,10 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
             <EvaluationView ev={company.latestEvaluation} />
           ) : (
             <div className="flex flex-col items-center gap-4 py-16 text-center">
-              <Zap className="h-10 w-10 text-slate-200" />
+              <Zap className="h-10 w-10 text-muted-foreground" />
               <div>
-                <p className="font-medium text-slate-700">Sin evaluación</p>
-                <p className="text-sm text-slate-400 mt-1">Esta empresa aún no ha sido evaluada.</p>
+                <p className="font-medium text-foreground">Sin evaluación</p>
+                <p className="text-sm text-muted-foreground mt-1">Esta empresa aún no ha sido evaluada.</p>
               </div>
               <Button size="sm" asChild>
                 <Link href={`/companies/${id}/edit`}>Ir a Editar y Evaluar</Link>

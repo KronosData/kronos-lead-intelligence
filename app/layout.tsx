@@ -14,8 +14,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={geist.variable}>
       <body className="bg-background text-foreground antialiased">
+        <div
+          className="bg-dot-grid pointer-events-none fixed inset-0 z-0"
+          style={{
+            WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
+            maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)',
+          }}
+        />
         <Sidebar />
-        <main className="ml-56 min-h-screen">{children}</main>
+        <main className="relative z-10 ml-56 min-h-screen">{children}</main>
       </body>
     </html>
   )

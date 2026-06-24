@@ -64,6 +64,8 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
 
     return ok({
       available: true,
+      score: company.salesOpportunityScore,
+      deficiencias: symptoms.map((s) => s.label),
       painDetected: pkg.painDetected,
       package: {
         slug: pkg.slug,
