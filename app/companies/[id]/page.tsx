@@ -54,15 +54,15 @@ function OpportunityScoreCard({ ev, approach }: { ev: Evaluation | null; approac
   return (
     <Card className="mb-4 glass-panel">
       <CardContent className="p-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <Zap className="h-4 w-4 text-blue-400 shrink-0" />
-          <div>
+          <div className="shrink-0">
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-none">
               {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority' : 'Opportunity Score'}
             </p>
             <p className={`text-2xl font-bold leading-tight ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
           </div>
-          <div className="w-20"><ScoreMeter score={ev.opportunityScore ?? 0} /></div>
+          <div className="flex-1 max-w-xs"><ScoreMeter score={ev.opportunityScore ?? 0} /></div>
         </div>
 
         <div className="h-8 w-px bg-blue-500/15 shrink-0" />
