@@ -53,37 +53,41 @@ function OpportunityScoreCard({ ev, approach }: { ev: Evaluation | null; approac
 
   return (
     <Card className="mb-4 glass-panel">
-      <CardContent className="p-5 flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <Zap className="h-5 w-5 text-blue-400 shrink-0" />
-          <div className="flex-1">
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-              {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority Score' : 'Opportunity Score'}
-            </span>
-            <div className="flex items-center gap-4">
-              <p className={`text-4xl font-bold ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
-              <div className="flex-1"><ScoreMeter score={ev.opportunityScore ?? 0} /></div>
-            </div>
+      <CardContent className="p-4 flex items-center gap-5 overflow-x-auto">
+        <div className="flex items-center gap-2 shrink-0">
+          <Zap className="h-4 w-4 text-blue-400" />
+          <div>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-none">
+              {ev.evaluationSource?.endsWith('_v2') ? 'Audit Priority' : 'Opportunity Score'}
+            </p>
+            <p className={`text-2xl font-bold leading-tight ${scoreColor(ev.opportunityScore ?? 0)}`}>{ev.opportunityScore ?? '—'}</p>
           </div>
+          <div className="w-16"><ScoreMeter score={ev.opportunityScore ?? 0} /></div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 border-t border-blue-500/15 pt-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Pérdida mensual est.</p>
-            <p className="text-lg font-bold text-red-400">
-              {ev.estimatedRevenueLostPerMonth != null ? `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}` : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Inversión (paquete sugerido)</p>
-            <p className="text-lg font-bold text-foreground">
-              {pkg ? `$${pkg.setupPriceUSD[0]}–$${pkg.setupPriceUSD[1]} + $${pkg.monthlyMaintenanceUSD}/mes` : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Tiempo de implementación</p>
-            <p className="text-lg font-bold text-foreground">{pkg?.implementationTime ?? '—'}</p>
-          </div>
+        <div className="h-8 w-px bg-blue-500/15 shrink-0" />
+
+        <div className="shrink-0">
+          <p className="text-[10px] text-muted-foreground leading-none">Pérdida mensual est.</p>
+          <p className="text-sm font-bold text-red-400 leading-tight">
+            {ev.estimatedRevenueLostPerMonth != null ? `$${ev.estimatedRevenueLostPerMonth.toLocaleString()}` : '—'}
+          </p>
+        </div>
+
+        <div className="h-8 w-px bg-blue-500/15 shrink-0" />
+
+        <div className="shrink-0">
+          <p className="text-[10px] text-muted-foreground leading-none">Inversión (paquete sugerido)</p>
+          <p className="text-sm font-bold text-foreground leading-tight">
+            {pkg ? `$${pkg.setupPriceUSD[0]}–$${pkg.setupPriceUSD[1]} + $${pkg.monthlyMaintenanceUSD}/mes` : '—'}
+          </p>
+        </div>
+
+        <div className="h-8 w-px bg-blue-500/15 shrink-0" />
+
+        <div className="shrink-0">
+          <p className="text-[10px] text-muted-foreground leading-none">Tiempo de implementación</p>
+          <p className="text-sm font-bold text-foreground leading-tight">{pkg?.implementationTime ?? '—'}</p>
         </div>
       </CardContent>
     </Card>
