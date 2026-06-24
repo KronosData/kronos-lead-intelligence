@@ -69,20 +69,20 @@ export const COMPANY_STATUSES = [
 // ─── CRM Pipeline stages (14-stage funnel) ────────────────────────────────────
 
 export const PIPELINE_STAGES = [
-  { value: 'discovered',          label: 'Descubierta',           color: 'bg-slate-100 text-slate-600' },
-  { value: 'evaluated',           label: 'Evaluada',              color: 'bg-blue-100 text-blue-700' },
-  { value: 'manual_review',       label: 'Revisión manual',       color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'approved_for_contact',label: 'Aprobada para contacto',color: 'bg-purple-100 text-purple-700' },
-  { value: 'contacted',           label: 'Contactada',            color: 'bg-indigo-100 text-indigo-700' },
-  { value: 'responded',           label: 'Respondió',             color: 'bg-cyan-100 text-cyan-700' },
-  { value: 'audit_scheduled',     label: 'Auditoría agendada',    color: 'bg-teal-100 text-teal-700' },
-  { value: 'audit_completed',     label: 'Auditoría realizada',   color: 'bg-emerald-100 text-emerald-700' },
-  { value: 'proposal_sent',       label: 'Propuesta enviada',     color: 'bg-orange-100 text-orange-700' },
-  { value: 'negotiating',         label: 'Negociando',            color: 'bg-amber-100 text-amber-700' },
-  { value: 'won',                 label: 'Ganada',                color: 'bg-green-100 text-green-700' },
-  { value: 'lost',                label: 'Perdida',               color: 'bg-red-100 text-red-700' },
-  { value: 'nurturing',           label: 'Nurturing',             color: 'bg-pink-100 text-pink-700' },
-  { value: 'discarded',           label: 'Descartada',            color: 'bg-slate-100 text-slate-400' },
+  { value: 'discovered',          label: 'Descubierta',           color: 'bg-muted text-muted-foreground' },
+  { value: 'evaluated',           label: 'Evaluada',              color: 'bg-blue-500/10 text-blue-400' },
+  { value: 'manual_review',       label: 'Revisión manual',       color: 'bg-yellow-500/10 text-yellow-400' },
+  { value: 'approved_for_contact',label: 'Aprobada para contacto',color: 'bg-purple-500/10 text-purple-400' },
+  { value: 'contacted',           label: 'Contactada',            color: 'bg-indigo-500/10 text-indigo-400' },
+  { value: 'responded',           label: 'Respondió',             color: 'bg-cyan-500/10 text-cyan-400' },
+  { value: 'audit_scheduled',     label: 'Auditoría agendada',    color: 'bg-teal-500/10 text-teal-400' },
+  { value: 'audit_completed',     label: 'Auditoría realizada',   color: 'bg-emerald-500/10 text-emerald-400' },
+  { value: 'proposal_sent',       label: 'Propuesta enviada',     color: 'bg-orange-500/10 text-orange-400' },
+  { value: 'negotiating',         label: 'Negociando',            color: 'bg-amber-500/10 text-amber-400' },
+  { value: 'won',                 label: 'Ganada',                color: 'bg-green-500/10 text-green-400' },
+  { value: 'lost',                label: 'Perdida',               color: 'bg-red-500/10 text-red-400' },
+  { value: 'nurturing',           label: 'Nurturing',             color: 'bg-pink-500/10 text-pink-400' },
+  { value: 'discarded',           label: 'Descartada',            color: 'bg-muted text-muted-foreground' },
 ]
 
 // ─── Contact statuses (legacy, kept for outreach history) ─────────────────────

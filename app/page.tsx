@@ -30,18 +30,18 @@ function priorityVariant(p: string): 'hot' | 'high' | 'medium' | 'low' | 'second
 }
 
 function scoreColor(score: number) {
-  if (score >= 80) return 'text-red-600 font-bold'
-  if (score >= 60) return 'text-orange-600 font-bold'
-  if (score >= 40) return 'text-yellow-600 font-semibold'
-  return 'text-slate-500'
+  if (score >= 80) return 'text-red-400 font-bold'
+  if (score >= 60) return 'text-orange-400 font-bold'
+  if (score >= 40) return 'text-yellow-400 font-semibold'
+  return 'text-muted-foreground'
 }
 
 function statusBadge(status: string) {
   const map: Record<string, string> = {
-    active: 'bg-blue-50 text-blue-700 border-blue-200',
-    contacted: 'bg-amber-50 text-amber-700 border-amber-200',
-    client: 'bg-green-50 text-green-700 border-green-200',
-    archived: 'bg-slate-50 text-slate-500 border-slate-200',
+    active: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+    contacted: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+    client: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+    archived: 'bg-muted text-muted-foreground border-border',
   }
   const labels: Record<string, string> = {
     active: 'Activo', contacted: 'Contactado', client: 'Cliente', archived: 'Archivado',
@@ -133,9 +133,9 @@ export default function DashboardPage() {
   }
 
   function confidenceBadgeClass(c: string | null) {
-    if (c === 'high')   return 'bg-green-50 text-green-700 border-green-200'
-    if (c === 'medium') return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-    return 'bg-slate-50 text-slate-500 border-slate-200'
+    if (c === 'high')   return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+    if (c === 'medium') return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+    return 'bg-muted text-muted-foreground border-border'
   }
 
   const hasFilters = !!(search || priority || industry || pkgFilter || confidenceFilter || prospectProfileFilter || sellabilityFilter)
@@ -144,8 +144,8 @@ export default function DashboardPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Pipeline de Leads</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-foreground">Pipeline de Leads</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {companies.length} empresa{companies.length !== 1 ? 's' : ''} · {hotCount} hot · {unevaluated} sin evaluar
           </p>
         </div>
@@ -165,7 +165,7 @@ export default function DashboardPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="relative flex-1 min-w-52 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar empresa o industria..."
             value={search}
@@ -173,14 +173,14 @@ export default function DashboardPage() {
             className="pl-8"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
         <Select value={priority} onValueChange={setPriority}>
-          <SelectTrigger className="w-36 bg-white">
+          <SelectTrigger className="w-36 bg-card">
             <SelectValue placeholder="Prioridad" />
           </SelectTrigger>
           <SelectContent>
@@ -193,7 +193,7 @@ export default function DashboardPage() {
         </Select>
 
         <Select value={industry} onValueChange={setIndustry}>
-          <SelectTrigger className="w-52 bg-white">
+          <SelectTrigger className="w-52 bg-card">
             <SelectValue placeholder="Industria" />
           </SelectTrigger>
           <SelectContent>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
         </Select>
 
         <Select value={pkgFilter} onValueChange={setPkgFilter}>
-          <SelectTrigger className="w-52 bg-white">
+          <SelectTrigger className="w-52 bg-card">
             <SelectValue placeholder="Paquete Kronos" />
           </SelectTrigger>
           <SelectContent>
@@ -219,7 +219,7 @@ export default function DashboardPage() {
         </Select>
 
         <Select value={confidenceFilter} onValueChange={setConfidenceFilter}>
-          <SelectTrigger className="w-36 bg-white">
+          <SelectTrigger className="w-36 bg-card">
             <SelectValue placeholder="Confianza" />
           </SelectTrigger>
           <SelectContent>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
         </Select>
 
         <Select value={prospectProfileFilter} onValueChange={setProspectProfileFilter}>
-          <SelectTrigger className="w-44 bg-white">
+          <SelectTrigger className="w-44 bg-card">
             <SelectValue placeholder="Perfil PFS" />
           </SelectTrigger>
           <SelectContent>
@@ -244,7 +244,7 @@ export default function DashboardPage() {
         </Select>
 
         <Select value={sellabilityFilter} onValueChange={setSellabilityFilter}>
-          <SelectTrigger className="w-48 bg-white">
+          <SelectTrigger className="w-48 bg-card">
             <SelectValue placeholder="Sellability" />
           </SelectTrigger>
           <SelectContent>
@@ -258,7 +258,7 @@ export default function DashboardPage() {
         </Select>
 
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger className="w-52 bg-white">
+          <SelectTrigger className="w-52 bg-card">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -278,21 +278,21 @@ export default function DashboardPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
         {error ? (
-          <div className="flex items-center gap-2 p-6 text-red-600 text-sm">
+          <div className="flex items-center gap-2 p-6 text-red-400 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0" /> {error}
           </div>
         ) : loading ? (
-          <div className="flex items-center justify-center gap-2 p-16 text-slate-400">
+          <div className="flex items-center justify-center gap-2 p-16 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Cargando...
           </div>
         ) : companies.length === 0 ? (
           <div className="flex flex-col items-center gap-4 p-16 text-center">
-            <Building2 className="h-10 w-10 text-slate-300" />
+            <Building2 className="h-10 w-10 text-muted-foreground" />
             <div>
-              <p className="font-medium text-slate-700">No hay empresas</p>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="font-medium text-foreground">No hay empresas</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 {hasFilters
                   ? 'Ajusta los filtros para ver más resultados.'
                   : 'Agrega tu primera empresa para empezar.'}
@@ -307,7 +307,7 @@ export default function DashboardPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 hover:bg-slate-50">
+              <TableRow className="bg-muted hover:bg-muted">
                 <TableHead>Empresa</TableHead>
                 <TableHead>Industria</TableHead>
                 <TableHead>País</TableHead>
@@ -329,40 +329,40 @@ export default function DashboardPage() {
                   className="cursor-pointer"
                   onClick={() => router.push(`/companies/${c.id}`)}
                 >
-                  <TableCell className="font-semibold text-slate-900">{c.name}</TableCell>
-                  <TableCell className="text-slate-500 text-sm">{c.industry}</TableCell>
-                  <TableCell className="text-slate-400 text-xs uppercase tracking-wide">{c.country}</TableCell>
+                  <TableCell className="font-semibold text-foreground">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{c.industry}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs uppercase tracking-wide">{c.country}</TableCell>
                   <TableCell className="text-center">
                     {c.latestEvaluatedAt ? (
                       <span className={`text-lg ${scoreColor(c.latestOpportunityScore)}`}>
                         {c.latestOpportunityScore}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-300">—</span>
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-center">
                     {c.salesQualificationScore !== null && c.salesQualificationScore !== undefined ? (
                       <span className={`text-sm font-semibold ${
-                        c.salesQualificationScore >= 70 ? 'text-emerald-600' :
-                        c.salesQualificationScore >= 55 ? 'text-blue-600' :
-                        c.salesQualificationScore >= 35 ? 'text-amber-600' :
-                        'text-slate-400'
+                        c.salesQualificationScore >= 70 ? 'text-emerald-400' :
+                        c.salesQualificationScore >= 55 ? 'text-blue-400' :
+                        c.salesQualificationScore >= 35 ? 'text-amber-400' :
+                        'text-muted-foreground'
                       }`}>{c.salesQualificationScore}</span>
                     ) : (
-                      <span className="text-xs text-slate-300">—</span>
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-center hidden xl:table-cell">
                     {c.prospectFitScore !== null && c.prospectFitScore !== undefined ? (
                       <span className={`text-sm font-semibold ${
-                        c.prospectFitScore >= 70 ? 'text-emerald-600' :
-                        c.prospectFitScore >= 50 ? 'text-blue-600' :
-                        c.prospectFitScore >= 30 ? 'text-amber-600' :
-                        'text-slate-400'
+                        c.prospectFitScore >= 70 ? 'text-emerald-400' :
+                        c.prospectFitScore >= 50 ? 'text-blue-400' :
+                        c.prospectFitScore >= 30 ? 'text-amber-400' :
+                        'text-muted-foreground'
                       }`}>{c.prospectFitScore}</span>
                     ) : (
-                      <span className="text-xs text-slate-300">—</span>
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -371,23 +371,23 @@ export default function DashboardPage() {
                         {c.latestPriorityLevel.toUpperCase()}
                       </Badge>
                     ) : (
-                      <span className="text-xs text-slate-400 italic">Sin evaluar</span>
+                      <span className="text-xs text-muted-foreground italic">Sin evaluar</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-slate-600">
+                  <TableCell className="text-xs text-muted-foreground">
                     {c.latestPackageSlug
                       ? PKG_LABELS[c.latestPackageSlug] ?? c.latestPackageSlug
-                      : <span className="text-slate-300">—</span>}
+                      : <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell>
                     {c.latestScoreConfidence ? (
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${confidenceBadgeClass(c.latestScoreConfidence)}`}>
                         {c.latestScoreConfidence === 'high' ? 'Alta' : c.latestScoreConfidence === 'medium' ? 'Media' : 'Baja'}
                       </span>
-                    ) : <span className="text-slate-300 text-xs">—</span>}
+                    ) : <span className="text-muted-foreground text-xs">—</span>}
                   </TableCell>
                   <TableCell>{statusBadge(c.status)}</TableCell>
-                  <TableCell className="text-xs text-slate-400">
+                  <TableCell className="text-xs text-muted-foreground">
                     {c.latestEvaluatedAt
                       ? new Date(c.latestEvaluatedAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })
                       : '—'}
@@ -413,16 +413,16 @@ export default function DashboardPage() {
           <DialogHeader>
             <DialogTitle>Importar empresas desde CSV</DialogTitle>
             <DialogDescription className="text-xs leading-relaxed">
-              Columnas requeridas: <code className="bg-slate-100 px-1 rounded">name · industry · country</code>
-              <br />Opcionales: <code className="bg-slate-100 px-1 rounded">city · website · whatsapp · leadSource</code>
-              <br />País válido: <code className="bg-slate-100 px-1 rounded">peru · mexico · colombia · chile · argentina · ecuador · bolivia · uruguay · paraguay · costa_rica · panama · guatemala · honduras · el_salvador · nicaragua · spain</code>
+              Columnas requeridas: <code className="bg-muted px-1 rounded">name · industry · country</code>
+              <br />Opcionales: <code className="bg-muted px-1 rounded">city · website · whatsapp · leadSource</code>
+              <br />País válido: <code className="bg-muted px-1 rounded">peru · mexico · colombia · chile · argentina · ecuador · bolivia · uruguay · paraguay · costa_rica · panama · guatemala · honduras · el_salvador · nicaragua · spain</code>
             </DialogDescription>
           </DialogHeader>
 
           {!importing && !importResult && (
-            <label className="flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-slate-200 p-8 cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors">
-              <Upload className="h-8 w-8 text-slate-300" />
-              <span className="text-sm text-slate-500">Haz clic para seleccionar tu archivo CSV</span>
+            <label className="flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-border p-8 cursor-pointer hover:border-muted-foreground hover:bg-muted transition-colors">
+              <Upload className="h-8 w-8 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Haz clic para seleccionar tu archivo CSV</span>
               <input
                 ref={fileRef}
                 type="file"
@@ -435,13 +435,13 @@ export default function DashboardPage() {
 
           {importing && (
             <div className="flex flex-col items-center gap-4 py-6">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
-              <p className="text-sm text-slate-600">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
                 Importando {importProgress.done} / {importProgress.total} empresas...
               </p>
-              <div className="w-full bg-slate-100 rounded-full h-1.5">
+              <div className="w-full bg-muted rounded-full h-1.5">
                 <div
-                  className="bg-slate-800 h-1.5 rounded-full transition-all duration-300"
+                  className="bg-primary h-1.5 rounded-full transition-all duration-300"
                   style={{ width: importProgress.total ? `${(importProgress.done / importProgress.total) * 100}%` : '0%' }}
                 />
               </div>
@@ -451,19 +451,19 @@ export default function DashboardPage() {
           {importResult && (
             <div className="flex flex-col gap-3">
               <div className="flex gap-3">
-                <div className="flex-1 rounded-lg bg-green-50 border border-green-200 p-4 text-center">
-                  <p className="text-3xl font-bold text-green-700">{importResult.success}</p>
-                  <p className="text-xs text-green-600 mt-1">Importadas exitosamente</p>
+                <div className="flex-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-4 text-center">
+                  <p className="text-3xl font-bold text-emerald-400">{importResult.success}</p>
+                  <p className="text-xs text-emerald-400 mt-1">Importadas exitosamente</p>
                 </div>
-                <div className="flex-1 rounded-lg bg-red-50 border border-red-200 p-4 text-center">
-                  <p className="text-3xl font-bold text-red-700">{importResult.failed}</p>
-                  <p className="text-xs text-red-600 mt-1">Fallidas</p>
+                <div className="flex-1 rounded-lg bg-red-500/10 border border-red-500/30 p-4 text-center">
+                  <p className="text-3xl font-bold text-red-400">{importResult.failed}</p>
+                  <p className="text-xs text-red-400 mt-1">Fallidas</p>
                 </div>
               </div>
               {importResult.errors.length > 0 && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-3 max-h-24 overflow-y-auto">
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 max-h-24 overflow-y-auto">
                   {importResult.errors.map((e, i) => (
-                    <p key={i} className="text-xs text-red-600">{e}</p>
+                    <p key={i} className="text-xs text-red-400">{e}</p>
                   ))}
                 </div>
               )}
