@@ -145,15 +145,15 @@ function estimateValue(
 ): { min: number; max: number } {
   const industryLower = industry.toLowerCase()
 
-  let baseMin = 1200
-  let baseMax = 3500
+  let baseMin = 650
+  let baseMax = 2200
 
   if (industryLower.includes('inmob') || industryLower.includes('real_estate')) {
-    baseMin = 1800
-    baseMax = 5000
+    baseMin = 900
+    baseMax = 3000
   } else if (industryLower.includes('legal') || industryLower.includes('jurídico') || industryLower.includes('law')) {
-    baseMin = 2000
-    baseMax = 5500
+    baseMin = 900
+    baseMax = 3200
   }
 
   const multiplier =

@@ -43,22 +43,22 @@ const PACKAGE_INFO: Record<EntryPackageSlug, Omit<EntryPackageRecommendation, 'p
   whatsapp_followup: {
     slug: 'whatsapp_followup',
     name: 'Sistema de Seguimiento por WhatsApp',
-    setupPriceUSD: [150, 300],
-    monthlyMaintenanceUSD: 50,
+    setupPriceUSD: [350, 750],
+    monthlyMaintenanceUSD: 90,
     implementationTime: '1–2 semanas',
   },
   lead_tracking_crm: {
     slug: 'lead_tracking_crm',
     name: 'Sistema de Seguimiento de Leads',
-    setupPriceUSD: [200, 400],
-    monthlyMaintenanceUSD: 60,
+    setupPriceUSD: [450, 950],
+    monthlyMaintenanceUSD: 120,
     implementationTime: '2–3 semanas',
   },
   website_seo: {
     slug: 'website_seo',
     name: 'Página Web + Posicionamiento SEO',
-    setupPriceUSD: [300, 600],
-    monthlyMaintenanceUSD: 80,
+    setupPriceUSD: [650, 1400],
+    monthlyMaintenanceUSD: 150,
     implementationTime: '3–4 semanas',
   },
 }

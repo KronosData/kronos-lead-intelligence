@@ -2,7 +2,7 @@
 // Generates concise, evidence-based messages by channel and evidence tier.
 //
 // Rules:
-//  - Always include https://www.kronosdata.tech/
+//  - Always include the official Kronos Data URL
 //  - Never invent phone/email/revenue numbers
 //  - Never claim losses or ROI not backed by evidence
 //  - First contact asks for a diagnostic conversation, not a purchase decision
@@ -11,8 +11,7 @@
 
 import type { EvidenceTier } from '@/lib/scoring/composite-scorer'
 import { makeClientSafeCopy } from '@/lib/outreach/approach-message'
-
-const OFFICIAL_URL = 'https://www.kronosdata.tech/'
+import { calendarCta, senderSignature } from '@/lib/outreach/kronos-contact'
 
 export type OutreachChannel = 'email' | 'whatsapp' | 'linkedin'
 
@@ -147,9 +146,9 @@ ${diagnosticAsk(15)}
 
 Si no vemos nada claro, igual les queda el diagnóstico.
 
-Alejandro Bri
-Kronos Data
-${OFFICIAL_URL}`),
+${calendarCta(15)}
+
+${senderSignature('email')}`),
     evidenceTier: 'LOW',
     notes: 'Mensaje exploratorio. No afirma un problema cerrado; solo abre una conversación de diagnóstico.',
   }
@@ -169,9 +168,9 @@ ${diagnosticAsk(20)}
 
 Si tiene sentido, seguimos conversando. Si no, les queda una lectura externa útil para ordenar prioridades.
 
-Alejandro Bri
-Kronos Data
-${OFFICIAL_URL}`),
+${calendarCta(20)}
+
+${senderSignature('email')}`),
     evidenceTier: 'MEDIUM',
     notes: 'Mensaje con hipotesis concreta. Revisar el punto visible antes de enviarlo.',
   }
@@ -198,9 +197,9 @@ ${diagnosticAsk(20)}
 
 Si no hay una oportunidad clara, no forzamos nada: les queda el diagnóstico y seguimos cada uno con lo suyo.
 
-Alejandro Bri
-Kronos Data
-${OFFICIAL_URL}`),
+${calendarCta(20)}
+
+${senderSignature('email')}`),
     evidenceTier: 'HIGH',
     notes: `Mensaje con evidencia alta. Personaliza [Nombre] si tienes contacto. Base: ${problems.slice(0, 2).join('; ')}`,
   }
@@ -218,7 +217,9 @@ ${diagnosticAsk(15)}
 
 Si no hay nada claro, igual queda el diagnóstico.
 
-${OFFICIAL_URL}`),
+${calendarCta(15)}
+
+${senderSignature('whatsapp')}`),
     evidenceTier: 'LOW',
     notes: 'Usar solo si el número es comercial/público o hubo contexto previo. No enviar masivamente.',
   }
@@ -236,7 +237,9 @@ ${frictionLine(input)}
 
 ¿Les parece si lo revisamos 15 min esta semana? Es gratis y sin compromiso.
 
-${OFFICIAL_URL}`),
+${calendarCta(15)}
+
+${senderSignature('whatsapp')}`),
     evidenceTier: 'MEDIUM',
     notes: 'Mensaje breve con dolor visible. Verificar que el contacto sea publico/comercial.',
   }
@@ -256,7 +259,9 @@ Te propongo verlo 15 min por Meet/Zoom. Te muestro 2 o 3 puntos concretos y vali
 
 ¿Tienes un espacio esta semana?
 
-${OFFICIAL_URL}`),
+${calendarCta(15)}
+
+${senderSignature('whatsapp')}`),
     evidenceTier: 'HIGH',
     notes: `Mensaje directo con evidencia alta. Personaliza [Nombre] si lo tienes. Base: ${topProblems(input).slice(0, 2).join('; ')}`,
   }
@@ -272,7 +277,7 @@ Estoy revisando negocios donde pequeños puntos de presencia/contacto pueden fre
 
 Si te parece, puedo hacer una revisión gratuita de 15 min y compartirte 2 o 3 observaciones concretas.
 
-${OFFICIAL_URL}`),
+${senderSignature('linkedin')}`),
     evidenceTier: 'LOW',
     notes: 'Primer contacto suave para LinkedIn. Personalizar con nombre y un dato del perfil.',
   }
@@ -288,7 +293,7 @@ No lo planteo como diagnóstico cerrado. Me gustaría revisarlo contigo 15 min y
 
 ¿Te sirve coordinar esta semana?
 
-${OFFICIAL_URL}`),
+${senderSignature('linkedin')}`),
     evidenceTier: 'MEDIUM',
     notes: 'Mensaje semi-personalizado. Confirmar el punto visible antes de enviar.',
   }
@@ -304,7 +309,7 @@ ${frictionLine(input)}
 
 Si te parece, lo revisamos 20 min. Te muestro lo que vi, lo contrastamos con tu realidad y ves si vale priorizarlo.
 
-${OFFICIAL_URL}`),
+${senderSignature('linkedin')}`),
     evidenceTier: 'HIGH',
     notes: `Mensaje con evidencia alta. Personalizar [Nombre]. Base: ${topProblems(input).slice(0, 2).join('; ')}`,
   }

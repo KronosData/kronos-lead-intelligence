@@ -1,6 +1,5 @@
 import type { EntryPackageRecommendation } from '@/lib/recommendations/entry-package'
-
-const OFFICIAL_URL = 'https://www.kronosdata.tech/'
+import { calendarCta, senderSignature } from '@/lib/outreach/kronos-contact'
 
 export interface ApproachMessageContext {
   industry?: string | null
@@ -153,6 +152,7 @@ export function buildApproachMessage(
     `El detalle es que ${pain.consequence}.\n\n` +
     `Te propongo una revisión gratuita de 15 min. Miramos desde afuera el recorrido de un cliente, marcamos 2 o 3 puntos concretos sobre ${pain.diagnosisFocus}, y validamos si de verdad hay algo que valga la pena mejorar.\n\n` +
     `Si no vemos nada claro, igual te queda el diagnóstico.\n\n` +
-    `Alejandro | Kronos Data\n${OFFICIAL_URL}`,
+    `${calendarCta(15)}\n\n` +
+    senderSignature(),
   )
 }

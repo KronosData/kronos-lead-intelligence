@@ -32,6 +32,7 @@ import {
 import { SIGNAL_DEFINITIONS, OUTREACH_CHANNELS, RESPONSE_TYPES, CONTACT_STATUSES, MEETING_STATUSES, PIPELINE_STAGES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { makeClientSafeCopy } from '@/lib/outreach/approach-message'
+import { calendarCta, senderSignature } from '@/lib/outreach/kronos-contact'
 
 function priorityVariant(p: string): 'hot' | 'high' | 'medium' | 'low' | 'secondary' {
   if (p === 'hot') return 'hot'
@@ -1165,8 +1166,6 @@ function outreachEvidenceLevel(ev: Evaluation): 'A' | 'B' | 'C' {
   return 'C'
 }
 
-const OFFICIAL_URL = 'https://www.kronosdata.tech/'
-
 function clientSafe(text: string): string {
   return makeClientSafeCopy(text)
     .replace(/\s+\n/g, '\n')
@@ -1209,6 +1208,11 @@ function generateOutreachTemplate(
   const v = version % 2
   const pain = visiblePainLine(companyName, industry, auditHook, confirmedSymptoms)
   const consequence = subtleConsequence(pain)
+  const footer = channel === 'email'
+    ? `${calendarCta(15)}\n\n${senderSignature('email')}`
+    : channel === 'whatsapp'
+      ? `${calendarCta(15)}\n\n${senderSignature('whatsapp')}`
+      : senderSignature('linkedin')
 
   if (commercialState === 'RESEARCH_REQUIRED' || commercialState === 'DISQUALIFIED') {
     return `[Sin plantilla - estado ${commercialState ?? 'desconocido'}. No se recomienda contacto en esta etapa.]`
@@ -1216,19 +1220,19 @@ function generateOutreachTemplate(
 
   if (channel === 'whatsapp') {
     return clientSafe(v === 0
-      ? `Hola ${nombre}, soy Alejandro de Kronos Data.\n\nVi algo puntual en ${companyName}: ${pain}.\n\n${consequence}\n\nTe propongo revisarlo 15 min por Meet/Zoom, gratis. Te muestro 2 o 3 puntos concretos y validamos si hay algo real que mejorar.\n\n¿Tienes un espacio esta semana?\n\n${OFFICIAL_URL}`
-      : `Hola ${nombre}, soy Alejandro de Kronos Data.\n\nEstaba revisando negocios de ${industry} y ${companyName} me llamó la atención por este punto: ${pain}.\n\nNo lo tomo como diagnóstico cerrado; lo validamos juntos en 15 min y te queda una lectura externa clara.\n\n¿Con quién podría coordinarlo?\n\n${OFFICIAL_URL}`)
+      ? `Hola ${nombre}, soy Alejandro de Kronos Data.\n\nVi algo puntual en ${companyName}: ${pain}.\n\n${consequence}\n\nTe propongo revisarlo 15 min por Meet/Zoom, gratis. Te muestro 2 o 3 puntos concretos y validamos si hay algo real que mejorar.\n\n¿Tienes un espacio esta semana?\n\n${footer}`
+      : `Hola ${nombre}, soy Alejandro de Kronos Data.\n\nEstaba revisando negocios de ${industry} y ${companyName} me llamó la atención por este punto: ${pain}.\n\nNo lo tomo como diagnóstico cerrado; lo validamos juntos en 15 min y te queda una lectura externa clara.\n\n¿Con quién podría coordinarlo?\n\n${footer}`)
   }
 
   if (channel === 'email') {
     return clientSafe(v === 0
-      ? `Asunto: ${companyName}: diagnóstico gratuito de 15 min\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Revisé ${companyName} desde afuera y vi un punto que vale validar: ${pain}.\n\n${consequence}\n\nTe propongo una revisión gratuita de 15 min. Miramos el recorrido de una persona interesada, marco 2 o 3 puntos concretos y vemos si hay algo que valga la pena priorizar.\n\nSi no vemos nada claro, igual te queda el diagnóstico.\n\nAlejandro Bri\nKronos Data\n${OFFICIAL_URL}`
-      : `Asunto: ${companyName}: punto visible para revisar\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Estaba revisando negocios de ${industry} y encontré este detalle en ${companyName}: ${pain}.\n\n${consequence}\n\n¿Te parece si lo revisamos 15 min esta semana? Es gratuito y sin compromiso.\n\nAlejandro Bri\nKronos Data\n${OFFICIAL_URL}`)
+      ? `Asunto: ${companyName}: diagnóstico gratuito de 15 min\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Revisé ${companyName} desde afuera y vi un punto que vale validar: ${pain}.\n\n${consequence}\n\nTe propongo una revisión gratuita de 15 min. Miramos el recorrido de una persona interesada, marco 2 o 3 puntos concretos y vemos si hay algo que valga la pena priorizar.\n\nSi no vemos nada claro, igual te queda el diagnóstico.\n\n${footer}`
+      : `Asunto: ${companyName}: punto visible para revisar\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Estaba revisando negocios de ${industry} y encontré este detalle en ${companyName}: ${pain}.\n\n${consequence}\n\n¿Te parece si lo revisamos 15 min esta semana? Es gratuito y sin compromiso.\n\n${footer}`)
   }
 
   return clientSafe(v === 0
-    ? `Hola ${nombre}, vi ${companyName} y hay un punto que me pareció accionable: ${pain}.\n\n${consequence}\n\nSi te parece, lo revisamos 15 min. Te muestro lo que vi, lo contrastamos con tu realidad y ves si vale priorizarlo.\n\n${OFFICIAL_URL}`
-    : `Hola ${nombre}, revisé ${companyName} desde afuera y noté algo que quizás vale validar: ${pain}.\n\nNo lo planteo como diagnóstico cerrado. En 15 min puedo dejarte 2 o 3 observaciones concretas sobre presencia, contacto o seguimiento.\n\n¿Te sirve coordinar esta semana?\n\n${OFFICIAL_URL}`)
+    ? `Hola ${nombre}, vi ${companyName} y hay un punto que me pareció accionable: ${pain}.\n\n${consequence}\n\nSi te parece, lo revisamos 15 min. Te muestro lo que vi, lo contrastamos con tu realidad y ves si vale priorizarlo.\n\n${footer}`
+    : `Hola ${nombre}, revisé ${companyName} desde afuera y noté algo que quizás vale validar: ${pain}.\n\nNo lo planteo como diagnóstico cerrado. En 15 min puedo dejarte 2 o 3 observaciones concretas sobre presencia, contacto o seguimiento.\n\n¿Te sirve coordinar esta semana?\n\n${footer}`)
 }
 
 function OutreachPanel({

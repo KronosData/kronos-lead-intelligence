@@ -26,7 +26,7 @@ export interface RoiFitResult {
 const KRONOS_PRICE_RANGES = {
   min: 350,   // cheapest individual service
   mid: 1200,  // typical project
-  max: 3500,  // full package
+  max: 3000,  // full package
 }
 
 // Size factor for benefit estimates: larger businesses get proportionally more benefit
