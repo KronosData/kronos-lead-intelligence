@@ -7,10 +7,9 @@
 //  - Never claim losses or ROI not backed by evidence
 //  - LOW evidence → propose free audit only, no specific claims
 //  - MEDIUM evidence → hypothesis framing, "hemos notado que…"
-//  - HIGH evidence → specific pain points, concrete service match
+//  - HIGH evidence → specific pain points, free diagnosis, no package claim
 //  - Messages are proposals, not automated sends
 
-import { KRONOS_PACKAGES } from '@/lib/catalog/kronos-offers'
 import type { EvidenceTier } from '@/lib/scoring/composite-scorer'
 
 const OFFICIAL_URL = 'https://www.kronosdata.tech/'
@@ -69,16 +68,6 @@ function locationStr(city: string | null, country: string): string {
   return country
 }
 
-function packageLabel(slug: string | null): string {
-  if (!slug || !(slug in KRONOS_PACKAGES)) return 'nuestros servicios'
-  return KRONOS_PACKAGES[slug as keyof typeof KRONOS_PACKAGES].name
-}
-
-function packageDescription(slug: string | null): string {
-  if (!slug || !(slug in KRONOS_PACKAGES)) return 'una solución a medida para tu operación'
-  return KRONOS_PACKAGES[slug as keyof typeof KRONOS_PACKAGES].subtitle
-}
-
 function topProblems(input: MessageInput): string[] {
   const problems: string[] = []
   if (input.signals?.probablePainPoint) problems.push(input.signals.probablePainPoint)
@@ -131,9 +120,7 @@ function emailMedium(input: MessageInput): GeneratedMessage {
 Mi nombre es [Tu nombre], de Kronos Data. Nos especializamos en automatización de operaciones y transformación digital para empresas del sector ${input.industry} en Latinoamérica.
 
 ${problemText}
-Trabajamos con empresas similares a la suya ayudándoles a ${packageDescription(input.recommendedPackageSlug)}.
-
-Nuestra propuesta de entrada siempre es una auditoría gratuita: sin compromiso, sin contrato. Primero entendemos su situación real, luego — si tiene sentido — conversamos sobre soluciones concretas.
+No quiero asumir una solución antes de conocer su realidad. Nuestra entrada siempre es una auditoría gratuita: revisamos juntos lo que está pasando, validamos si hay una pérdida real de clientes o seguimiento, y recién después vemos si tiene sentido proponer una mejora concreta.
 
 ¿Estarían disponibles para una sesión de 30 minutos esta semana?
 
@@ -152,8 +139,6 @@ ${OFFICIAL_URL}`,
 function emailHigh(input: MessageInput): GeneratedMessage {
   const loc = locationStr(input.city, input.country)
   const problems = topProblems(input)
-  const pkg = packageLabel(input.recommendedPackageSlug)
-  const pkgDesc = packageDescription(input.recommendedPackageSlug)
 
   const problemSection = problems.length > 0
     ? `En nuestra revisión de ${input.companyName} identificamos específicamente:\n${problems.map(p => `• ${p}`).join('\n')}\n`
@@ -161,18 +146,18 @@ function emailHigh(input: MessageInput): GeneratedMessage {
 
   return {
     channel: 'email',
-    subject: `${input.companyName} — Solución concreta para [problema principal]`,
+    subject: `${input.companyName} — diagnóstico gratuito para revisar oportunidades`,
     body: `Hola [Nombre del contacto],
 
-Mi nombre es [Tu nombre], de Kronos Data. Nos especializamos en ${pkgDesc} para empresas del sector ${input.industry}.
+Mi nombre es [Tu nombre], de Kronos Data. Revisamos empresas del sector ${input.industry} para detectar fugas de clientes, seguimiento o presencia digital antes de proponer cualquier solución.
 
 ${problemSection}
-Basándonos en esto, creemos que la solución más adecuada para ${input.companyName} sería nuestro servicio de ${pkg}.
+No quiero venderles nada con una revisión externa. Lo correcto es validar estos puntos con ustedes y entender si realmente afectan la operación o la captación de clientes.
 
 Lo que proponemos como primer paso es una auditoría gratuita de 30 minutos donde:
 • Revisamos juntos los puntos de mejora identificados
 • Validamos si corresponden a su realidad operativa
-• Definimos si hay un caso de negocio claro antes de cualquier inversión
+• Definimos si hay un caso claro antes de hablar de cualquier inversión
 
 Si todo tiene sentido para ustedes, avanzamos. Si no, la conversación igualmente les será útil.
 
@@ -221,9 +206,9 @@ function whatsappMedium(input: MessageInput): GeneratedMessage {
 
 Soy [nombre] de Kronos Data. ${problemLine}
 
-Ayudamos a empresas de ${input.industry} a resolver exactamente esto.
+No quiero asumir una solución antes de conocer su realidad. Me gustaría validarlo en un diagnóstico gratuito breve y ver si de verdad hay algo útil para mejorar.
 
-¿Puedo contarles en 2 minutos qué hacemos? Sin compromiso.
+¿Tienen 15 minutos esta semana? Sin compromiso.
 
 ${OFFICIAL_URL}`,
     evidenceTier: 'MEDIUM',
@@ -234,7 +219,6 @@ ${OFFICIAL_URL}`,
 function whatsappHigh(input: MessageInput): GeneratedMessage {
   const problems = topProblems(input)
   const mainProblem = problems[0] ?? `oportunidades de mejora identificadas en ${input.industry}`
-  const pkg = packageLabel(input.recommendedPackageSlug)
 
   return {
     channel: 'whatsapp',
@@ -245,7 +229,7 @@ Soy [Tu nombre] de Kronos Data.
 
 Revisamos ${input.companyName} y identificamos: ${mainProblem.toLowerCase()}.
 
-Tenemos un servicio específico para esto — ${pkg} — y nos gustaría ofrecerles un diagnóstico gratuito de 30 min para ver si aplica a su caso.
+No quiero venderles nada con una revisión externa. Me gustaría ofrecerles un diagnóstico gratuito de 30 min para validarlo juntos y ver si realmente hay una oportunidad de mejora.
 
 ¿Les parece bien esta semana?
 
@@ -265,7 +249,7 @@ function linkedinLow(input: MessageInput): GeneratedMessage {
 
 Vi el perfil de ${input.companyName} y me pareció interesante lo que hacen en ${input.industry}.
 
-Soy [Tu nombre] de Kronos Data — ayudamos a empresas como la suya a mejorar su operación y captación de clientes a través de automatización y datos.
+Soy [Tu nombre] de Kronos Data. Estamos revisando empresas donde podría haber fugas de clientes, seguimiento o presencia digital que se pueden mejorar con cambios simples.
 
 ¿Estarías abierto a una conversación exploratoria de 20 minutos? Ofrecemos un diagnóstico inicial gratuito.
 
@@ -292,7 +276,7 @@ Revisé el perfil de ${input.companyName} y ${problemHint}.
 
 Desde Kronos Data trabajamos específicamente con empresas de ${input.industry} en Latinoamérica para resolver este tipo de problemas — automatización de procesos, mejora de conversión digital y datos estructurados.
 
-Si te parece, me gustaría compartirte en una sesión de 30 min cómo lo hacemos. Empezamos con un diagnóstico gratuito.
+Si te parece, me gustaría validarlo contigo en una sesión gratuita de 30 min. No es una propuesta cerrada: primero entendemos si realmente hay una oportunidad.
 
 ¿Tienes disponibilidad esta semana?
 
@@ -305,7 +289,6 @@ ${OFFICIAL_URL}`,
 function linkedinHigh(input: MessageInput): GeneratedMessage {
   const problems = topProblems(input)
   const mainProblem = problems[0] ?? 'oportunidades de mejora identificadas'
-  const pkg = packageLabel(input.recommendedPackageSlug)
 
   return {
     channel: 'linkedin',
@@ -314,7 +297,7 @@ function linkedinHigh(input: MessageInput): GeneratedMessage {
 
 Revisé en detalle la presencia de ${input.companyName} y encontré algo relevante: ${mainProblem.toLowerCase()}.
 
-En Kronos Data nos especializamos exactamente en esto para empresas del sector ${input.industry}. Nuestro servicio de ${pkg} está diseñado para este tipo de situación.
+No quiero convertir una revisión externa en una venta directa. El primer paso correcto sería validar contigo si esto realmente afecta la captación, el seguimiento o la atención al cliente.
 
 Propongo una sesión de diagnóstico gratuita de 30 minutos donde revisamos juntos los hallazgos y definimos si tiene sentido trabajar juntos.
 

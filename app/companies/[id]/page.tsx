@@ -1031,10 +1031,10 @@ function buildWhatsAppUrl(number: string, message: string): string {
   return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`
 }
 
-// "Cómo acercarnos" — phase-1 land-and-expand pitch. One concrete visible
-// pain, one affordable entry package (WhatsApp follow-up / lead CRM /
-// web+SEO), one ready-to-send message, one recommended channel. No full
-// diagnosis pitched here — that's for after the client is already happy.
+// "Cómo acercarnos" — phase-1 free diagnosis. One concrete visible pain,
+// one possible entry fix for internal planning, one ready-to-send message,
+// one recommended channel. The first contact validates the pain before
+// any package or price is discussed with the prospect.
 function ApproachPanel({
   data, loading, whatsapp,
 }: { data: ApproachRecommendation | null; loading: boolean; whatsapp?: string | null }) {
@@ -1100,16 +1100,16 @@ function ApproachPanel({
           )}
         </div>
 
-        {/* 3. Solución */}
+        {/* 3. Possible fix */}
         <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">3. Solución sugerida</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">3. Mejora posible tras diagnóstico</p>
           <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted px-3 py-2.5">
             <div className="flex-1 min-w-40">
-              <p className="text-xs text-muted-foreground">Paquete de entrada</p>
+              <p className="text-xs text-muted-foreground">Primera mejora posible</p>
               <p className="text-sm font-semibold">{pkg.name}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Instalación</p>
+              <p className="text-xs text-muted-foreground">Ticket interno</p>
               <p className="text-sm font-semibold">${pkg.setupPriceUSD[0]}–${pkg.setupPriceUSD[1]}</p>
             </div>
             <div>

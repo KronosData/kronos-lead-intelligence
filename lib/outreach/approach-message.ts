@@ -42,12 +42,12 @@ const HOOK_BY_SYMPTOM: Record<string, (name: string) => string> = {
     `Una reseña sin responder no se queda ahí — la ve cada persona nueva que investiga a ${name} antes de decidir. El silencio se lee como "no les importa", y eso aleja gente que ni siquiera llegó a escribirte.`,
   signalHasInstagram: (name) =>
     `Mucha gente, antes de escribirte, revisa tus redes para confirmar que el negocio es real y activo. Sin ese rastro visible, ${name} pierde esa pequeña confirmación que convierte la curiosidad en mensaje.`,
-  signalHasLinkedin: (name) =>
+  signalHasLinkedin: () =>
     `Para clientes B2B, no tener presencia profesional visible genera la misma duda que un local sin letrero: ¿esto sigue funcionando? Esa duda basta para que elijan a la competencia que sí se ve activa.`,
 
   signalHasWhatsapp: (name) =>
     `Cuando alguien le escribe a ${name} y no ve respuesta rápido, no espera — prueba con el siguiente negocio de la lista. Ese cliente no se fue porque no quería comprar: se fue porque nadie contestó a tiempo, y eso pasa todos los días sin que se note.`,
-  signalWeakFollowup: (name) =>
+  signalWeakFollowup: () =>
     `La mayoría de las ventas no se pierden en el primer mensaje — se pierden en el silencio después. Un cliente que preguntó y no recibió seguimiento simplemente se enfría: no se queja, no avisa, solo deja de responder.`,
   signalSlowResponse: (name) =>
     `Cuando ${name} tarda en responder, el cliente no espera pacientemente — empieza a mirar otras opciones mientras espera. Para cuando llega tu respuesta, a veces ya decidió con otro.`,
@@ -56,9 +56,9 @@ const HOOK_BY_SYMPTOM: Record<string, (name: string) => string> = {
     `Cuando todo se maneja a mano, es fácil perder de vista a alguien sin darte cuenta — no porque a ${name} le falten clientes, sino porque se pierden en el camino antes de cerrar, y nadie nota el hueco hasta que ya es tarde.`,
   signalHasLeadCapture: (name) =>
     `Cada visita o mensaje que no queda registrado en ningún lado es una oportunidad que ${name} no puede recuperar después — no hay a quién darle seguimiento si no quedó guardado en primer lugar.`,
-  signalHasBookingSystem: (name) =>
+  signalHasBookingSystem: () =>
     `Sin un sistema de reservas claro, coordinar una cita se vuelve ida y vuelta de mensajes — y en ese ida y vuelta, una buena parte de la gente simplemente se cansa y desiste antes de confirmar.`,
-  signalHasClearCta: (name) =>
+  signalHasClearCta: () =>
     `Cuando un cliente llega interesado y no encuentra un siguiente paso claro — a quién escribir, cómo agendar — se queda esperando una señal que nunca llega, y termina yéndose sin avisar.`,
 }
 
@@ -74,13 +74,13 @@ const FALLBACK_HOOK = (name: string, painLabel: string) =>
 export function buildApproachMessage(companyName: string, pkg: EntryPackageRecommendation): string {
   const hook = HOOK_BY_SYMPTOM[pkg.painKey]?.(companyName) ?? FALLBACK_HOOK(companyName, pkg.painDetected)
   const outcome = OUTCOME_BY_SLUG[pkg.slug] ?? 'resolver justo eso, de forma simple y rápida'
-  const [low, high] = pkg.setupPriceUSD
 
   return (
     `Hola,\n\n` +
     `${hook}\n\n` +
-    `En Kronos Data nos enfocamos en ${outcome}. Lo implementamos en ${pkg.implementationTime}, sin que tengas que cambiar tu forma de trabajar — desde $${low} hasta $${high} de instalación + $${pkg.monthlyMaintenanceUSD}/mes de mantenimiento.\n\n` +
-    `¿Te interesa una llamada de 15 min para mostrarte exactamente cómo se vería para ${companyName}?\n\n` +
+    `El primer paso no es venderte una automatización. En Kronos Data empezamos con un diagnóstico gratuito para revisar si realmente hay oportunidades de mejora y si tendría sentido intervenir.\n\n` +
+    `En esa conversación vemos juntos dónde se puede mejorar para ${outcome}, sin compromiso y sin asumir una solución antes de entender el negocio.\n\n` +
+    `¿Te parece si agendamos 15 min para revisar ${companyName} y ver si hay algo útil que podamos detectar?\n\n` +
     `Más sobre nosotros: https://www.kronosdata.tech/`
   )
 }

@@ -1,8 +1,7 @@
 // GET /api/companies/[id]/approach
-// "Cómo acercarnos" — phase-1 land-and-expand pitch: one concrete visible
-// pain, one affordable entry package, one ready-to-send message, one
-// recommended channel. No full diagnosis, no automated packages here —
-// those come later, after the client is happy with the first small win.
+// "Cómo acercarnos" — phase-1 free diagnosis: one concrete visible pain,
+// one possible entry fix for internal planning, one ready-to-send message,
+// one recommended channel. No package pitch in the first contact.
 
 import { prisma } from '@/lib/db'
 import { ok, notFound, serverError } from '@/lib/api-helpers'

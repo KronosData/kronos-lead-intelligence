@@ -36,6 +36,8 @@ interface SearchMeta {
   overFetched: number
   afterFilters: number
   sources: { here: boolean; osm: boolean; hereRaw: number; osmRaw: number }
+  queries?: string[]
+  locations?: string[]
 }
 
 interface SearchResponse {
@@ -129,6 +131,82 @@ function sourceBadge(source: 'here' | 'osm') {
     : <span className="text-[10px] font-semibold text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded">OSM</span>
 }
 
+const AUTO_DISCOVERY_QUERIES = [
+  'clinicas dentales',
+  'clinicas esteticas',
+  'abogados',
+  'inmobiliarias',
+  'veterinarias',
+  'spa',
+  'fisioterapia',
+  'taller mecanico',
+]
+
+interface DiscoverySearchTarget {
+  query: string
+  country: string
+  city: string
+  label: string
+}
+
+const SMART_DISCOVERY_PLAN: DiscoverySearchTarget[] = [
+  { country: 'peru', city: 'Lima', query: 'clinicas dentales', label: 'Clínicas dentales · Lima' },
+  { country: 'peru', city: 'Lima', query: 'clinicas esteticas', label: 'Clínicas estéticas · Lima' },
+  { country: 'peru', city: 'Lima', query: 'inmobiliarias', label: 'Inmobiliarias · Lima' },
+  { country: 'colombia', city: 'Bogotá', query: 'clinicas dentales', label: 'Clínicas dentales · Bogotá' },
+  { country: 'colombia', city: 'Medellín', query: 'spa', label: 'Spa y estética · Medellín' },
+  { country: 'mexico', city: 'Ciudad de México', query: 'clinicas esteticas', label: 'Clínicas estéticas · CDMX' },
+  { country: 'mexico', city: 'Guadalajara', query: 'abogados', label: 'Abogados · Guadalajara' },
+  { country: 'chile', city: 'Santiago', query: 'veterinarias', label: 'Veterinarias · Santiago' },
+  { country: 'ecuador', city: 'Quito', query: 'fisioterapia', label: 'Fisioterapia · Quito' },
+  { country: 'spain', city: 'Madrid', query: 'inmobiliarias', label: 'Inmobiliarias · Madrid' },
+]
+
+function normalizeCandidateKey(c: DiscoveryCandidate): string {
+  if (c.website) {
+    try {
+      return new URL(c.website).hostname.replace(/^www\./, '').toLowerCase()
+    } catch {
+      return c.website.toLowerCase().replace(/^https?:\/\/(www\.)?/, '')
+    }
+  }
+
+  return `${c.name}|${c.country}|${c.city}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+}
+
+function mergeCandidates(groups: DiscoveryCandidate[][], limit: number): DiscoveryCandidate[] {
+  const byKey = new Map<string, DiscoveryCandidate>()
+
+  for (const group of groups) {
+    for (const candidate of group) {
+      const key = normalizeCandidateKey(candidate)
+      const previous = byKey.get(key)
+      if (
+        !previous ||
+        candidate.salesQualificationScore > previous.salesQualificationScore ||
+        (
+          candidate.salesQualificationScore === previous.salesQualificationScore &&
+          candidate.prospectFitScore > previous.prospectFitScore
+        )
+      ) {
+        byKey.set(key, candidate)
+      }
+    }
+  }
+
+  return [...byKey.values()]
+    .sort((a, b) =>
+      b.salesQualificationScore - a.salesQualificationScore ||
+      b.prospectFitScore - a.prospectFitScore ||
+      b.contactabilityScore - a.contactabilityScore
+    )
+    .slice(0, limit)
+    .map((candidate, i) => ({ ...candidate, rankAfterReranking: i + 1 }))
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function DiscoverPage() {
@@ -155,6 +233,7 @@ export default function DiscoverPage() {
   // Results
   const [searching,   setSearching]   = useState(false)
   const [searchError, setSearchError] = useState('')
+  const [searchProgress, setSearchProgress] = useState('')
   const [candidates,  setCandidates]  = useState<DiscoveryCandidate[]>([])
   const [meta,        setMeta]        = useState<SearchMeta | null>(null)
 
@@ -171,12 +250,69 @@ export default function DiscoverPage() {
 
   // ── Search ──────────────────────────────────────────────────────────────────
 
-  async function handleSearch() {
-    if (!query.trim() || !city.trim() || !country) {
-      setSearchError('Industria/búsqueda, ciudad y país son requeridos.')
-      return
+  function buildSearchTargets(): DiscoverySearchTarget[] {
+    const trimmedQuery = query.trim()
+    const selectedCity = city.trim()
+    const fallbackCity = selectedCountryConfig?.cities[0] ?? ''
+    const effectiveCity = selectedCity || fallbackCity
+
+    if (country && effectiveCity) {
+      const terms = trimmedQuery ? [trimmedQuery] : AUTO_DISCOVERY_QUERIES
+      return terms.map(term => ({
+        query: term,
+        country,
+        city: effectiveCity,
+        label: `${term} · ${effectiveCity}`,
+      }))
     }
+
+    if (trimmedQuery) {
+      return SMART_DISCOVERY_PLAN.map(target => ({
+        ...target,
+        query: trimmedQuery,
+        label: `${trimmedQuery} · ${target.city}`,
+      }))
+    }
+
+    return SMART_DISCOVERY_PLAN
+  }
+
+  function buildPayload(target: DiscoverySearchTarget, resultLimit: number): Record<string, unknown> {
+    const payload: Record<string, unknown> = {
+      query:   target.query,
+      city:    target.city,
+      country: target.country,
+      limit:   resultLimit,
+      mode,
+      radiusKm: Number(radiusKm),
+      privateBusiness,
+      excludePublicProjects,
+    }
+    if (district.trim() && country && city.trim()) payload.district = district.trim()
+    if (excludeChains !== undefined)  payload.excludeChains        = excludeChains
+    if (excludeLarge  !== undefined)  payload.excludeLarge         = excludeLarge
+    if (requireContact !== undefined) payload.requireContact       = requireContact
+    if (minProspectFitScore !== '')   payload.minProspectFitScore  = Number(minProspectFitScore)
+    if (minSalesQualScore   !== '')   payload.minSalesQualScore    = Number(minSalesQualScore)
+    return payload
+  }
+
+  async function runDiscovery(target: DiscoverySearchTarget, resultLimit: number): Promise<SearchResponse> {
+    const res = await fetch('/api/discovery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildPayload(target, resultLimit)),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(data.error ?? `HTTP ${res.status}`)
+    }
+    return res.json() as Promise<SearchResponse>
+  }
+
+  async function handleSearch() {
     setSearchError('')
+    setSearchProgress('')
     setSearching(true)
     setCandidates([])
     setSelected(new Set())
@@ -184,39 +320,53 @@ export default function DiscoverPage() {
     setImportSummary(null)
     setMeta(null)
 
-    const payload: Record<string, unknown> = {
-      query:   query.trim(),
-      city:    city.trim(),
-      country,
-      limit:   Number(limit),
-      mode,
-      radiusKm: Number(radiusKm),
-      privateBusiness,
-      excludePublicProjects,
-    }
-    if (district.trim())              payload.district             = district.trim()
-    if (excludeChains !== undefined)  payload.excludeChains        = excludeChains
-    if (excludeLarge  !== undefined)  payload.excludeLarge         = excludeLarge
-    if (requireContact !== undefined) payload.requireContact       = requireContact
-    if (minProspectFitScore !== '')   payload.minProspectFitScore  = Number(minProspectFitScore)
-    if (minSalesQualScore   !== '')   payload.minSalesQualScore    = Number(minSalesQualScore)
+    const requestedLimit = Number(limit)
+    const targets = buildSearchTargets()
+    const perTargetLimit = targets.length > 1 ? 8 : requestedLimit
 
     try {
-      const res = await fetch('/api/discovery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(data.error ?? `HTTP ${res.status}`)
+      const responses: SearchResponse[] = []
+      const errors: string[] = []
+
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i]
+        setSearchProgress(targets.length > 1 ? `Buscando ${i + 1}/${targets.length}: ${target.label}` : '')
+        try {
+          responses.push(await runDiscovery(target, perTargetLimit))
+        } catch (e) {
+          errors.push(`${target.label}: ${e instanceof Error ? e.message : 'error'}`)
+        }
       }
-      const data = await res.json() as SearchResponse
-      setCandidates(data.candidates)
-      setMeta(data.meta)
+
+      if (responses.length === 0) throw new Error(errors[0] ?? 'No se pudo buscar empresas')
+
+      const merged = mergeCandidates(responses.map(r => r.candidates), requestedLimit)
+      const firstMeta = responses[0].meta
+      setCandidates(merged)
+      setMeta({
+        ...firstMeta,
+        city: targets.length > 1 && !country ? 'Varias ciudades' : firstMeta.city,
+        state: targets.length > 1 && !country ? null : firstMeta.state,
+        country: targets.length > 1 && !country ? 'LATAM / España' : firstMeta.country,
+        countryCode: targets.length > 1 && !country ? 'MIX' : firstMeta.countryCode,
+        overFetched: responses.reduce((sum, r) => sum + r.meta.overFetched, 0),
+        afterFilters: merged.length,
+        sources: {
+          here: responses.some(r => r.meta.sources.here),
+          osm: true,
+          hereRaw: responses.reduce((sum, r) => sum + r.meta.sources.hereRaw, 0),
+          osmRaw: responses.reduce((sum, r) => sum + r.meta.sources.osmRaw, 0),
+        },
+        queries: [...new Set(targets.map(target => target.query))],
+        locations: [...new Set(targets.map(target => `${target.city}, ${target.country}`))],
+      })
+      if (errors.length > 0) {
+        setSearchError(`Algunas búsquedas no respondieron (${errors.length}). Se muestran los resultados disponibles.`)
+      }
     } catch (e) {
       setSearchError(e instanceof Error ? e.message : 'Error al buscar empresas')
     } finally {
+      setSearchProgress('')
       setSearching(false)
     }
   }
@@ -281,8 +431,8 @@ export default function DiscoverPage() {
             contactabilityScore:    c.contactabilityScore,
             opportunityReasons:     c.opportunityReasons,
             prospectRisks:          c.prospectRisks,
-            discoverySearchCountry: meta?.countryCode ?? c.country,
-            discoverySearchCity:    meta?.city ?? c.city,
+            discoverySearchCountry: meta?.countryCode === 'MIX' ? c.country : meta?.countryCode ?? c.country,
+            discoverySearchCity:    meta?.city === 'Varias ciudades' ? c.city : meta?.city ?? c.city,
             discoveryMode:          meta?.mode ?? mode,
             discoveryRankBefore:    c.rankBeforeReranking,
             discoveryRankAfter:     c.rankAfterReranking,
@@ -364,23 +514,26 @@ export default function DiscoverPage() {
       {/* Search form */}
       <Card className="mb-6 max-w-5xl">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Parámetros de búsqueda</CardTitle>
+          <CardTitle className="text-base">Radar comercial KRONOS</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Row 1: query + city + country */}
+          {/* Row 1: optional query + location refinements */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="sm:col-span-2">
-              <Label htmlFor="query">Industria / Búsqueda *</Label>
+              <Label htmlFor="query">Rubro específico (opcional)</Label>
               <Input
                 id="query"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleSearch() } }}
-                placeholder="dental, abogados, inmobiliaria..."
+                placeholder="Opcional: dental, inmobiliarias, estética..."
                 className="mt-1"
                 disabled={searching}
                 list="query-suggestions"
               />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Déjalo vacío para que KRONOS busque oportunidades vendibles en rubros y mercados prioritarios.
+              </p>
               <datalist id="query-suggestions">
                 {INDUSTRY_SUGGESTIONS.filter(s => s !== 'Otro').map(s => (
                   <option key={s} value={s} />
@@ -389,10 +542,14 @@ export default function DiscoverPage() {
             </div>
 
             <div>
-              <Label>País *</Label>
+              <Label>País (opcional)</Label>
               <Select
                 value={country}
-                onValueChange={v => { setCountry(v); setCity('') }}
+                onValueChange={v => {
+                  const nextCountry = COUNTRY_CONFIGS.find(c => c.value === v)
+                  setCountry(v)
+                  setCity(nextCountry?.cities[0] ?? '')
+                }}
                 disabled={searching}
               >
                 <SelectTrigger className="mt-1">
@@ -407,17 +564,28 @@ export default function DiscoverPage() {
             </div>
 
             <div>
-              <Label htmlFor="city">Ciudad *</Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={e => setCity(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleSearch() } }}
-                placeholder={selectedCountryConfig?.cities[0] ?? 'Ciudad...'}
-                className="mt-1"
-                disabled={searching || !country}
-                list="city-suggestions"
-              />
+              <Label htmlFor="city">Ciudad (opcional)</Label>
+              <div className="relative mt-1">
+                <Input
+                  id="city"
+                  value={city}
+                  onChange={e => setCity(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleSearch() } }}
+                  placeholder={selectedCountryConfig?.cities[0] ?? 'Ciudad...'}
+                  className="pr-14"
+                  disabled={searching}
+                  list="city-suggestions"
+                />
+                {city && !searching && (
+                  <button
+                    type="button"
+                    onClick={() => setCity('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
               {selectedCountryConfig && (
                 <datalist id="city-suggestions">
                   {selectedCountryConfig.cities.map(c => (
@@ -427,6 +595,27 @@ export default function DiscoverPage() {
               )}
             </div>
           </div>
+
+          {selectedCountryConfig && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Ciudades rápidas:</span>
+              {selectedCountryConfig.cities.slice(0, 10).map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCity(c)}
+                  disabled={searching}
+                  className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                    city === c
+                      ? 'border-orange-500/40 bg-orange-500/10 text-orange-600'
+                      : 'border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Row 2: mode + limit + search button */}
           <div className="flex flex-wrap items-end gap-4">
@@ -461,12 +650,12 @@ export default function DiscoverPage() {
 
             <Button
               onClick={() => void handleSearch()}
-              disabled={searching || !query.trim() || !city.trim() || !country}
+              disabled={searching}
               className="gap-2"
             >
               {searching
                 ? <><Loader2 className="h-4 w-4 animate-spin" />Buscando...</>
-                : <><Search className="h-4 w-4" />Buscar</>}
+                : <><Search className="h-4 w-4" />Buscar mejores oportunidades</>}
             </Button>
 
             <button
@@ -577,6 +766,12 @@ export default function DiscoverPage() {
               <AlertCircle className="h-4 w-4 shrink-0" /> {searchError}
             </div>
           )}
+
+          {searchProgress && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" /> {searchProgress}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -590,6 +785,12 @@ export default function DiscoverPage() {
           </span>
           <span>· {meta.gridPoints} puntos · radio {meta.radiusKm} km</span>
           <span>· {meta.overFetched} candidatos analizados → {meta.afterFilters} calificados</span>
+          {meta.queries && meta.queries.length > 1 && (
+            <span>· {meta.queries.length} rubros priorizados</span>
+          )}
+          {meta.locations && meta.locations.length > 1 && (
+            <span>· {meta.locations.length} zonas exploradas</span>
+          )}
           <span>·
             <span className="font-semibold text-purple-600"> HERE</span>
             {meta.sources.here ? ` ${meta.sources.hereRaw}` : ' no disponible'}
@@ -854,8 +1055,8 @@ export default function DiscoverPage() {
           </div>
 
           <p className="mt-3 text-xs text-muted-foreground">
-            Ordenadas por ICP Fit × Contactabilidad. Solo empresas privadas con síntomas visibles detectados externamente.
-            El diagnóstico real se hace después de la Auditoría Gratuita.
+            Ordenadas por vendibilidad: encaje KRONOS, tamaño manejable, contacto disponible y señales visibles.
+            El primer contacto es diagnóstico gratuito; la venta viene después de confirmar el dolor con el cliente.
           </p>
         </div>
       )}

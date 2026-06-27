@@ -1,10 +1,9 @@
 import type { VisibleSymptom } from '@/lib/signal-engine/types'
 
-// Phase 1 of the "land and expand" sales motion: don't pitch a full
-// diagnosis — pitch one small, affordable, tangible fix for the most
-// visible confirmed pain, then upsell bigger/automated packages later
-// once the client is happy. Only confirmed symptoms (not 'unknown')
-// ever reach this function — see computeVisibleSymptoms.
+// Phase 1 of the "land and expand" sales motion: identify the most
+// likely small, tangible fix after the free diagnosis. The first contact
+// should validate pain, not sell the fix. Only confirmed symptoms (not
+// 'unknown') ever reach this function — see computeVisibleSymptoms.
 
 export type EntryPackageSlug = 'whatsapp_followup' | 'lead_tracking_crm' | 'website_seo'
 
