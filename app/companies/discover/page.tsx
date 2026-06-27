@@ -1056,7 +1056,7 @@ export default function DiscoverPage() {
 
           <p className="mt-3 text-xs text-muted-foreground">
             Ordenadas por vendibilidad: encaje KRONOS, tamaño manejable, contacto disponible y señales visibles.
-            El primer contacto es diagnóstico gratuito; la venta viene después de confirmar el dolor con el cliente.
+            El primer contacto es diagnóstico gratuito; cualquier propuesta viene después de confirmar el dolor con el cliente.
           </p>
         </div>
       )}

@@ -31,6 +31,7 @@ import {
 } from '@/lib/api-client'
 import { SIGNAL_DEFINITIONS, OUTREACH_CHANNELS, RESPONSE_TYPES, CONTACT_STATUSES, MEETING_STATUSES, PIPELINE_STAGES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { makeClientSafeCopy } from '@/lib/outreach/approach-message'
 
 function priorityVariant(p: string): 'hot' | 'high' | 'medium' | 'low' | 'secondary' {
   if (p === 'hot') return 'hot'
@@ -1036,8 +1037,8 @@ function buildWhatsAppUrl(number: string, message: string): string {
 // one recommended channel. The first contact validates the pain before
 // any package or price is discussed with the prospect.
 function ApproachPanel({
-  data, loading, whatsapp,
-}: { data: ApproachRecommendation | null; loading: boolean; whatsapp?: string | null }) {
+  data, loading, whatsapp, website,
+}: { data: ApproachRecommendation | null; loading: boolean; whatsapp?: string | null; website?: string | null }) {
   const [copied, setCopied] = useState(false)
 
   if (loading) {
@@ -1143,6 +1144,11 @@ function ApproachPanel({
             </Button>
           )}
         </div>
+        {whatsapp && !website && (
+          <p className="text-[11px] text-muted-foreground">
+            WhatsApp puede venir de una ficha pública o directorio. No confirma que la empresa tenga una web activa.
+          </p>
+        )}
       </CardContent>
     </Card>
   )
@@ -1161,8 +1167,34 @@ function outreachEvidenceLevel(ev: Evaluation): 'A' | 'B' | 'C' {
 
 const OFFICIAL_URL = 'https://www.kronosdata.tech/'
 
-// v2: Generates audit-focused outreach based on commercial state and visible symptoms.
-// No revenue estimates, no auto-diagnosis, no package/ROI claims before the audit.
+function clientSafe(text: string): string {
+  return makeClientSafeCopy(text)
+    .replace(/\s+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function visiblePainLine(companyName: string, industry: string, auditHook: string | null, confirmedSymptoms: string[]): string {
+  const raw = confirmedSymptoms[0] || auditHook
+  if (raw) return clientSafe(raw).replace(/[.。]+$/, '').toLowerCase()
+  return `hay un punto visible en presencia o contacto que puede estar frenando consultas para un negocio de ${industry}`
+}
+
+function subtleConsequence(pain: string): string {
+  if (/web|presencia|google|seo|online|digital|pagina|sitio/i.test(pain)) {
+    return 'Cuando alguien compara opciones, suele avanzar con quien le da más confianza y un siguiente paso más claro.'
+  }
+  if (/whatsapp|respuesta|seguimiento|mensaje|contact/i.test(pain)) {
+    return 'Muchas consultas no se pierden de golpe; se enfrían cuando nadie las retoma en el momento correcto.'
+  }
+  if (/cita|reserva|agenda/i.test(pain)) {
+    return 'Cada paso extra para coordinar hace que algunas personas lo dejen para después.'
+  }
+  return 'Son detalles pequeños, pero influyen antes de que una persona decida escribir, agendar o seguir comparando.'
+}
+
+// v3: Short consultative templates. Touch one visible pain, create curiosity,
+// and ask for a diagnostic conversation. No package language in first contact.
 function generateOutreachTemplate(
   channel: 'whatsapp' | 'email' | 'linkedin',
   version: number,
@@ -1175,43 +1207,28 @@ function generateOutreachTemplate(
 ): string {
   const nombre = contactName?.trim() || companyName || 'equipo'
   const v = version % 2
-  const hookLine = auditHook
-    ? auditHook
-    : `Revisé ${companyName} externamente y hay señales visibles de mejora para un negocio de ${industry}.`
-  const symptomLine = confirmedSymptoms.length > 0
-    ? `Lo que identifiqué externamente: ${confirmedSymptoms.slice(0, 2).join(', ')}.`
-    : ''
+  const pain = visiblePainLine(companyName, industry, auditHook, confirmedSymptoms)
+  const consequence = subtleConsequence(pain)
 
-  // RESEARCH_REQUIRED or DISQUALIFIED: no outreach template
   if (commercialState === 'RESEARCH_REQUIRED' || commercialState === 'DISQUALIFIED') {
-    return `[Sin plantilla — estado ${commercialState ?? 'desconocido'}. No se recomienda contacto en esta etapa.]`
+    return `[Sin plantilla - estado ${commercialState ?? 'desconocido'}. No se recomienda contacto en esta etapa.]`
   }
 
-  // OFFER_AUDIT: invite to free 15-min audit
-  if (!commercialState || commercialState === 'OFFER_AUDIT') {
-    if (channel === 'whatsapp') {
-      return v === 0
-        ? `Hola ${nombre} 👋\n\n${hookLine}\n\n${symptomLine}\n\nAntes de asumir cualquier solución, me gustaría validar los detalles contigo en una Auditoría Gratuita de 15 min.\n\nPuedes conocer cómo trabajamos aquí:\n${OFFICIAL_URL}\n\n¿Tienes disponibilidad esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-        : `Hola ${nombre},\n\n${hookLine}\n\nEl primer paso siempre es una conversación de 15 min para entender la situación real antes de recomendar nada.\n\nTe comparto nuestro enfoque:\n${OFFICIAL_URL}\n\n¿Podemos coordinar?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-    }
-    if (channel === 'email') {
-      return `Asunto: ${companyName} — Auditoría Gratuita (15 min)\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. ${hookLine}\n\n${symptomLine ? symptomLine + '\n\n' : ''}El primer paso que propongo es siempre una Auditoría Gratuita sin compromiso — para validar si hay una oportunidad real antes de recomendar cualquier solución.\n\nPuedes conocer cómo trabajamos aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15–20 minutos esta semana?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
-    }
-    return v === 0
-      ? `${nombre}, ${hookLine}\n\n${symptomLine ? symptomLine + '\n\n' : ''}Me gustaría validarlo contigo en una Auditoría Gratuita de 15 min antes de proponer nada.\n\nCómo trabajamos:\n${OFFICIAL_URL}\n\n¿Tienes disponibilidad?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-      : `${nombre}, hice una revisión externa de ${companyName} (${industry}) y me gustaría compartirte lo que encontré en una conversación breve.\n\nSin diagnóstico previo — solo quiero validar contigo si tiene sentido explorar.\n\nCómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-  }
-
-  // CONTACT_READY: direct contact, no diagnosis claims
   if (channel === 'whatsapp') {
-    return v === 0
-      ? `Hola ${nombre} 👋\n\n${hookLine}\n\nMe gustaría explorar si hay algo útil para ${companyName}. No tengo un diagnóstico definitivo — eso lo hacemos juntos.\n\nPuedes ver cómo trabajamos aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15 min esta semana?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
-      : `Hola ${nombre},\n\nEncontré ${companyName} en mi investigación de negocios de ${industry} y me generó interés.\n\n${symptomLine ? symptomLine + '\n\n' : ''}¿Podríamos hablar brevemente para ver si hay algo relevante?\n\nTe comparto nuestro enfoque:\n${OFFICIAL_URL}\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+    return clientSafe(v === 0
+      ? `Hola ${nombre}, soy Alejandro de Kronos Data.\n\nVi algo puntual en ${companyName}: ${pain}.\n\n${consequence}\n\nTe propongo revisarlo 15 min por Meet/Zoom, gratis. Te muestro 2 o 3 puntos concretos y validamos si hay algo real que mejorar.\n\n¿Tienes un espacio esta semana?\n\n${OFFICIAL_URL}`
+      : `Hola ${nombre}, soy Alejandro de Kronos Data.\n\nEstaba revisando negocios de ${industry} y ${companyName} me llamó la atención por este punto: ${pain}.\n\nNo lo tomo como diagnóstico cerrado; lo validamos juntos en 15 min y te queda una lectura externa clara.\n\n¿Con quién podría coordinarlo?\n\n${OFFICIAL_URL}`)
   }
+
   if (channel === 'email') {
-    return `Asunto: ${companyName} — ¿Conversación breve?\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. ${hookLine}\n\n${symptomLine ? symptomLine + '\n\n' : ''}Me gustaría explorar contigo si hay algo relevante para ${companyName}. Sin diagnóstico previo — eso lo hacemos en conversación.\n\nPuedes conocer nuestro enfoque aquí:\n${OFFICIAL_URL}\n\n¿Tienes 15–20 minutos?\n\nAlejandro Bri\nKronos Data\nalejandro@kronosdata.tech`
+    return clientSafe(v === 0
+      ? `Asunto: ${companyName}: diagnóstico gratuito de 15 min\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Revisé ${companyName} desde afuera y vi un punto que vale validar: ${pain}.\n\n${consequence}\n\nTe propongo una revisión gratuita de 15 min. Miramos el recorrido de una persona interesada, marco 2 o 3 puntos concretos y vemos si hay algo que valga la pena priorizar.\n\nSi no vemos nada claro, igual te queda el diagnóstico.\n\nAlejandro Bri\nKronos Data\n${OFFICIAL_URL}`
+      : `Asunto: ${companyName}: punto visible para revisar\n\nHola ${nombre},\n\nSoy Alejandro de Kronos Data. Estaba revisando negocios de ${industry} y encontré este detalle en ${companyName}: ${pain}.\n\n${consequence}\n\n¿Te parece si lo revisamos 15 min esta semana? Es gratuito y sin compromiso.\n\nAlejandro Bri\nKronos Data\n${OFFICIAL_URL}`)
   }
-  return `${nombre}, encontré ${companyName} (${industry}) en mi investigación y me interesa explorar si hay algo útil para tu negocio.\n\n${symptomLine ? symptomLine + '\n\n' : ''}Sin diagnóstico previo — eso lo validamos juntos.\n\nCómo trabajamos:\n${OFFICIAL_URL}\n\n¿Hablamos 15 min?\n\nAlejandro | Kronos Data\nalejandro@kronosdata.tech`
+
+  return clientSafe(v === 0
+    ? `Hola ${nombre}, vi ${companyName} y hay un punto que me pareció accionable: ${pain}.\n\n${consequence}\n\nSi te parece, lo revisamos 15 min. Te muestro lo que vi, lo contrastamos con tu realidad y ves si vale priorizarlo.\n\n${OFFICIAL_URL}`
+    : `Hola ${nombre}, revisé ${companyName} desde afuera y noté algo que quizás vale validar: ${pain}.\n\nNo lo planteo como diagnóstico cerrado. En 15 min puedo dejarte 2 o 3 observaciones concretas sobre presencia, contacto o seguimiento.\n\n¿Te sirve coordinar esta semana?\n\n${OFFICIAL_URL}`)
 }
 
 function OutreachPanel({
@@ -1387,6 +1404,11 @@ function OutreachPanel({
               : <span className="text-muted-foreground">👤 Sin contacto identificado</span>
             }
           </div>
+          {whatsapp && !company.website && (
+            <p className="px-4 pt-2 text-[11px] text-muted-foreground">
+              WhatsApp puede venir de una ficha pública o directorio. No confirma que la empresa tenga una web activa.
+            </p>
+          )}
 
           <div className="flex gap-1 px-4 pt-2">
             {(['whatsapp', 'email', 'linkedin'] as const).map((ch) => (
@@ -1970,7 +1992,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      <ApproachPanel data={approach} loading={approachLoading} whatsapp={company.whatsapp} />
+      <ApproachPanel data={approach} loading={approachLoading} whatsapp={company.whatsapp} website={company.website} />
 
       {/* Main content */}
       <Tabs defaultValue="evaluation">

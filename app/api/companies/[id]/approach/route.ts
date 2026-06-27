@@ -51,7 +51,14 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
     }
 
     const channel = recommendChannel(company)
-    const message = buildApproachMessage(company.name, pkg)
+    const message = buildApproachMessage(company.name, pkg, {
+      industry: company.industry,
+      city: company.city,
+      country: company.country,
+      website: company.website,
+      whatsapp: company.whatsapp,
+      contactName: company.contactName,
+    })
 
     return ok({
       available: true,

@@ -1,42 +1,35 @@
-// Phase 4 — Outreach message generator.
-// Generates personalized, evidence-based messages by channel and evidence tier.
+// Phase 4 - Outreach message generator.
+// Generates concise, evidence-based messages by channel and evidence tier.
 //
 // Rules:
 //  - Always include https://www.kronosdata.tech/
 //  - Never invent phone/email/revenue numbers
 //  - Never claim losses or ROI not backed by evidence
-//  - LOW evidence → propose free audit only, no specific claims
-//  - MEDIUM evidence → hypothesis framing, "hemos notado que…"
-//  - HIGH evidence → specific pain points, free diagnosis, no package claim
+//  - First contact asks for a diagnostic conversation, not a purchase decision
+//  - Client-facing copy avoids: sell/sales language, automation, system, AI
 //  - Messages are proposals, not automated sends
 
 import type { EvidenceTier } from '@/lib/scoring/composite-scorer'
+import { makeClientSafeCopy } from '@/lib/outreach/approach-message'
 
 const OFFICIAL_URL = 'https://www.kronosdata.tech/'
 
 export type OutreachChannel = 'email' | 'whatsapp' | 'linkedin'
 
 export interface MessageInput {
-  // Company
   companyName: string
   industry: string
   city: string | null
   country: string
   website: string | null
-
-  // Scoring
   evidenceTier: EvidenceTier
   salesPriority: string
   primaryProblem: string | null
   whyContact: string[]
   qualificationReason: string | null
   recommendedFirstAction: string
-
-  // Package/service recommendation
   recommendedPackageSlug: string | null
   primaryServiceName: string | null
-
-  // Evaluation signals (optional — only if evaluation exists)
   signals?: {
     hasWebsite: boolean
     hasCta: boolean
@@ -55,281 +48,274 @@ export interface MessageInput {
 
 export interface GeneratedMessage {
   channel: OutreachChannel
-  subject: string | null  // email only
+  subject: string | null
   body: string
   evidenceTier: EvidenceTier
-  notes: string  // usage guidance for the sender
+  notes: string
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function locationStr(city: string | null, country: string): string {
   if (city) return `${city}, ${country}`
   return country
 }
 
+function cleanSnippet(text: string): string {
+  return makeClientSafeCopy(text)
+    .replace(/\s+/g, ' ')
+    .replace(/[.。]+$/, '')
+    .trim()
+}
+
 function topProblems(input: MessageInput): string[] {
   const problems: string[] = []
   if (input.signals?.probablePainPoint) problems.push(input.signals.probablePainPoint)
-  if (input.primaryProblem && !problems.includes(input.primaryProblem)) problems.push(input.primaryProblem)
+  if (input.primaryProblem) problems.push(input.primaryProblem)
+  if (input.qualificationReason) problems.push(input.qualificationReason)
+  if (input.whyContact.length > 0) problems.push(...input.whyContact.slice(0, 2))
   if (input.signals?.detectedProblems) problems.push(...input.signals.detectedProblems.slice(0, 2))
-  return [...new Set(problems)].slice(0, 3)
+  return [...new Set(problems.map(cleanSnippet).filter(Boolean))].slice(0, 3)
 }
 
-// ── Email templates ────────────────────────────────────────────────────────────
+function observedPain(input: MessageInput): string {
+  const problems = topProblems(input)
+  if (problems[0]) return problems[0].toLowerCase()
+
+  if (!input.website || input.signals?.hasWebsite === false) {
+    return 'no se ve una página clara donde una persona interesada pueda entender rápido qué hacer después'
+  }
+  if (input.signals?.slowResponse || input.signals?.weakFollowup) {
+    return 'parece haber espacio para mejorar cómo se responde y se retoman las consultas'
+  }
+  if (input.signals?.hasBooking === false) {
+    return 'agendar o confirmar parece requerir demasiados pasos manuales'
+  }
+  if (input.signals?.hasCta === false) {
+    return 'el siguiente paso para contactar no queda tan claro como podría quedar'
+  }
+  if (input.signals?.manualWork) {
+    return 'hay señales de trabajo repetitivo que podría estar quitando tiempo operativo'
+  }
+  if (input.signals?.hasReviews === false || input.signals?.hasUnansweredReviews) {
+    return 'hay detalles de confianza digital que una persona revisa antes de decidir'
+  }
+
+  return `hay puntos visibles de contacto y presencia digital que conviene revisar para un negocio de ${input.industry}`
+}
+
+function frictionLine(input: MessageInput): string {
+  if (!input.website || input.signals?.hasWebsite === false || input.signals?.hasCta === false) {
+    return 'Cuando una persona compara opciones, suele avanzar con el negocio que le da más claridad y menos fricción.'
+  }
+  if (input.signals?.slowResponse || input.signals?.weakFollowup) {
+    return 'Muchas consultas no se pierden de golpe; se enfrían cuando nadie las retoma en el momento correcto.'
+  }
+  if (input.signals?.hasBooking === false) {
+    return 'Cada paso extra para coordinar hace que algunas personas lo dejen para después.'
+  }
+  if (input.signals?.manualWork) {
+    return 'Cuando todo queda en mensajes sueltos o memoria, es fácil que algo importante se escape.'
+  }
+  return 'Son detalles pequeños, pero suelen influir antes de que la persona decida escribir o agendar.'
+}
+
+function diagnosticAsk(minutes = 15): string {
+  return `Te propongo revisarlo ${minutes} min, gratis. Miramos el recorrido desde afuera, marco 2 o 3 puntos concretos y validamos si hay algo que realmente valga la pena mejorar.`
+}
+
+function maybeLowEvidencePrefix(input: MessageInput): string {
+  return input.evidenceTier === 'LOW'
+    ? 'No lo tomo como diagnóstico cerrado; solo como una primera señal para revisar. '
+    : ''
+}
+
+function finalize(body: string): string {
+  return makeClientSafeCopy(body)
+}
 
 function emailLow(input: MessageInput): GeneratedMessage {
   const loc = locationStr(input.city, input.country)
   return {
     channel: 'email',
-    subject: `Diagnóstico gratuito para ${input.companyName} — Kronos Data`,
-    body: `Hola equipo de ${input.companyName},
+    subject: `${input.companyName}: revisión gratuita de presencia y contacto`,
+    body: finalize(`Hola equipo de ${input.companyName},
 
-Mi nombre es [Tu nombre] y soy parte de Kronos Data, una empresa especializada en automatización de operaciones y eficiencia de datos para negocios en ${loc}.
+Soy Alejandro de Kronos Data. Estaba revisando negocios de ${input.industry} en ${loc} y me aparecio ${input.companyName}.
 
-Encontramos a ${input.companyName} en nuestra búsqueda de empresas del sector ${input.industry} con potencial de mejora en sus procesos digitales, y quisiera ofrecerles algo concreto: una auditoría gratuita de su operación actual.
+${maybeLowEvidencePrefix(input)}Hay un punto que quizas vale revisar: ${observedPain(input)}.
 
-Sin compromiso ni contrato. El objetivo es simplemente identificar si hay oportunidades reales que valga la pena explorar juntos.
+${diagnosticAsk(15)}
 
-¿Tienen 20 minutos esta semana para una llamada exploratoria?
+Si no vemos nada claro, igual les queda el diagnóstico.
 
-Pueden conocer más sobre lo que hacemos en ${OFFICIAL_URL}
-
-Quedo a disposición.
-
-[Tu nombre]
+Alejandro Bri
 Kronos Data
-${OFFICIAL_URL}`,
+${OFFICIAL_URL}`),
     evidenceTier: 'LOW',
-    notes: 'Mensaje exploratorio. No menciona problemas específicos porque la evidencia es limitada. Personaliza [Tu nombre] antes de enviar.',
+    notes: 'Mensaje exploratorio. No afirma un problema cerrado; solo abre una conversación de diagnóstico.',
   }
 }
 
 function emailMedium(input: MessageInput): GeneratedMessage {
-  const loc = locationStr(input.city, input.country)
-  const problems = topProblems(input)
-  const problemText = problems.length > 0
-    ? `Al revisar su presencia digital, notamos algunas áreas que podrían estar limitando su captación de clientes:\n${problems.map(p => `• ${p}`).join('\n')}\n`
-    : `Al revisar el sector de ${input.industry} en ${loc}, identificamos patrones comunes que suelen afectar la captación y conversión de clientes.\n`
-
   return {
     channel: 'email',
-    subject: `Oportunidad de mejora para ${input.companyName} — Diagnóstico gratuito`,
-    body: `Hola equipo de ${input.companyName},
+    subject: `${input.companyName}: punto visible para revisar`,
+    body: finalize(`Hola equipo de ${input.companyName},
 
-Mi nombre es [Tu nombre], de Kronos Data. Nos especializamos en automatización de operaciones y transformación digital para empresas del sector ${input.industry} en Latinoamérica.
+Soy Alejandro de Kronos Data. Revisando ${input.companyName} desde afuera, vi un punto que puede estar afectando el primer contacto: ${observedPain(input)}.
 
-${problemText}
-No quiero asumir una solución antes de conocer su realidad. Nuestra entrada siempre es una auditoría gratuita: revisamos juntos lo que está pasando, validamos si hay una pérdida real de clientes o seguimiento, y recién después vemos si tiene sentido proponer una mejora concreta.
+${frictionLine(input)}
 
-¿Estarían disponibles para una sesión de 30 minutos esta semana?
+${diagnosticAsk(20)}
 
-Pueden revisar nuestra oferta completa en ${OFFICIAL_URL}
+Si tiene sentido, seguimos conversando. Si no, les queda una lectura externa útil para ordenar prioridades.
 
-Saludos,
-
-[Tu nombre]
+Alejandro Bri
 Kronos Data
-${OFFICIAL_URL}`,
+${OFFICIAL_URL}`),
     evidenceTier: 'MEDIUM',
-    notes: 'Mensaje basado en hipótesis. Verifica manualmente los problemas detectados antes de enviar. Personaliza [Tu nombre].',
+    notes: 'Mensaje con hipotesis concreta. Revisar el punto visible antes de enviarlo.',
   }
 }
 
 function emailHigh(input: MessageInput): GeneratedMessage {
-  const loc = locationStr(input.city, input.country)
   const problems = topProblems(input)
-
-  const problemSection = problems.length > 0
-    ? `En nuestra revisión de ${input.companyName} identificamos específicamente:\n${problems.map(p => `• ${p}`).join('\n')}\n`
-    : `Hemos analizado la presencia digital y operativa de ${input.companyName} en ${loc}.\n`
+  const details = problems.length > 0
+    ? `Puntos visibles:\n${problems.slice(0, 2).map(p => `- ${p}`).join('\n')}`
+    : `Punto visible: ${observedPain(input)}`
 
   return {
     channel: 'email',
-    subject: `${input.companyName} — diagnóstico gratuito para revisar oportunidades`,
-    body: `Hola [Nombre del contacto],
+    subject: `${input.companyName}: diagnóstico gratuito de 20 min`,
+    body: finalize(`Hola [Nombre],
 
-Mi nombre es [Tu nombre], de Kronos Data. Revisamos empresas del sector ${input.industry} para detectar fugas de clientes, seguimiento o presencia digital antes de proponer cualquier solución.
+Soy Alejandro de Kronos Data. Revise ${input.companyName} desde afuera y encontre algo puntual que vale validar con ustedes.
 
-${problemSection}
-No quiero venderles nada con una revisión externa. Lo correcto es validar estos puntos con ustedes y entender si realmente afectan la operación o la captación de clientes.
+${details}
 
-Lo que proponemos como primer paso es una auditoría gratuita de 30 minutos donde:
-• Revisamos juntos los puntos de mejora identificados
-• Validamos si corresponden a su realidad operativa
-• Definimos si hay un caso claro antes de hablar de cualquier inversión
+${frictionLine(input)}
 
-Si todo tiene sentido para ustedes, avanzamos. Si no, la conversación igualmente les será útil.
+${diagnosticAsk(20)}
 
-¿Tienen disponibilidad esta semana?
+Si no hay una oportunidad clara, no forzamos nada: les queda el diagnóstico y seguimos cada uno con lo suyo.
 
-Más información en ${OFFICIAL_URL}
-
-Saludos,
-
-[Tu nombre]
+Alejandro Bri
 Kronos Data
-${OFFICIAL_URL}`,
+${OFFICIAL_URL}`),
     evidenceTier: 'HIGH',
-    notes: `Mensaje con evidencia alta. Reemplaza [problema principal] en el asunto con el problema real detectado. Reemplaza [Nombre del contacto] si lo conoces. Basado en: ${input.whyContact.slice(0, 2).join('; ')}.`,
+    notes: `Mensaje con evidencia alta. Personaliza [Nombre] si tienes contacto. Base: ${problems.slice(0, 2).join('; ')}`,
   }
 }
-
-// ── WhatsApp templates ────────────────────────────────────────────────────────
 
 function whatsappLow(input: MessageInput): GeneratedMessage {
   return {
     channel: 'whatsapp',
     subject: null,
-    body: `Hola, soy [nombre] de Kronos Data 👋
+    body: finalize(`Hola, soy Alejandro de Kronos Data.
 
-Encontramos a ${input.companyName} y quisiera ofrecerles una auditoría gratuita de su operación — sin compromiso.
+Vi a ${input.companyName} y hay un punto que quiza vale revisar: ${observedPain(input)}.
 
-¿Tienen unos minutos para conversarlo?
+${diagnosticAsk(15)}
 
-Más info: ${OFFICIAL_URL}`,
+Si no hay nada claro, igual queda el diagnóstico.
+
+${OFFICIAL_URL}`),
     evidenceTier: 'LOW',
-    notes: 'Mensaje muy corto para WhatsApp. Úsalo SOLO si hay contexto previo o canal comercial público claro. No enviar masivamente.',
+    notes: 'Usar solo si el número es comercial/público o hubo contexto previo. No enviar masivamente.',
   }
 }
 
 function whatsappMedium(input: MessageInput): GeneratedMessage {
-  const problems = topProblems(input)
-  const problemLine = problems[0]
-    ? `Notamos que ${problems[0].toLowerCase()}.`
-    : `Vemos oportunidades de mejora en su presencia digital.`
-
   return {
     channel: 'whatsapp',
     subject: null,
-    body: `Hola equipo de ${input.companyName} 👋
+    body: finalize(`Hola equipo de ${input.companyName}, soy Alejandro de Kronos Data.
 
-Soy [nombre] de Kronos Data. ${problemLine}
+Vi un detalle concreto: ${observedPain(input)}.
 
-No quiero asumir una solución antes de conocer su realidad. Me gustaría validarlo en un diagnóstico gratuito breve y ver si de verdad hay algo útil para mejorar.
+${frictionLine(input)}
 
-¿Tienen 15 minutos esta semana? Sin compromiso.
+¿Les parece si lo revisamos 15 min esta semana? Es gratis y sin compromiso.
 
-${OFFICIAL_URL}`,
+${OFFICIAL_URL}`),
     evidenceTier: 'MEDIUM',
-    notes: 'Mensaje breve basado en hipótesis. Verifica el problema antes de enviar. WhatsApp debe usarse con canal comercial público o interacción previa.',
+    notes: 'Mensaje breve con dolor visible. Verificar que el contacto sea publico/comercial.',
   }
 }
 
 function whatsappHigh(input: MessageInput): GeneratedMessage {
-  const problems = topProblems(input)
-  const mainProblem = problems[0] ?? `oportunidades de mejora identificadas en ${input.industry}`
-
   return {
     channel: 'whatsapp',
     subject: null,
-    body: `Hola [nombre del contacto] 👋
+    body: finalize(`Hola [Nombre], soy Alejandro de Kronos Data.
 
-Soy [Tu nombre] de Kronos Data.
+Revise ${input.companyName} desde afuera y vi esto: ${observedPain(input)}.
 
-Revisamos ${input.companyName} y identificamos: ${mainProblem.toLowerCase()}.
+${frictionLine(input)}
 
-No quiero venderles nada con una revisión externa. Me gustaría ofrecerles un diagnóstico gratuito de 30 min para validarlo juntos y ver si realmente hay una oportunidad de mejora.
+Te propongo verlo 15 min por Meet/Zoom. Te muestro 2 o 3 puntos concretos y validamos si de verdad hay algo que mejorar.
 
-¿Les parece bien esta semana?
+¿Tienes un espacio esta semana?
 
-Más detalles: ${OFFICIAL_URL}`,
+${OFFICIAL_URL}`),
     evidenceTier: 'HIGH',
-    notes: `Mensaje con evidencia alta. Reemplaza [nombre del contacto] si lo tienes. WhatsApp solo con opt-in o canal público. Basado en: ${problems.slice(0, 2).join('; ')}.`,
+    notes: `Mensaje directo con evidencia alta. Personaliza [Nombre] si lo tienes. Base: ${topProblems(input).slice(0, 2).join('; ')}`,
   }
 }
-
-// ── LinkedIn templates ────────────────────────────────────────────────────────
 
 function linkedinLow(input: MessageInput): GeneratedMessage {
   return {
     channel: 'linkedin',
     subject: null,
-    body: `Hola [Nombre],
+    body: finalize(`Hola [Nombre], vi ${input.companyName} y me llamo la atencion lo que hacen en ${input.industry}.
 
-Vi el perfil de ${input.companyName} y me pareció interesante lo que hacen en ${input.industry}.
+Estoy revisando negocios donde pequeños puntos de presencia/contacto pueden frenar consultas.
 
-Soy [Tu nombre] de Kronos Data. Estamos revisando empresas donde podría haber fugas de clientes, seguimiento o presencia digital que se pueden mejorar con cambios simples.
+Si te parece, puedo hacer una revisión gratuita de 15 min y compartirte 2 o 3 observaciones concretas.
 
-¿Estarías abierto a una conversación exploratoria de 20 minutos? Ofrecemos un diagnóstico inicial gratuito.
-
-${OFFICIAL_URL}
-
-¡Gracias!`,
+${OFFICIAL_URL}`),
     evidenceTier: 'LOW',
-    notes: 'Mensaje genérico para LinkedIn. Personaliza con el nombre del contacto y algún dato concreto del perfil si lo tienes.',
+    notes: 'Primer contacto suave para LinkedIn. Personalizar con nombre y un dato del perfil.',
   }
 }
 
 function linkedinMedium(input: MessageInput): GeneratedMessage {
-  const problems = topProblems(input)
-  const problemHint = problems[0]
-    ? `noté que podrían tener oportunidades en ${problems[0].toLowerCase()}`
-    : `identificamos algunas áreas de mejora en su presencia digital`
-
   return {
     channel: 'linkedin',
     subject: null,
-    body: `Hola [Nombre],
+    body: finalize(`Hola [Nombre], revise ${input.companyName} desde afuera y note algo que quizas vale validar: ${observedPain(input)}.
 
-Revisé el perfil de ${input.companyName} y ${problemHint}.
+No lo planteo como diagnóstico cerrado. Me gustaría revisarlo contigo 15 min y dejarte 2 o 3 puntos claros sobre presencia, contacto o seguimiento.
 
-Desde Kronos Data trabajamos específicamente con empresas de ${input.industry} en Latinoamérica para resolver este tipo de problemas — automatización de procesos, mejora de conversión digital y datos estructurados.
+¿Te sirve coordinar esta semana?
 
-Si te parece, me gustaría validarlo contigo en una sesión gratuita de 30 min. No es una propuesta cerrada: primero entendemos si realmente hay una oportunidad.
-
-¿Tienes disponibilidad esta semana?
-
-${OFFICIAL_URL}`,
+${OFFICIAL_URL}`),
     evidenceTier: 'MEDIUM',
-    notes: 'Mensaje semi-personalizado. Verifica el problema detectado antes de enviar.',
+    notes: 'Mensaje semi-personalizado. Confirmar el punto visible antes de enviar.',
   }
 }
 
 function linkedinHigh(input: MessageInput): GeneratedMessage {
-  const problems = topProblems(input)
-  const mainProblem = problems[0] ?? 'oportunidades de mejora identificadas'
-
   return {
     channel: 'linkedin',
     subject: null,
-    body: `Hola [Nombre],
+    body: finalize(`Hola [Nombre], vi ${input.companyName} con más detalle y hay un punto que me parece accionable: ${observedPain(input)}.
 
-Revisé en detalle la presencia de ${input.companyName} y encontré algo relevante: ${mainProblem.toLowerCase()}.
+${frictionLine(input)}
 
-No quiero convertir una revisión externa en una venta directa. El primer paso correcto sería validar contigo si esto realmente afecta la captación, el seguimiento o la atención al cliente.
+Si te parece, lo revisamos 20 min. Te muestro lo que vi, lo contrastamos con tu realidad y ves si vale priorizarlo.
 
-Propongo una sesión de diagnóstico gratuita de 30 minutos donde revisamos juntos los hallazgos y definimos si tiene sentido trabajar juntos.
-
-Sin compromiso previo.
-
-¿Hay un buen momento esta semana o la siguiente?
-
-${OFFICIAL_URL}`,
+${OFFICIAL_URL}`),
     evidenceTier: 'HIGH',
-    notes: `Mensaje con evidencia alta. Reemplaza [Nombre] con el nombre real del contacto. Basado en: ${problems.slice(0, 2).join('; ')}.`,
+    notes: `Mensaje con evidencia alta. Personalizar [Nombre]. Base: ${topProblems(input).slice(0, 2).join('; ')}`,
   }
 }
-
-// ── Main generator ─────────────────────────────────────────────────────────────
 
 export function generateOutreachMessages(input: MessageInput): GeneratedMessage[] {
   const tier = input.evidenceTier
-  const messages: GeneratedMessage[] = []
-
-  // Generate per-channel messages based on evidence tier
-  if (tier === 'HIGH') {
-    messages.push(emailHigh(input), whatsappHigh(input), linkedinHigh(input))
-  } else if (tier === 'MEDIUM') {
-    messages.push(emailMedium(input), whatsappMedium(input), linkedinMedium(input))
-  } else {
-    messages.push(emailLow(input), whatsappLow(input), linkedinLow(input))
-  }
-
-  return messages
+  if (tier === 'HIGH') return [emailHigh(input), whatsappHigh(input), linkedinHigh(input)]
+  if (tier === 'MEDIUM') return [emailMedium(input), whatsappMedium(input), linkedinMedium(input)]
+  return [emailLow(input), whatsappLow(input), linkedinLow(input)]
 }
-
-// ── Compliance helper ─────────────────────────────────────────────────────────
 
 export interface ComplianceInfo {
   legalRisk: 'LOW' | 'MEDIUM' | 'HIGH'
@@ -348,27 +334,26 @@ export function assessOutreachCompliance(
   let risk: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW'
 
   if (channel === 'whatsapp' && !hasOptIn && !hasPublicContactInfo) {
-    warnings.push('WhatsApp sin opt-in ni canal comercial público confirmado — alto riesgo de spam')
+    warnings.push('WhatsApp sin opt-in ni canal comercial publico confirmado: alto riesgo de spam')
     risk = 'HIGH'
   } else if (channel === 'whatsapp' && !hasOptIn) {
-    warnings.push('WhatsApp sin opt-in previo — úsalo solo si el número es claramente comercial/público')
+    warnings.push('WhatsApp sin opt-in previo: usar solo si el número es claramente comercial/público')
     risk = 'MEDIUM'
   }
 
   if (evidenceTier === 'LOW' && channel !== 'email') {
-    warnings.push('Evidencia baja: asegúrate de que el mensaje no haga afirmaciones sobre el negocio')
+    warnings.push('Evidencia baja: no afirmar problemas específicos sin verificación manual')
     if (risk === 'LOW') risk = 'MEDIUM'
   }
 
-  const gdprCountries = ['spain']
-  if (gdprCountries.includes(country.toLowerCase())) {
-    warnings.push('España aplica RGPD/GDPR — asegura base legal antes de contactar (legítimo interés B2B puede aplicar para email)')
+  if (country.toLowerCase() === 'spain') {
+    warnings.push('Espana aplica RGPD/GDPR: asegurar base legal antes de contactar')
   }
 
   const channelGuidance: Record<OutreachChannel, string> = {
-    email: 'Email B2B con fuente pública (web, Google Business) tiene menor riesgo legal en LATAM. Incluye opt-out.',
-    whatsapp: 'WhatsApp requiere número comercial público o interacción previa. No usar si el número es personal.',
-    linkedin: 'LinkedIn InMail o conexión B2B tiene el menor riesgo legal. Mensaje profesional siempre.',
+    email: 'Email B2B con fuente pública tiene menor riesgo. Incluir salida simple si piden no ser contactados.',
+    whatsapp: 'WhatsApp debe usarse con número comercial público o interacción previa. Evitar números personales.',
+    linkedin: 'LinkedIn funciona mejor con mensaje profesional, corto y personalizado. Evitar secuencias masivas de invitaciones.',
   }
 
   return { legalRisk: risk, warnings, channelGuidance: channelGuidance[channel] }
